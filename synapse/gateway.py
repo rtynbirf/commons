@@ -154,10 +154,19 @@ class Gateway:
     def organ_names(self) -> list[str]:
         return list(self._organs)
 
+    @property
+    def adapters(self) -> list[Any]:
+        """Живые адаптеры манифеста — для shutdown() органов при смерти организма (SPEC-0002 п.7)."""
+        return list(self._adapters.values())
+
     # --- вызов ---
 
-    def call(self, organ: str, tool: str, payload: dict[str, Any] | None, trace_id: str) -> Any:
-        """Вызов органа через синапс. Любой исход попадает в кровь."""
+    def call(self, organ: str, tool: str, payload: dict[str, Any] | None, trace_id: str, _seen: frozenset[str] = frozenset()) -> Any:
+        """Вызов органа через синапс. Любой исход попадает в кровь.
+
+        `_seen` — защита от циклов в таблице замен (SPEC-0002 п.3):
+        орган дважды в одной цепочке замен не появляется.
+        """
         entry = self._organs.get(organ)
         if entry is None:
             self._emit("veto", organ, {"reason": "орган не объявлен в манифесте", "tool": tool}, trace_id=trace_id)
@@ -173,7 +182,10 @@ class Gateway:
             if substitute is None:
                 self._emit("error", organ, {"reason": "орган недоступен, замены нет", "tool": tool}, trace_id=trace_id)
                 raise OrganUnavailable(f"{organ}: недоступен и замен нет")
-            return self.call(substitute, tool, payload, trace_id)
+            if substitute in _seen:
+                self._emit("error", organ, {"reason": f"цикл замен: {' -> '.join((*_seen, organ, substitute))}", "tool": tool}, trace_id=trace_id)
+                raise OrganUnavailable(f"{organ}: цикл в таблице замен ({substitute} уже в цепочке)")
+            return self.call(substitute, tool, payload, trace_id, _seen | {organ})
 
         started = time.monotonic()
         try:

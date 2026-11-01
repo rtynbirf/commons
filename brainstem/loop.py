@@ -39,12 +39,13 @@ class Budget:
     seconds: float | None = None
 
     def exhausted_by(self, spent: Cost) -> str | None:
-        if self.tokens_in is not None and spent.tokens_in > self.tokens_in:
-            return f"tokens_in {spent.tokens_in} > {self.tokens_in}"
-        if self.tokens_out is not None and spent.tokens_out > self.tokens_out:
-            return f"tokens_out {spent.tokens_out} > {self.tokens_out}"
-        if self.seconds is not None and spent.seconds > self.seconds:
-            return f"seconds {spent.seconds:.3f} > {self.seconds}"
+        """Граница включена: проведённое ровно в лимит = бюджет исчерпан (SPEC-0001 G3)."""
+        if self.tokens_in is not None and spent.tokens_in >= self.tokens_in:
+            return f"tokens_in {spent.tokens_in} >= {self.tokens_in}"
+        if self.tokens_out is not None and spent.tokens_out >= self.tokens_out:
+            return f"tokens_out {spent.tokens_out} >= {self.tokens_out}"
+        if self.seconds is not None and spent.seconds >= self.seconds:
+            return f"seconds {spent.seconds:.3f} >= {self.seconds}"
         return None
 
 

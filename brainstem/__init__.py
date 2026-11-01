@@ -5,5 +5,6 @@ PLAN → ACT → OBSERVE → REFLECT → (PLAN | HALT), бюджет G3, жур�
 """
 
 from brainstem.loop import Budget, Loop, Step
+from brainstem.pid1 import PID1
 
-__all__ = ["Budget", "Loop", "Step"]
+__all__ = ["Budget", "Loop", "Step", "PID1"]

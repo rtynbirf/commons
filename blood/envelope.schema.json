@@ -29,12 +29,14 @@
         "error",
         "security.violation",
         "organ.health",
-        "organ.replace"
+        "organ.replace",
+        "boot",
+        "shutdown"
       ]
     },
     "source": {
       "type": "string",
-      "description": "Эмитент: brainstem | synapse | organ:<name>",
+      "description": "Эмитент: brainstem | synapse | pid1 | organ:<name>",
       "minLength": 1
     },
     "organ": {

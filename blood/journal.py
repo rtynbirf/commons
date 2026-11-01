@@ -17,10 +17,27 @@ class Journal:
 
     def __init__(self) -> None:
         self._events: list[dict[str, Any]] = []
+        self._fh: Any = None
+
+    def attach(self, path: str | Path) -> None:
+        """Пишет кровь в файл в момент события (append-only, SPEC-0004 п.5).
+
+        Открытие в режиме 'a': несколько сессий одного дня живут в одном
+        файле и различаются trace_id; смерть процесса не теряет конвертов.
+        """
+        self._fh = open(path, "a", encoding="utf-8")
+
+    def close(self) -> None:
+        if self._fh is not None:
+            self._fh.close()
+            self._fh = None
 
     def append(self, envelope: dict[str, Any]) -> dict[str, Any]:
         validate(envelope)
         self._events.append(dict(envelope))
+        if self._fh is not None:
+            self._fh.write(json.dumps(envelope, ensure_ascii=False) + "\n")
+            self._fh.flush()
         return envelope
 
     def all(self) -> tuple[dict[str, Any], ...]:

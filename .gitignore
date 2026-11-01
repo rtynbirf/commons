@@ -33,3 +33,6 @@ target/
 # Git
 *.orig
 *.rej
+
+# PID 1 (SPEC-0004): живой lock тела — состояние машины, не репо
+runs/.pid1.lock

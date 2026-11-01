@@ -64,3 +64,38 @@ class FakeAbuser:
 
     def invoke(self, tool: str, payload: dict[str, Any]) -> tuple[Any, Cost]:
         raise AuthorityViolation("орган запросил сеть, полномочия: fs: read-only")
+
+
+class FakeMortal:
+    """Здоровый орган-процесс: помнит shutdown (SPEC-0002 п.7) и здоровье."""
+
+    def __init__(self, entry: dict[str, Any]) -> None:
+        self.entry = entry
+        self.calls: list[tuple[str, dict[str, Any]]] = []
+        self.shutdowns = 0
+        self.healthy = True
+
+    def health(self) -> bool:
+        return self.healthy
+
+    def invoke(self, tool: str, payload: dict[str, Any]) -> tuple[Any, Cost]:
+        self.calls.append((tool, payload))
+        return {"echo": payload, "tool": tool}, Cost(tokens_in=3, tokens_out=1, seconds=0.01)
+
+    def shutdown(self) -> None:
+        self.shutdowns += 1
+
+
+class FakeFlaky:
+    """Орган с переворачивающимся healthcheck: ловит циклы замен (SPEC-0002 п.3)."""
+
+    def __init__(self, entry: dict[str, Any]) -> None:
+        self.entry = entry
+        self.healthy = True
+
+    def health(self) -> bool:
+        self.healthy = not self.healthy
+        return self.healthy
+
+    def invoke(self, tool: str, payload: dict[str, Any]) -> tuple[Any, Cost]:  # pragma: no cover
+        raise AssertionError("в тесте цикла замен вызов не доходит до органа")

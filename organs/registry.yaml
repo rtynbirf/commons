@@ -1,9 +1,9 @@
-# Реестр органов COMMONS v0.1.1
+# Реестр органов COMMONS v0.2.1
 # Лицензии ВЕРИФИЦИРОВАНЫ живым GitHub API 2026-11-01 — матрица и расшифровка NOASSERTION: PROVENANCE.md.
-# Перед фактическим подключением лицензия дополнительно перепроверяется по файлу LICENSE upstream (закон иммунитета).
+# Перед фактическим подключением лицензия перепроверяется по API при подключении (PROVENANCE §4, ADR-0005).
 # rank/stars — снимок рейтинга 2026-10-26 (organs/top100-2026-10-26.yaml), не живой счётчик.
 meta:
-  version: 0.1.1
+  version: 0.2.1
   updated: 2026-11-01
   snapshot_date: 2026-10-26
   license_verified_date: 2026-11-01
@@ -19,18 +19,18 @@ organs:
   - {repo: f/prompts.chat, system: genome, role: коллекция промптов, rank: 51, stars: 174638, license_pre: NOASSERTION, mode: reference, status: studying}
 
   # --- МЕТАБОЛИЗМ ---
-  - {repo: ollama/ollama, system: metabolism, role: локальный инференс, rank: 43, stars: 184850, license_pre: MIT, mode: dependency, status: m1-adapter, note: адаптер в ядре 0.2; соединение — OLLAMA_HOST}
+  - {repo: ollama/ollama, system: metabolism, role: локальный инференс, rank: 43, stars: 184850, license_pre: MIT, mode: dependency, status: m1-adapter, note: адаптер в ядре 0.2; соединение — OLLAMA_HOST; замер — спайк S1 (spikes/s1-metabolism)}
   - {repo: ggml-org/llama.cpp, system: metabolism, role: инференс C/C++, rank: 83, stars: 132419, license_pre: MIT, mode: dependency, status: m1-adapter, fallback_for: ollama/ollama}
   - {repo: huggingface/transformers, system: metabolism, role: доступ к моделям, rank: 52, stars: 168192, license_pre: Apache-2.0, mode: dependency, status: planned-m2}
 
   # --- ЭФФЕКТОРЫ ---
   - {repo: openclaw/openclaw, system: effectors, role: автономное действие, rank: 6, stars: 393128, license_pre: MIT, mode: dependency, status: planned-m2}
-  - {repo: browser-use/browser-use, system: effectors, role: браузер, rank: 98, stars: 119187, license_pre: MIT, mode: dependency, status: m1-adapter}
+  - {repo: browser-use/browser-use, system: effectors, role: браузер, rank: 98, stars: 119187, license_pre: MIT, mode: dependency, status: m1-adapter, note: живой пульс — после приёмки S4 (ADR-0005)}
   - {repo: morluto/rea, system: effectors, role: реверс-инжиниринг агентами, rank: 7, stars: 389257, license_pre: MIT, mode: adapter, status: studying}
   - {repo: NousResearch/hermes-agent, system: effectors, role: автономный агент, rank: вне-топ-100, stars: 259386, license_pre: MIT, mode: reference, status: studying}
 
   # --- СЕНСОРИКА ---
-  - {repo: microsoft/markitdown, system: senses, role: документы в Markdown, rank: 37, stars: 192313, license_pre: MIT, mode: dependency, status: m1-adapter}
+  - {repo: microsoft/markitdown, system: senses, role: документы в Markdown, rank: 37, stars: 192313, license_pre: MIT, mode: dependency, status: connected, note: первый живой пульс 2026-11-01 — runs/2026-11-01-first-pulse, приёмка в CI}
   - {repo: firecrawl/firecrawl, system: senses, role: извлечение из веба, rank: 34, stars: 195544, license_pre: AGPL-3.0, mode: external, status: hosted-api-only}
   - {repo: x1xhlol/system-prompts-and-models-of-ai-tools, system: senses, role: корпус системных промптов, rank: 66, stars: 144270, license_pre: GPL-3.0, mode: reference, status: studying}
 

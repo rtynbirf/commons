@@ -19,6 +19,8 @@ path = [
   "brainstem/**",
   "tests/**",
   "scripts/**",
+  "spikes/**",
+  "runs/**",
   ".github/**",
   ".editorconfig",
   ".gitattributes",

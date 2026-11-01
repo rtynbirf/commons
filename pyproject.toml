@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "commons-organism"
-version = "0.2.0"
+version = "0.2.1"
 description = "COMMONS: исполнимое ядро организма — ствол мозга (SPEC-0001), синапсы MCP (SPEC-0002), кровь (SPEC-0003)"
 readme = "README.md"
 requires-python = ">=3.10"

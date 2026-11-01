@@ -16,7 +16,9 @@
 - [docs/repo-structure-study.md](docs/repo-structure-study.md): структура 10 эталонных репозиториев, TOP-10 перенятых паттернов.
 - [docs/practices-checklist.md](docs/practices-checklist.md): 16 практик open-source 2025–2026 и их статус здесь.
 - [docs/glossary.md](docs/glossary.md): словарь организма.
-- [docs/adr/](docs/adr/): журнал решений (почему так; ADR-0004 — исполнимое ядро 0.2).
+- [docs/adr/](docs/adr/): журнал решений (почему так; ADR-0004 — исполнимое ядро 0.2, ADR-0005 — ритуал подключения органа).
+- [runs/](runs/): жизнь организма — артефакты реальных прогонов (первый пульс: runs/2026-11-01-first-pulse/).
+- [spikes/](spikes/): харнессы спайков S1–S5 (замеры для ADR; S1 — spikes/s1-metabolism/).
 - [specs/](specs/): геном — SPEC-0001 ствол мозга, SPEC-0002 синапсы, SPEC-0003 кровь.
 - [brainstem/](brainstem/): исполняемый цикл PLAN→ACT→OBSERVE→REFLECT (ядро 0.2).
 - [synapse/](synapse/): MCP-шлюз + адаптеры органов (ollama, llama.cpp, универсальный MCP-stdio).
@@ -37,3 +39,4 @@
 5. Метрики — только из живого GitHub API с датой, либо пометка «предварительно».
 6. Новый орган подключается правкой манифеста (поле `adapter`), без правки шлюза (SPEC-0002).
 7. docs/selfmap.md не правится руками — только через `python3 scripts/selfmap.py`.
+8. Новый орган подключается по ритуалу ADR-0005: перепроверка лицензии живым API → живой пульс через синапсы (`runs/`) → приёмка в CI; артефакты прогона — собственный труд организма.

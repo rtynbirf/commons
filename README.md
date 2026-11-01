@@ -7,14 +7,14 @@
 ![license](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![REUSE](https://img.shields.io/badge/REUSE-3.3--compliant-blueviolet)
 ![provenance](https://img.shields.io/badge/provenance-verified%202026--11--01-brightgreen)
-![stage](https://img.shields.io/badge/stage-0.2.0%20core-orange)
+![stage](https://img.shields.io/badge/stage-0.2.1%20first--pulse-orange)
 [English](README.en.md)
 
 ## Что это
 
 COMMONS — проект-организм, собранный из топ-100 публичных GitHub-репозиториев. Снимок рейтинга от 26.10.2026 хранится как данные: [`organs/top100-2026-10-26.yaml`](organs/top100-2026-10-26.yaml).
 
-С **0.2.0 организм исполняется**: ствол мозга, синапсы и кровь — работающий код, чьи приёмки SPEC-0001..0003 гоняются в CI как тесты.
+С **0.2.0 организм исполняется**: ствол мозга, синапсы и кровь — работающий код, чьи приёмки SPEC-0001..0003 гоняются в CI как тесты. С **0.2.1 организм впервые коснулся мира**: сенсорика markitdown выполнила реальное действие через синапсы с полным трейсом крови — [`runs/2026-11-01-first-pulse/`](runs/2026-11-01-first-pulse/report.md).
 
 Мы сознательно **не** сливаем чужие кодовые базы в монолит: это породило бы десятки мёртвых ответвлений. Вместо этого:
 
@@ -74,7 +74,10 @@ commons/
 ├── brainstem/                     # СТВОЛ МОЗГА: канонический цикл (SPEC-0001)
 ├── synapse/                       # СИНАПСЫ: MCP-шлюз + адаптеры органов (SPEC-0002)
 ├── blood/                         # КРОВЬ: конверт + append-only журнал (SPEC-0003)
-├── tests/                         # 26 приёмок спек в форме pytest
+├── tests/                         # 35 приёмок спек в форме pytest
+├── runs/                          # ЖИЗНЬ: артефакты реальных прогонов организма
+│   └── 2026-11-01-first-pulse/    # первый живой пульс (сенсорика markitdown)
+├── spikes/                        # харнессы спайков S1–S5 (замеры для ADR)
 ├── organs/                        # РЕЕСТР ОРГАНОВ + карточки органов
 │   ├── registry.yaml              # кто подключён, режим, лицензия
 │   ├── top100-2026-10-26.yaml     # снимок рейтинга топ-100
@@ -106,16 +109,17 @@ commons/
 
 ```bash
 pip install '.[dev]'
-python -m pytest -q        # 26 приёмок SPEC-0001..0003
+python -m pytest -q        # 35 приёмок SPEC-0001..0003 + первый пульс
 python3 scripts/selfmap.py # организм рисует себя сам → docs/selfmap.md
 ```
 
 - **Ствол мозга** (`brainstem/`): цикл PLAN → ACT → OBSERVE → REFLECT, бюджет G3, HALT.
 - **Синапсы** (`synapse/`): шлюз читает манифест; veto необъявленного; замены по таблице `substitutions`; адаптеры загружаются из манифеста — новый орган = правка манифеста, не кода.
 - **Кровь** (`blood/`): конверт с обязательной ценой + append-only журнал; сессия реконструируется полностью.
-- **Органы M1**: адаптеры ollama (HTTP) и llama.cpp (запас), универсальный MCP-stdio для markitdown и browser-use; карточки — в `organs/<имен>/README.md`.
+- **Первый пульс** (`runs/2026-11-01-first-pulse/`): настоящий сенсорный орган (markitdown-mcp) превратил настоящий DOCX в Markdown; полный трейс в `blood.jsonl`, реконструкция и чек-лист DoD — в `report.md`.
+- **Органы M1**: адаптеры ollama (HTTP) и llama.cpp (запас), универсальный MCP-stdio для markitdown и browser-use; карточки — в `organs/<имен>/README.md`; харнесс спайка S1 — `spikes/s1-metabolism/`.
 
-Реальные соединения настраиваются на машине организма: `OLLAMA_HOST`, `LLAMA_SERVER_URL`, установленные `markitdown-mcp` / `browser-use-mcp`. В CI органы — фейки по контракту адаптера.
+Реальные соединения настраиваются на машине организма: `OLLAMA_HOST`, `LLAMA_SERVER_URL`, установленные `markitdown-mcp` / `browser-use-mcp`. В CI органы — фейки по контракту адаптера; пульс с настоящим markitdown воспроизводится командой `python3 scripts/first_pulse.py`.
 
 ## Дорожная карта
 

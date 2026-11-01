@@ -24,7 +24,7 @@ organs:
   - {repo: huggingface/transformers, system: metabolism, role: доступ к моделям, rank: 52, stars: 168192, license_pre: Apache-2.0, mode: dependency, status: planned-m2}
 
   # --- ЭФФЕКТОРЫ ---
-  - {repo: openclaw/openclaw, system: effectors, role: автономное действие, rank: 6, stars: 393128, license_pre: MIT, mode: dependency, status: planned-m2}
+  - {repo: openclaw/openclaw, system: effectors, role: автономное действие, rank: 6, stars: 393128, license_pre: MIT, mode: dependency, status: m2-adapter, note: 'эффектор 0.11.0 SPEC-0008 — CLI-мост с белым списком методов (openclaw/), живой gateway — на хосте владельца (PID 1); MIT перепроверено API 2026-11-02 (393 635 звёзд)'}
   - {repo: browser-use/browser-use, system: effectors, role: браузер, rank: 98, stars: 119187, license_pre: MIT, mode: dependency, status: m1-adapter, note: живой пульс — после приёмки S4 (ADR-0005)}
   - {repo: morluto/rea, system: effectors, role: реверс-инжиниринг агентами, rank: 7, stars: 389257, license_pre: MIT, mode: adapter, status: studying}
   - {repo: NousResearch/hermes-agent, system: effectors, role: автономный агент, rank: вне-топ-100, stars: 259386, license_pre: MIT, mode: reference, status: studying}

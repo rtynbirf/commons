@@ -33,7 +33,8 @@ flowchart LR
     system_prompts_and_models_of_ai_tools:::outside
   end
   subgraph effectors["Эффекторы"]
-    openclaw["openclaw<br/>MIT · dependency"]
+    openclaw["openclaw<br/>MIT · dependency<br/>MCP: abort, health, send_message, status"]
+    openclaw:::wired
     browser_use["browser-use<br/>MIT · dependency<br/>MCP: click, extract, navigate, screenshot"]
     browser_use:::wired
     rea["rea<br/>MIT · adapter"]

@@ -2,6 +2,26 @@
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/); версии — SemVer.
 
+## [0.11.0] — 2026-11-02
+
+### Added
+
+- **Эффектор получает руки** (M2, код следует за SPEC-0008, ADR-0010): openclaw подключён за стволом мозга — руки в каналах человека, не второй ствол мозга (исполняет импульсы, не решает):
+  * пакет `openclaw/` — мост через CLI `openclaw gateway call <method> --json` (документация протокола запрещает hand-roll handshake; тело не строит shell-строк): белый список методов `health`/`status`/`chat.send`/`chat.abort`, структурные параметры сериализуются телом в один аргумент `--params` JSON;
+  * `openclaw/reference/effector-policy.json` — данные-политика эффекта: `bind: loopback`, токен только env (`OPENCLAW_GATEWAY_TOKEN`), exec только под approvals — уроки CVE-2026-25253 и 341 вредоносного навыка ClawHub (февраль 2026) вошли в спеку;
+  * валидатор `python3 -m openclaw check` → `POLICY: N ok, M failed`; fail-closed: `bind-open` / `auth-weak` / `method-unknown` / `exec-open` — красный PR;
+  * запись органа в `synapse/mcp-manifest.yaml` (endpoint `${OPENCLAW_GATEWAY_URL}`, tools 1:1 в белый список, authority `localhost-only`/`none`).
+- **Спека SPEC-0008** («Эффектор — OpenClaw как внешние руки», спека до кода) + **ADR-0010** («мост CLI вместо самодельного протокола»).
+- **Гейт в CI**: отдельный job `effector` — `python3 -m openclaw check`.
+- **20 новых приёмок** (`tests/test_openclaw.py`), всего **253**: инъекция в тексте сообщения остаётся данными JSON (argv списком, shell не строится); метод вне белого списка — отказ без запуска бинарника; закрытый `chat.send` с непустым `idempotencyKey` (uuid4); MIT + dependency — барьер SPEC-0006 зелёный.
+- Верификация органа живым GitHub API 2026-11-02: `openclaw/openclaw` — MIT, 393 635 звёзд.
+
+### Changed
+
+- `pyproject.toml`: пакет `openclaw*` включён в дистрибуцию; команда `commons-openclaw`.
+- CI: новый job `effector` — параллельно validate/reuse/immune/pipeline/core (6 job'ов).
+- README/README.en: история дополнена 0.11.0; `organs/registry.yaml`: openclaw `planned-m2 → m2-adapter`.
+
 ## [0.10.0] — 2026-11-02
 
 ### Added

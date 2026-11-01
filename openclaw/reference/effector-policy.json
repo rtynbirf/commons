@@ -1,0 +1,9 @@
+{
+  "gateway_url": "http://127.0.0.1:18789",
+  "bind": "loopback",
+  "auth_token_env": "OPENCLAW_GATEWAY_TOKEN",
+  "allowed_methods": ["health", "status", "chat.send", "chat.abort"],
+  "exec_approval_required": true,
+  "session_key_default": "main",
+  "note": "Данные-политика эффекта (SPEC-0008): руки без воли. Расширение allowed_methods — только правкой спеки. Живой gateway разворачивает человек на своём хосте (PID 1); токен — только env."
+}

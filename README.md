@@ -7,14 +7,14 @@
 ![license](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![REUSE](https://img.shields.io/badge/REUSE-3.3--compliant-blueviolet)
 ![provenance](https://img.shields.io/badge/provenance-verified%202026--11--01-brightgreen)
-![stage](https://img.shields.io/badge/stage-0.10.0%20upstream--patch-orange)
+![stage](https://img.shields.io/badge/stage-0.11.0%20hands--on-orange)
 [English](README.en.md)
 
 ## Что это
 
 COMMONS — проект-организм, собранный из топ-100 публичных GitHub-репозиториев. Снимок рейтинга от 26.10.2026 хранится как данные: [`organs/top100-2026-10-26.yaml`](organs/top100-2026-10-26.yaml).
 
-С **0.2.0 организм исполняется**, с **0.2.1 впервые коснулся мира** (сенсорика), а с **0.2.2 думает своим метаболизмом**: сенсорика markitdown и метаболизм llama.cpp прошли один трейс — документ превращён в Markdown и сжат до сути, токены посчитаны сервером в крови — [`runs/2026-11-01-organism-pulse/`](runs/2026-11-01-organism-pulse/report.md). DoD M1 закрыт. С **0.3.0 все пять спайков исследовательской программы получили честные харнессы** (S2 замерен, S1/S3/S4/S5 ждут живой хост), а приёмки спайков живут в CI. С **0.4.0 организм живёт во времени**: PID 1 — демон-сердцебиение (`boot → organ.health → shutdown`), смерть всегда записана — [`runs/2026-11-01-pid1/`](runs/2026-11-01-pid1/). С **0.5.0 у организма есть ген памяти** (SPEC-0005: память — производная крови), решение по движкам (ADR-0007) и второй автопортрет — excalidraw-карта из живого реестра. С **0.6.0 память исполняется**: граф + вектора + replay из крови, PLAN читает её read-only, движок — орган в манифесте. С **0.7.0 иммунитет исполняется**: лицензионный барьер как код (SPEC-0006, ADR-0008) — матрица лицензий в данных, fail-closed на неизвестное, `commons-immune` красит PR раньше, чем AGPL попадёт в тело. С **0.8.0 метаболизм в бюджете** (SPEC-0001 G3): лимиты на трейс и на вызов — поле `budget` в манифесте, порог → событие `alert` в крови, исчерпание → HALT. С **0.9.0 у организма есть внешний конвейер** (SPEC-0007, ADR-0009): n8n — внешний узел (fair-code, не встраивается), референс-развёртывание и воркфлоу — данные с белым списком команд; валидатор `commons-pipeline` красит PR раньше, чем произвольная команда попадёт в конвейер. С **0.10.0 организм отдаёт первый патч upstream** (ROADMAP M3, ADR-0001): верифицированный docs-vs-code дрейф в n8n-docs (MCP Server Trigger — OAuth2-опция и незадокументированные параметры), патч в форке — за PR остался один шаг человека; карта занятости баг-очередей органов — [`runs/2026-11-02-upstream-patch/`](runs/2026-11-02-upstream-patch/report.md).
+С **0.2.0 организм исполняется**, с **0.2.1 впервые коснулся мира** (сенсорика), а с **0.2.2 думает своим метаболизмом**: сенсорика markitdown и метаболизм llama.cpp прошли один трейс — документ превращён в Markdown и сжат до сути, токены посчитаны сервером в крови — [`runs/2026-11-01-organism-pulse/`](runs/2026-11-01-organism-pulse/report.md). DoD M1 закрыт. С **0.3.0 все пять спайков исследовательской программы получили честные харнессы** (S2 замерен, S1/S3/S4/S5 ждут живой хост), а приёмки спайков живут в CI. С **0.4.0 организм живёт во времени**: PID 1 — демон-сердцебиение (`boot → organ.health → shutdown`), смерть всегда записана — [`runs/2026-11-01-pid1/`](runs/2026-11-01-pid1/). С **0.5.0 у организма есть ген памяти** (SPEC-0005: память — производная крови), решение по движкам (ADR-0007) и второй автопортрет — excalidraw-карта из живого реестра. С **0.6.0 память исполняется**: граф + вектора + replay из крови, PLAN читает её read-only, движок — орган в манифесте. С **0.7.0 иммунитет исполняется**: лицензионный барьер как код (SPEC-0006, ADR-0008) — матрица лицензий в данных, fail-closed на неизвестное, `commons-immune` красит PR раньше, чем AGPL попадёт в тело. С **0.8.0 метаболизм в бюджете** (SPEC-0001 G3): лимиты на трейс и на вызов — поле `budget` в манифесте, порог → событие `alert` в крови, исчерпание → HALT. С **0.9.0 у организма есть внешний конвейер** (SPEC-0007, ADR-0009): n8n — внешний узел (fair-code, не встраивается), референс-развёртывание и воркфлоу — данные с белым списком команд; валидатор `commons-pipeline` красит PR раньше, чем произвольная команда попадёт в конвейер. С **0.10.0 организм отдаёт первый патч upstream** (ROADMAP M3, ADR-0001): верифицированный docs-vs-code дрейф в n8n-docs (MCP Server Trigger — OAuth2-опция и незадокументированные параметры), патч в форке — за PR остался один шаг человека; карта занятости баг-очередей органов — [`runs/2026-11-02-upstream-patch/`](runs/2026-11-02-upstream-patch/report.md). С **0.11.0 у организма есть руки** (SPEC-0008, ADR-0010): openclaw подключён за стволом мозга как эффектор — мост через CLI `openclaw gateway call` с белым списком методов (health/status/chat.send/chat.abort); параметры — данные JSON, shell не строится; руки без воли — исполняют импульсы ствола, не решают; токен и живой gateway — у человека (PID 1).
 
 Мы сознательно **не** сливаем чужие кодовые базы в монолит: это породило бы десятки мёртвых ответвлений. Вместо этого:
 
@@ -74,14 +74,16 @@ commons/
 │   ├── SPEC-0004-pid1.md
 │   ├── SPEC-0005-memory.md
 │   ├── SPEC-0006-immunity.md
-│   └── SPEC-0007-pipeline.md
+│   ├── SPEC-0007-pipeline.md
+│   └── SPEC-0008-effector.md
 ├── brainstem/                     # СТВОЛ МОЗГА: канонический цикл (SPEC-0001) + живой организм PID 1 (SPEC-0004)
 ├── synapse/                       # СИНАПСЫ: MCP-шлюз + адаптеры органов (SPEC-0002)
 ├── blood/                         # КРОВЬ: конверт + append-only журнал (SPEC-0003) + lock одиночности
 ├── memory/                        # ПАМЯТЬ: граф + вектора + replay из крови (SPEC-0005)
 ├── immune/                        # ИММУНИТЕТ: лицензионный барьер тела (SPEC-0006) — матрица данных + commons-immune
 ├── pipeline/                      # КОНВЕЙЕР: n8n как внешний узел (SPEC-0007) — воркфлоу-данные + commons-pipeline
-├── tests/                         # 233 приёмок спек, пульсов, спайков, иммунитета, бюджета и конвейера в форме pytest
+├── openclaw/                      # ЭФФЕКТОР: openclaw как внешние руки (SPEC-0008) — CLI-мост + commons-openclaw
+├── tests/                         # 253 приёмок спек, пульсов, спайков, иммунитета, бюджета, конвейера и эффекта в форме pytest
 ├── runs/                          # ЖИЗНЬ: артефакты реальных прогонов организма
 │   ├── 2026-11-01-first-pulse/    # первый пульс (сенсорика markitdown)
 │   ├── 2026-11-01-organism-pulse/ # двуорганный пульс (сенсорика + метаболизм)
@@ -103,7 +105,7 @@ commons/
 │   ├── practices-checklist.md · glossary.md · repo-practices-2026.md
 │   ├── templates/                 # шаблоны: спека · ADR · карточка органа
 │   └── adr/                       # журнал решений (почему)
-└── .github/                       # CI (валидация + REUSE + immune + pipeline + pytest) и шаблоны
+└── .github/                       # CI (валидация + REUSE + immune + pipeline + effector + pytest) и шаблоны
 ```
 
 ## Быстрый старт
@@ -119,9 +121,10 @@ commons/
 
 ```bash
 pip install '.[dev]'
-python -m pytest -q        # 233 приёмок SPEC-0001..0007, пульсов, спайков, иммунитета, бюджета и конвейера
+python -m pytest -q        # 253 приёмок SPEC-0001..0008, пульсов, спайков, иммунитета, бюджета, конвейера и эффекта
 python3 -m immune          # лицензионный барьер тела → IMMUNE: 40 ok, 0 failed
 python3 -m pipeline        # валидатор внешнего конвейера n8n → PIPELINE: 4 ok, 0 failed
+python3 -m openclaw check  # валидатор политики эффекта → POLICY: 1 ok, 0 failed
 python3 scripts/selfmap.py # организм рисует себя сам → docs/selfmap.md
 python3 scripts/organ_map.py  # второй автопортрет → docs/organ-map.excalidraw
 python3 scripts/pid1.py --interval 10 --max-beats 3   # живой ритм: boot → heartbeat → shutdown
@@ -136,14 +139,15 @@ python3 scripts/pid1.py --interval 10 --max-beats 3   # живой ритм: boo
 - **Память** (`memory/`, SPEC-0005, ADR-0007): исполняется с 0.6.0 — `SQLiteVectorIndex` (базовая линия ADR-0007) + `MemoryGraph` + replay из крови; PLAN читает read-only, индексация после REFLECT, движок — орган в манифесте (G2); живой embedding — от метаболизма (спайк S6).
 - **Иммунитет** (`immune/`, SPEC-0006, ADR-0008): исполняется с 0.7.0 — барьер `(license, mode) → вердикт`: матрица правил — данные (`immune/license-matrix.yaml`), fail-closed на неизвестную лицензию (G1), матрица меняется правкой YAML без кода (G2), каждый вердикт несёт правило и причину (G3); гейт `python -m immune` в CI — AGPL/fair-code/NOASSERTION не встраиваются (`restricted` вне core_modes), dify — `conditional` в adapter.
 - **Конвейер** (`pipeline/`, SPEC-0007, ADR-0009): исполняется с 0.9.0 — n8n как внешний узел: fair-code не встраивается (реестр: `not-embeddable`, барьер SPEC-0006 пропускает только в `external`); референс-развёртывание (`pipeline/n8n/docker-compose.yml`) и воркфлоу (`pipeline/n8n/workflows/*.json`) — данные: команды узлов ограничены белым списком точек входа, произвольный shell и метасимволы — отказ (G1 fail-closed); пульс — только через ствол мозга; валидатор `python -m pipeline` в CI.
+- **Эффектор** (`openclaw/`, SPEC-0008, ADR-0010): исполняется с 0.11.0 — openclaw как внешние руки: мост через CLI `openclaw gateway call` (протокол запрещает hand-roll handshake), белый список методов health/status/chat.send/chat.abort (расширение — только правка спеки, G2), параметры сериализуются телом — инъекция остаётся данными JSON; данные-политика `openclaw/reference/effector-policy.json`: bind loopback, токен только env, exec под approvals (уроки CVE-2026-25253 и вредоносных навыков ClawHub); руки без воли — исполняют импульсы ствола, не решают; валидатор `python3 -m openclaw check` в CI; живой gateway — на хосте владельца (PID 1).
 - **Автопортреты**: `python3 scripts/selfmap.py` → mermaid; `python3 scripts/organ_map.py` → `docs/organ-map.excalidraw` (36 органов, 13 систем, гейт свежести `--check`).
 
-Реальные соединения настраиваются на машине организма: `OLLAMA_HOST`, `LLAMA_SERVER_URL` (пример: `llama-server -m qwen2.5-0.5b-q4km.gguf --port 8080`), установленные `markitdown-mcp` / `browser-use-mcp`. Пульсы воспроизводятся: `python3 scripts/first_pulse.py` и `python3 scripts/organism_pulse.py`. Недоступный орган не останавливает сердце: `organ.health healthy=false` — и ритм идёт.
+Реальные соединения настраиваются на машине организма: `OLLAMA_HOST`, `LLAMA_SERVER_URL` (пример: `llama-server -m qwen2.5-0.5b-q4km.gguf --port 8080`), установленные `markitdown-mcp` / `browser-use-mcp`, живой gateway openclaw (`OPENCLAW_GATEWAY_URL` + `OPENCLAW_GATEWAY_TOKEN`, см. [`openclaw/README.md`](openclaw/README.md)). Пульсы воспроизводятся: `python3 scripts/first_pulse.py` и `python3 scripts/organism_pulse.py`. Недоступный орган не останавливает сердце: `organ.health healthy=false` — и ритм идёт.
 
 ## Дорожная карта
 
 - **M1 — Ядро** (недели 1–2): ✅ закрыт — цикл, шлюз, кровь, DoD двуорганным пульсом; остаток — живой эффектор (приёмка S4).
-- **M2 — Нервная система** (недели 3–4): организм живёт во времени — ✅ PID 1 (0.4.0); память — ✅ базовая реализация по SPEC-0005 (0.6.0): граф + вектора + replay, G1/G2/G3 в CI; живой движок — метрики S6 на хосте; карта органов в excalidraw — ✅ закрыта (0.5.0); эффектор openclaw и живые замеры S1/S3/S4/S5 — на хосте организма.
+- **M2 — Нервная система** (недели 3–4): организм живёт во времени — ✅ PID 1 (0.4.0); память — ✅ базовая реализация по SPEC-0005 (0.6.0): граф + вектора + replay, G1/G2/G3 в CI; живой движок — метрики S6 на хосте; карта органов в excalidraw — ✅ закрыта (0.5.0); эффектор openclaw — ✅ подключён за стволом мозга (0.11.0): CLI-мост с белым списком, живой gateway — на хосте; живые замеры S1/S3/S4/S5 — на хосте организма.
 - **M3 — Иммунитет** (недели 5–6): ✅ лицензионная матрица в CI (0.7.0) — SPEC-0006 + ADR-0008, пакет `immune/`, гейт `commons-immune`; ✅ бюджет метаболизма (0.8.0) — лимиты на трейс и на вызов (`budget` в манифесте), `alert`/`halt` по G3; ✅ внешний конвейер n8n (0.9.0) — SPEC-0007 + ADR-0009, пакет `pipeline/`, гейт `commons-pipeline`; первые патчи в upstream — дальше.
 
 Подробно и с критериями готовности: [`ROADMAP.md`](ROADMAP.md).

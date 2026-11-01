@@ -28,6 +28,8 @@ Since **0.8.0 metabolism is budgeted** (SPEC-0001 G3): trace-level and per-call 
 
 Since **0.9.0 the organism has an external pipeline** ([SPEC-0007](specs/SPEC-0007-pipeline.md), [ADR-0009](docs/adr/ADR-0009-external-pipeline.md)): n8n stays an external node (fair-code, not embeddable — the registry keeps it in `external` mode); the reference deployment and exported workflows are **data** with a command whitelist (organ entry points only), arbitrary shell fails validation (G1 fail-closed); the pulse goes only through the brainstem (`commons-pid1`); the `python -m pipeline` gate in CI turns a violating PR red.
 
+Since **0.11.0 the organism has hands** ([SPEC-0008](specs/SPEC-0008-effector.md), [ADR-0010](docs/adr/ADR-0010-cli-bridge-effector.md)): openclaw is connected behind the brainstem as the effector — a CLI bridge `openclaw gateway call` with a method whitelist (`health`/`status`/`chat.send`/`chat.abort`); parameters are structured data serialized by the body (no shell strings are ever built); hands without will — they execute brainstem impulses, they don't decide; the live gateway and the token stay with the human (PID 1).
+
 ## Core artifacts
 
 | Artifact | Purpose |
@@ -35,6 +37,7 @@ Since **0.9.0 the organism has an external pipeline** ([SPEC-0007](specs/SPEC-00
 | `specs/` | Genome: canonical agent loop, MCP synapse contract, blood envelope contract, living organism (PID 1), memory, license immunity |
 | `immune/` | License barrier: rules-as-data matrix + `(license, mode) → verdict` + `commons-immune` CI gate |
 | `pipeline/` | External pipeline (n8n): reference deployment + workflow data + `commons-pipeline` CI gate |
+| `openclaw/` | Effector (openclaw as hands, SPEC-0008): CLI bridge + method whitelist + policy data + `commons-openclaw` CI gate |
 | `organs/registry.yaml` | Which organs are connected, in which mode (dependency / adapter / external / reference / substrate), with verified licenses |
 | `synapse/mcp-manifest.yaml` | Declarative manifest of organs as MCP servers |
 | `blood/envelope.schema.json` | JSON Schema of the event envelope (every call carries its cost) |

@@ -102,9 +102,9 @@ def test_manifest_clean(matrix) -> None:
     """Реальный манифест синапсов: run_check == 0 и каждая запись ok (в том числе через check_entries)."""
     code, text = gate([REAL_MANIFEST])
     assert code == 0
-    assert "IMMUNE: 4 ok, 0 failed" in text
+    assert "IMMUNE: 5 ok, 0 failed" in text
     decisions = check_entries(load_organs(REAL_MANIFEST), matrix)
-    assert len(decisions) == 4
+    assert len(decisions) == 5
     for d in decisions:
         assert d.ok, f"{d.organ}: {d.rule} — {d.reason}"
 
@@ -157,7 +157,7 @@ def test_veto_agpl_dependency_rejected(tmp_path: Path) -> None:
     assert "FAIL" in text
     assert "malicious-organ" in text
     summary = next(line for line in text.splitlines() if line.startswith("IMMUNE:"))
-    assert "FAIL" in summary and "4 ok" in summary and "1 failed" in summary
+    assert "FAIL" in summary and "5 ok" in summary and "1 failed" in summary
 
 
 def test_veto_noassertion_dependency_rejected(tmp_path: Path) -> None:

@@ -12,7 +12,7 @@ MANIFEST = REPO_ROOT / "synapse" / "mcp-manifest.yaml"
 
 def test_real_manifest_loads_through_gateway() -> None:
     gateway = Gateway(MANIFEST)
-    assert set(gateway.organ_names) == {"ollama", "llama.cpp", "markitdown", "browser-use"}
+    assert set(gateway.organ_names) == {"ollama", "llama.cpp", "markitdown", "browser-use", "openclaw"}
 
 
 def test_every_manifest_organ_has_adapter() -> None:

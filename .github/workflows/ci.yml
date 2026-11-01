@@ -93,6 +93,18 @@ jobs:
       - name: Валидатор конвейера (воркфлоу + compose)
         run: python3 -m pipeline
 
+  effector:
+    # Эффектор: openclaw как внешние руки (SPEC-0008, ADR-0010) — CLI-мост,
+    # белый список методов, данные-политика fail-closed (CVE-2026-25253, ClawHub)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Валидатор эффекта (политика + белый список)
+        run: python3 -m openclaw check
+
   core:
     # Исполнимое ядро 0.2: приёмки спек SPEC-0001..0003 как pytest (ADR-0004)
     runs-on: ubuntu-latest

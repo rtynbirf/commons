@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2026 COMMONS contributors
 # SPDX-License-Identifier: Apache-2.0
 #
-# Донорские карты органов COMMONS (SPEC-0008, ADR-0010) — данные, не код.
+# Донорские карты органов COMMONS (SPEC-0009, ADR-0011) — данные, не код.
 # Правила меняются правкой этого файла; immune/donation.py — только механизм применения.
 # Факты типирования — живое чтение upstream на дату (PROVENANCE.md §2): факты не выдумываются,
 # каждая запись evidence несёт дату, https-URL и что именно проверено.
@@ -10,7 +10,7 @@
 # субстрат, образование) — «нет карты — донорства нет» (G1) защищает и их.
 version: 0.2.0
 updated: 2026-11-02
-spec: SPEC-0008
+spec: SPEC-0009
 
 # Протоколы upstream (как орган принимает кровь) и решения тела.
 protocols: [dco, none-observed, cla, unverified]
@@ -275,7 +275,7 @@ cards:
         url: "https://raw.githubusercontent.com/Genymobile/scrcpy/master/LICENSE"
         fact: "лицензия Apache-2.0"
 
-# Карт нет — донорства нет (G1 fail-closed, SPEC-0008): орган без карты не готов к донорству.
+# Карт нет — донорства нет (G1 fail-closed, SPEC-0009): орган без карты не готов к донорству.
 # Без карт остались reference/substrate/education-органы реестра (антропics/skills, f/prompts.chat,
 # langflow, hermes-agent, Awesome-Hacking, субстрат linux/kubernetes/node/go/rust, образование):
 # тело их не патчит по определению режима — G1 защищает и их.

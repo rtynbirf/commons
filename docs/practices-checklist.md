@@ -16,7 +16,7 @@ DCO, SemVer, docs-as-code, spec-driven development, MCP, SBOM) с вердикт
 | 6 | CONTRIBUTING под документы (спеки через PR, стиль, глоссарий) | MUST | ✅ 0.1.0; 0.1.1 добавляет DCO и провенанс-правила |
 | 7 | ADR-журнал `docs/adr/NNNN-*` (Статус/Контекст/Решение/Последствия) | MUST | ✅ 0.1.0 (ADR-0001..0003) + шаблон 0.1.1 |
 | 8 | CITATION.cff — цитируемость репозитория | SHOULD | ✅ 0.1.1 |
-| 9 | DCO (Signed-off-by) вместо CLA | SHOULD | ✅ 0.1.1: обязателен для всех коммитов; 0.12.0: распространено на исходящее донорство (SPEC-0008, ADR-0010) — гейт `commons-transplant`: кровь уходит в upstream только органам без CLA-ошейника; 0.13.0: карты `organs/donation.yaml` — весь реестр типирован живыми фактами с датой |
+| 9 | DCO (Signed-off-by) вместо CLA | SHOULD | ✅ 0.1.1: обязателен для всех коммитов; 0.13.0: распространено на исходящее донорство (SPEC-0009, ADR-0011) — гейт `commons-transplant`: кровь уходит в upstream только органам без CLA-ошейника; 0.14.0: карты `organs/donation.yaml` — весь реестр типирован живыми фактами с датой |
 | 10 | SemVer + теги + GitHub Releases как датированные якоря | SHOULD | ✅ релизы v0.1.0 и v0.1.1; CHANGELOG по Keep a Changelog |
 | 11 | Docs-as-code: markdown в git, проверка текста в CI | MUST | ✅ 0.1.0 (валидация YAML/JSON + статус спек); markdownlint — LATER |
 | 12 | Spec-driven development: поведение в спеках, исполняемых агентами | MUST | ✅ геном `specs/`, шаблоны в `docs/templates/`; S5 — приёмка |

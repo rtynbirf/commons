@@ -1,4 +1,4 @@
-"""Приёмки донорского протокола (SPEC-0008, ADR-0010).
+"""Приёмки донорского протокола (SPEC-0009, ADR-0011).
 
 Тело дарит кровь только по рукопожатию (DCO) и тому, кто дарит. Ошейник (CLA)
 не подписывается; непотипированный орган не получает донорства; карта без
@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DONATION = REPO_ROOT / "organs" / "donation.yaml"
 REGISTRY = REPO_ROOT / "organs" / "registry.yaml"
 MATRIX = REPO_ROOT / "immune" / "license-matrix.yaml"
-SPEC = REPO_ROOT / "specs" / "SPEC-0008-transplant.md"
+SPEC = REPO_ROOT / "specs" / "SPEC-0009-transplant.md"
 
 EVIDENCE_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 SPEC_BULLET = re.compile(r"^[ \t]*- `([^`]+)` — ", re.M)
@@ -301,7 +301,7 @@ def test_bad_evidence_entries_fail(tmp_path: Path) -> None:
 
 
 def test_spec_enums_match_data_and_code() -> None:
-    """Словари протоколов и решений SPEC-0008 == данные карт == механизм."""
+    """Словари протоколов и решений SPEC-0009 == данные карт == механизм."""
     text = SPEC.read_text(encoding="utf-8")
     contract = text.split("## Контракт", 1)[1].split("## Гарантии", 1)[0]
     bullets = SPEC_BULLET.findall(contract)

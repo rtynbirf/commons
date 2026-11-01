@@ -6,7 +6,7 @@
 
 ### Added
 
-- **Типирование реестра до конца** (M3, SPEC-0008 v0.1.1) — 12 новых донорских карт живым чтением upstream 2026-11-02 (evidence с датой и https-URL):
+- **Типирование реестра до конца** (M3, SPEC-0009 v0.1.1) — 12 новых донорских карт живым чтением upstream 2026-11-02 (evidence с датой и https-URL):
   * **Ошейников не обнаружено → `donate`**: `github/spec-kit` (MIT; AI-вклад — Assisted-by трейлером), `openclaw/openclaw` (MIT; лимит 20 PR, фичи — через issue), `langchain-ai/langchain` (MIT; крупные PR — issue-first), `Graphify-Labs/graphify` (Apache-2.0; AI-авторство — Co-Authored-By), `shadcn-ui/ui`, `vercel/next.js` (описания PR — человеческие), `excalidraw/excalidraw`, `Genymobile/scrcpy` (файлов вклада нет вовсе);
   * **Путь агенту-донору закрыт правилом органа → `patch-inside`**: `huggingface/transformers` («first-time contributors should not use code agents», автономным агентам PR не открывать), `morluto/rea` («AI agents must leave these declarations to a human»);
   * **Ошейник вшит в LICENSE → `patch-inside`**: `langgenius/dify` — «License and Contributor Agreement»: производитель может менять соглашение, вклады идут в коммерческие операции;
@@ -17,7 +17,7 @@
 
 ### Changed
 
-- `specs/SPEC-0008` v0.1.1: приёмка «unverified не имеет donate» перепроверена на механизме; cla-органы в приёмке пополнены dify.
+- `specs/SPEC-0009` v0.1.1: приёмка «unverified не имеет donate» перепроверена на механизме; cla-органы в приёмке пополнены dify.
 - ROADMAP M3: типирование реестра закрыто; первые патчи — типированным донорским органам, перед каждым PR — перепроверка карты.
 - `docs/practices-checklist.md` #9: карты донорства — весь реестр типирован живыми фактами с датой.
 - llms.txt: инвариант 10 пополнился dify (ошейник в LICENSE) и правилом органов против агентов-доноров.
@@ -26,8 +26,8 @@
 
 ### Added
 
-- **Трансплантология — донорский протокол органов** (M3; SPEC-0008 v0.1.0 — спека раньше кода, ADR-0010):
-  * **Исходящий иммунитет**: SPEC-0006 решает, что входит в тело; SPEC-0008 — куда тело отдаёт свою кровь. Аксиома: дарим только по рукопожатию (DCO) и тому, кто дарит; CLA-ошейник не подписывается — патч живёт внутри организма;
+- **Трансплантология — донорский протокол органов** (M3; SPEC-0009 v0.1.0 — спека раньше кода, ADR-0011):
+  * **Исходящий иммунитет**: SPEC-0006 решает, что входит в тело; SPEC-0009 — куда тело отдаёт свою кровь. Аксиома: дарим только по рукопожатию (DCO) и тому, кто дарит; CLA-ошейник не подписывается — патч живёт внутри организма;
   * **Донорские карты** — данные `organs/donation.yaml`: факты живого типирования upstream 2026-11-02 (evidence с датой и https-URL): microsoft/markitdown, browser-use/browser-use, ollama/ollama — ошейников не обнаружено (`donate`); facebook/react — CLA в шаблоне PR и метки «CLA Signed» (`patch-inside`); n8n-io/n8n — CLA («I give n8n permission to license my contributions on any terms they like») + fair-code (`consume-only`); ggml-org/llama.cpp — не типирован (`patch-inside` до типирования);
   * **Механизм** `immune/donation.py` — чистая функция без сети: отказы `collar` / `untyped` / `not-mutual` (дарим тому, кто дарит — лицензия из allowed матрицы SPEC-0006) / `unknown-organ` / `duplicate` / `missing`; fail-closed (G1), данные не код (G2), итог `TRANSPLANT: N ok, M failed` (G3);
   * **CI-гейт**: job `transplant` (`python -m immune.donation`, консольный скрипт `commons-transplant`) — рядом с `commons-immune`.
@@ -35,10 +35,10 @@
 
 ### Changed
 
-- ROADMAP M3: «первые патчи в upstream» — только типированным по SPEC-0008 органам (markitdown, browser-use, ollama) с перепроверкой карты перед каждым PR; react и n8n получают улучшения внутри тела.
+- ROADMAP M3: «первые патчи в upstream» — только типированным по SPEC-0009 органам (markitdown, browser-use, ollama) с перепроверкой карты перед каждым PR; react и n8n получают улучшения внутри тела.
 - `docs/practices-checklist.md`: практика #9 «DCO вместо CLA» распространена на исходящее донорство (v0.3.0, волна 3).
 - PROVENANCE §2: донорские факты (CLA/DCO/лицензии upstream) фиксируются живым чтением upstream-файлов на дату.
-- llms.txt: SPEC-0008, `organs/donation.yaml`, инвариант 10 (кровь наружу — только по донорской карте).
+- llms.txt: SPEC-0009, `organs/donation.yaml`, инвариант 10 (кровь наружу — только по донорской карте).
 
 ## [0.12.0] — 2026-11-02
 

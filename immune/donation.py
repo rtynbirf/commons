@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 COMMONS contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Донорский протокол COMMONS (SPEC-0008, ADR-0010): карта -> вердикт.
+"""Донорский протокол COMMONS (SPEC-0009, ADR-0011): карта -> вердикт.
 
 Трансплантология — исходящий иммунитет: куда тело отдаёт свою кровь. Данные —
 organs/donation.yaml (карты донорства с evidence и датой); этот модуль — только
@@ -142,7 +142,7 @@ def verdict(
         return Decision(False, organ_name, protocol_s, decision_s, "unknown-organ", f"орган '{repo_s}' отсутствует в живом реестре — кровь отдаётся только органам тела")
 
     if protocol_s == "cla" and decision_s == "donate":
-        return Decision(False, organ_name, protocol_s, decision_s, "collar", "CLA — ошейник: права на кровь переходят хозяину репозитория; донорство запрещено, патч живёт внутри организма (SPEC-0008)")
+        return Decision(False, organ_name, protocol_s, decision_s, "collar", "CLA — ошейник: права на кровь переходят хозяину репозитория; донорство запрещено, патч живёт внутри организма (SPEC-0009)")
 
     if protocol_s == "unverified" and decision_s == "donate":
         return Decision(False, organ_name, protocol_s, decision_s, "untyped", "орган не типирован: сначала донорское типирование, потом донорство")
@@ -259,7 +259,7 @@ def main(argv=None) -> int:
     """CLI: python -m immune.donation [--donation PATH] [--registry PATH] [--matrix PATH]."""
     parser = argparse.ArgumentParser(
         prog="python -m immune.donation",
-        description="Донорский протокол COMMONS (SPEC-0008): карты донорства органов — дарим только по рукопожатию и тому, кто дарит.",
+        description="Донорский протокол COMMONS (SPEC-0009): карты донорства органов — дарим только по рукопожатию и тому, кто дарит.",
     )
     parser.add_argument("--donation", type=pathlib.Path, default=None, help="путь к картам донорства (по умолчанию organs/donation.yaml)")
     parser.add_argument("--registry", type=pathlib.Path, default=None, help="путь к реестру органов (по умолчанию organs/registry.yaml)")

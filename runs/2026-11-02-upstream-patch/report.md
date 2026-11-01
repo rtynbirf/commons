@@ -1,0 +1,88 @@
+<!--
+SPDX-FileCopyrightText: 2026 COMMONS contributors
+SPDX-License-Identifier: Apache-2.0
+-->
+
+# Апстрим-патч № 1: n8n-docs — MCP Server Trigger
+
+Дата: 2026-11-02 · Волна: ROADMAP M3 «Первые патчи, отправленные в upstream-органы»
+Итог: **патч подготовлен и вытолкнут в форк** (коммит 7f7270a, DCO); создание PR
+заблокировано полномочиями токена — остался один шаг человека.
+
+## Цель
+
+Закон обмена (ADR-0001): органы не форкаем — отдаём патчи в upstream. До этого дня
+организм только брал (реестр, конвейер); волна делает первый возврат.
+
+## Разведка: карта занятости баг-очередей органов (2026-11-02)
+
+Живая GitHub API разведка показала: первый же поиск «свободных» багов упирается в
+очереди чужих PR — жанр выработан до нас. Правило «не становиться 11-м дубликатом»:
+
+| Орган | Кандидат | Вердикт |
+|---|---|---|
+| microsoft/markitdown | #53 currency (метка «open for contribution») | **10+ открытых PR** с 2024 — очередь |
+| microsoft/markitdown | whitespace/PDF | **63 PR** по жанру |
+| browser-use/browser-use | #6209 SchemaOptimizer | репортёр сам несёт PR — территория занята |
+| langflow-ai/langflow | #15869 cp1254 | 3 открытых PR (#15903 — ровно наш план фикса) |
+| langflow-ai/langflow | #15859 дата-границы теста | PR #15860 |
+| github/spec-kit | #4819 preset resolve | needs-triage; репортёр: «фикстура не исполнена независимо» — дефект не подтверждён |
+| n8n-io/n8n-docs | MCP Server Trigger / Execute Command docs | **свободно: 0 открытых PR** к обеим страницам |
+
+Выбор: n8n-docs — орган, для которого организм только что собрал конвейер (0.9.0);
+MCP — наша компетенция (SPEC-0002); страницы рукотворные (`generated: true` нет).
+
+## Дефект (верифицирован по исходнику узла)
+
+Страница `docs/integrations/builtin/core-nodes/n8n-nodes-langchain.mcptrigger.md`
+не знает о параметрах, которые уже в узле (`packages/@n8n/nodes-langchain/nodes/mcp/McpTrigger/McpTrigger.node.ts`,
+`version: [1, 1.1, 2, 2.1]`):
+
+- Authentication: отсутствует опция **n8n User Auth (OAuth2)** (v2+; в коде — между None и Bearer Auth);
+- не задокументированы: **Require Workflow Execute Permission** (v2+, default true),
+  **Trusted Source Name or ID** (v2+), **Include User in Output** (v2.1+, default true);
+- параметр **Instructions** (все версии; текст, отдаваемый MCP-клиенту при подключении)
+  не упомянут вовсе.
+
+Проверки: 0 вхождений «OAuth2» / «Instructions» / «Include User» / «Trusted Source»
+на странице (9307 байт); 0 открытых PR к файлу; формулировки патча взяты дословно
+из описаний параметров в исходнике узла.
+
+## Патч
+
+- Форк: `rtynbirf/n8n-docs`, ветка `docs/mcp-trigger-parameters`, коммит **7f7270a** (DCO).
+- Изменения: +1 опция аутентификации; +3 буллета параметров OAuth2; +секция Instructions
+  между Path и Templates. Заголовки с якорями — по конвенции репозитория.
+- Рядом с отчётом: `mcptrigger.patch` (полный diff), `pr-body.md` (готовое тело PR
+  по шаблону n8n-docs: Summary / Related PRs / Preview / чек-лист).
+
+## Блокер: один шаг человека
+
+`POST /repos/n8n-io/n8n-docs/pulls` → **403 «Resource not accessible by personal
+access token»**: fine-grained PAT не имеет права создавать PR в чужих публичных
+репозиториях (push в собственный форк — есть, PR вверх по потоку — нет). Патч целиком
+в форке; осталось одно:
+
+- открыть compare-URL и вставить тело из `pr-body.md`:
+  <https://github.com/n8n-io/n8n-docs/compare/main...rtynbirf:n8n-docs:docs/mcp-trigger-parameters>
+- либо выдать токену право PR в публичных репозиториях (classic PAT с `public_repo`) —
+  тогда волна дожмёт PR сама при следующем запуске.
+
+После открытия PR репозиторий потребует **CLA** — подписывает человек, один раз.
+
+## Урок волны: фантомный дефект, пойманный fail-closed
+
+Первой ласточкой казался «сломанный markdown-линк» в Execute Command README
+(«running ultiple commands](...)» — так его показал сырой fetch-дамп в терминал).
+Скрипт патча упал на assert «broken link not found»; клон показал
+«running [multiple commands](...)» — **ссылка цела**, файл не менялся неделями
+(последний коммит — unrelated Databricks). Причина фантома: пара символов `[m`
+съедена рендером терминального вывода. Правило на будущее: **дефект верифицируется
+в клоне рабочей копии, не по fetch-дампам**; assert в скрипте — не бюрократия, а
+иммунитет от ложного PR. Фантомная ветка удалена до пуша.
+
+## Что дальше
+
+- PR уходит одним шагом человека → ROADMAP-строка закрывается в 0.10.x.
+- Канал «docs-vs-code дрейф» для органов, где у организма компетентный профиль
+  (MCP, конвейеры, кровь) — переиспользуемый маршрут первых патчей.

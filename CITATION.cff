@@ -10,7 +10,7 @@ type: software
 authors:
   - name: "rtynbirf"
     website: "https://github.com/rtynbirf"
-version: 0.9.0
+version: 0.10.0
 date-released: "2026-11-02"
 license: Apache-2.0
 repository-code: "https://github.com/rtynbirf/commons"
@@ -33,6 +33,7 @@ abstract: >-
   метаболизм в бюджете (лимиты на трейс и на вызов из манифеста, порог —
   alert, исчерпание — halt), внешний конвейер (n8n как внешний узел:
   воркфлоу — данные с белым списком команд, валидатор commons-pipeline
-  в CI); 233 приёмочных теста; харнессы шести спайков — честные отказы без серверов;
+  в CI); первый патч в upstream (n8n-docs: документирование MCP Server Trigger
+  по исходнику узла); 233 приёмочных теста; харнессы шести спайков — честные отказы без серверов;
   организм рисует себя сам (mermaid и excalidraw). Поведение живёт в спеках,
   код следует за спекой.

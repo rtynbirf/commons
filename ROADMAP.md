@@ -39,6 +39,7 @@
 - [x] Бюджет метаболизма (0.8.0): лимиты на трейс и на вызов — поле `budget` органа в манифесте (`brainstem/budget.py`, данные не код), порог `alert_ratio` → событие `alert` (один на трейс), превышение per-call лимита → `alert` с именем органа, исчерпание → HALT; SPEC-0001 v0.2.0 (G3 развёрнут), SPEC-0003 v0.3.0 (тип `alert`); 29 приёмок, всего 215.
 - [x] n8n как внешний конвейер автоматизации (0.9.0): SPEC-0007 + ADR-0009 — пакет `pipeline/`: референс-развёртывание (`pipeline/n8n/docker-compose.yml`) и воркфлоу-данные (`pipeline/n8n/workflows/*.json`), белый список точек входа организма, валидатор `commons-pipeline` в CI (fail-closed: произвольный shell и метасимволы — красный PR); n8n не встроен — fair-code остаётся внешним узлом (SPEC-0006), живой запуск — на хосте человека (PID 1).
 - [ ] Первые патчи, отправленные в upstream-органы.
+  - **в работе (0.10.0):** патч №1 подготовлен — n8n-docs, MCP Server Trigger (OAuth2-опция + незадокументированные параметры Instructions/Require Workflow Execute Permission/Trusted Source/Include User in Output, верифицировано по `McpTrigger.node.ts`); форк `rtynbirf/n8n-docs`, ветка `docs/mcp-trigger-parameters`, коммит 7f7270a (DCO); diff и тело PR — `runs/2026-11-02-upstream-patch/`; PR блокирует полномочие токена (403 на чужом публичном репо) — остался шаг человека (compare-URL из отчёта) или токен с правом PR в публичных репозиториях.
 
 **DoD:** Definition of One.
 

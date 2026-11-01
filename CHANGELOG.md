@@ -2,6 +2,20 @@
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/); версии — SemVer.
 
+## [0.10.0] — 2026-11-02
+
+### Added
+
+- **Первый патч в upstream** (M3, ROADMAP «патчи — в upstream», ADR-0001): разведка занятости баг-очередей органов живым API — markitdown #53 (**10+ открытых PR**), whitespace (**63 PR**), browser-use #6209 (чинит сам репортёр), langflow #15869 (#15903 — ровно наш план фикса) и #15859 (#15860), spec-kit #4819 (needs-triage, дефект не подтверждён) → выбран свободный и компетентный узел: **n8n-docs** (конвейер 0.9.0, MCP — SPEC-0002):
+  * верифицированный docs-vs-code дрейф MCP Server Trigger: опция **n8n User Auth (OAuth2)** (v2+) и параметры **Require Workflow Execute Permission** / **Trusted Source Name or ID** (v2+) / **Include User in Output** (v2.1+) / **Instructions** (все версии) есть в узле (`McpTrigger.node.ts`, `version: [1, 1.1, 2, 2.1]`) и отсутствуют на странице (0 вхождений);
+  * патч в форке: `rtynbirf/n8n-docs`, ветка `docs/mcp-trigger-parameters`, коммит **7f7270a** (DCO), формулировки — из описаний параметров исходника; артефакты волны — `runs/2026-11-02-upstream-patch/` (полный diff + готовое тело PR по шаблону + отчёт с картой занятости);
+  * фантомный дефект (казавшийся сломанным линк в Execute Command docs) перехвачен fail-closed-assert'ом — съеденные рендером символы `[m`; урок: дефект верифицируется в клоне, не по fetch-дампам.
+- Шаг человека для закрытия волны: compare-URL → вставить `pr-body.md` (CLA подписывает человек) — либо токен с правом PR в публичных репозиториях.
+
+### Changed
+
+- ROADMAP: строка «Первые патчи в upstream» — аннотирована, не закрыта (патч в форке; PR ждёт полномочия токена — 403 на чужом публичном репо).
+
 ## [0.9.0] — 2026-11-02
 
 ### Added

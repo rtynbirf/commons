@@ -1,6 +1,8 @@
 # Манифест синапсов COMMONS: декларация органов как MCP-серверов (SPEC-0002, ADR-0002).
 # Источник истины для шлюза: орган без записи здесь для тела не существует (veto).
-version: 0.1.0
+# Поле `adapter` — класс адаптера, загружаемый шлюзом динамически:
+# новый орган подключается правкой манифеста, без правки кода шлюза (приёмка SPEC-0002).
+version: 0.2.0
 updated: 2026-11-01
 transport_default: stdio
 
@@ -15,6 +17,7 @@ organs:
     healthcheck: GET /api/tags
     tools: [list_models, generate, chat, embeddings]
     authority: {network: localhost-only, fs: none}
+    adapter: synapse.adapters.ollama:OllamaAdapter
 
   - name: llama.cpp
     system: metabolism
@@ -26,6 +29,7 @@ organs:
     healthcheck: GET /health
     tools: [completion, embedding]
     authority: {network: localhost-only, fs: none}
+    adapter: synapse.adapters.llamacpp:LlamaCppAdapter
     note: запас для ollama — тест отключения (SPEC-0001 G2)
 
   - name: markitdown
@@ -38,6 +42,7 @@ organs:
     healthcheck: initialize handshake
     tools: [convert_to_markdown]
     authority: {fs: read-only-input-dir, network: none}
+    adapter: synapse.adapters.mcp_stdio:MCPStdioAdapter
 
   - name: browser-use
     system: effectors
@@ -49,6 +54,7 @@ organs:
     healthcheck: initialize handshake
     tools: [navigate, click, extract, screenshot]
     authority: {network: allowlist, fs: downloads-dir}
+    adapter: synapse.adapters.mcp_stdio:MCPStdioAdapter
 
 # Таблица замен: орган -> список резервов (тест отключения, SPEC-0001 G2).
 substitutions:

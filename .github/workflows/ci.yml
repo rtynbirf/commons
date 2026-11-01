@@ -81,7 +81,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Тесты ядра (26 приёмок)
+      - name: Тесты ядра (приёмки SPEC-0001..0004)
         run: |
           python -m pip install --disable-pip-version-check --quiet '.[dev]'
           python -m pytest -q

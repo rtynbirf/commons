@@ -16,11 +16,13 @@ We deliberately do **not** merge foreign codebases into a monolith — that woul
 
 **The whole is greater than the sum of its parts** — achieved through exchange, not through merging.
 
+Since **0.3.0 the organism lives in time**: PID 1 is a heartbeat daemon (`boot → organ.health → shutdown`); every controlled death is recorded in the blood; a second instance gets a veto; the doctrine is **HUMAN=PID=1** — the human remains the init: no unit files, no autostart, launch and kill are done by human hands only ([SPEC-0004](specs/SPEC-0004-pid1.md), [ADR-0006](docs/adr/ADR-0006-pid1.md), first artifacts in [`runs/2026-11-01-pid1/`](runs/2026-11-01-pid1/)).
+
 ## Core artifacts
 
 | Artifact | Purpose |
 |---|---|
-| `specs/` | Genome: canonical agent loop, MCP synapse contract, blood envelope contract |
+| `specs/` | Genome: canonical agent loop, MCP synapse contract, blood envelope contract, living organism (PID 1) |
 | `organs/registry.yaml` | Which organs are connected, in which mode (dependency / adapter / external / reference / substrate), with verified licenses |
 | `synapse/mcp-manifest.yaml` | Declarative manifest of organs as MCP servers |
 | `blood/envelope.schema.json` | JSON Schema of the event envelope (every call carries its cost) |

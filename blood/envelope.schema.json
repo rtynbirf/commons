@@ -5,7 +5,16 @@
   "description": "Конверт события крови организма (SPEC-0003). Событие без цены недействительно.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["id", "ts", "type", "source", "organ", "trace_id", "payload", "cost"],
+  "required": [
+    "id",
+    "ts",
+    "type",
+    "source",
+    "organ",
+    "trace_id",
+    "payload",
+    "cost"
+  ],
   "properties": {
     "id": {
       "type": "string",
@@ -31,7 +40,8 @@
         "organ.health",
         "organ.replace",
         "boot",
-        "shutdown"
+        "shutdown",
+        "alert"
       ]
     },
     "source": {
@@ -56,11 +66,24 @@
     "cost": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["tokens_in", "tokens_out", "seconds"],
+      "required": [
+        "tokens_in",
+        "tokens_out",
+        "seconds"
+      ],
       "properties": {
-        "tokens_in": { "type": "integer", "minimum": 0 },
-        "tokens_out": { "type": "integer", "minimum": 0 },
-        "seconds": { "type": "number", "minimum": 0 }
+        "tokens_in": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tokens_out": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "seconds": {
+          "type": "number",
+          "minimum": 0
+        }
       }
     }
   }

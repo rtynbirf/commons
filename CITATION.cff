@@ -10,7 +10,7 @@ type: software
 authors:
   - name: "rtynbirf"
     website: "https://github.com/rtynbirf"
-version: 0.7.0
+version: 0.8.0
 date-released: "2026-11-02"
 license: Apache-2.0
 repository-code: "https://github.com/rtynbirf/commons"
@@ -29,7 +29,8 @@ abstract: >-
   живой организм PID 1 (boot → сердцебиение → shutdown; ЧЕЛОВЕК=PID=1),
   память исполняется (граф + вектора + replay из крови; движок — орган
   в манифесте; PLAN читает read-only), иммунитет исполняется (лицензионный
-  барьер: матрица правил — данные, fail-closed, гейт commons-immune в CI);
-  186 приёмочных тестов; харнессы шести спайков — честные отказы без серверов;
+  барьер: матрица правил — данные, fail-closed, гейт commons-immune в CI),
+  метаболизм в бюджете (лимиты на трейс и на вызов из манифеста, порог —
+  alert, исчерпание — halt); 215 приёмочных тестов; харнессы шести спайков — честные отказы без серверов;
   организм рисует себя сам (mermaid и excalidraw). Поведение живёт в спеках,
   код следует за спекой.

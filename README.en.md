@@ -24,6 +24,8 @@ Since **0.6.0 memory runs**: graph + vectors + replay from the blood; PLAN reads
 
 Since **0.7.0 immunity runs**: the license barrier as code ([SPEC-0006](specs/SPEC-0006-immunity.md), [ADR-0008](docs/adr/ADR-0008-license-barrier.md)) — rules live in data (`immune/license-matrix.yaml`), an unknown license is rejected from embedding (fail-closed, G1), rules change by editing YAML, not code (G2), and the `python -m immune` gate in CI turns a PR red before AGPL/fair-code enters the body.
 
+Since **0.8.0 metabolism is budgeted** (SPEC-0001 G3): trace-level and per-call limits declared in the manifest (`budget` field), threshold crossing emits an `alert` event into the blood, exhaustion HALTs the loop.
+
 ## Core artifacts
 
 | Artifact | Purpose |

@@ -5,7 +5,10 @@
 # Правила меняются правкой этого файла; immune/donation.py — только механизм применения.
 # Факты типирования — живое чтение upstream на дату (PROVENANCE.md §2): факты не выдумываются,
 # каждая запись evidence несёт дату, https-URL и что именно проверено.
-version: 0.1.0
+# 0.2.0 (2026-11-02): реестр типирован до конца по патч-целям — dependency/adapter/external
+# имеют карты; reference/substrate/education карт не имеют: тело их не патчит (референс,
+# субстрат, образование) — «нет карты — донорства нет» (G1) защищает и их.
+version: 0.2.0
 updated: 2026-11-02
 spec: SPEC-0008
 
@@ -14,6 +17,21 @@ protocols: [dco, none-observed, cla, unverified]
 decisions: [donate, patch-inside, consume-only]
 
 cards:
+  # --- ГЕНОМ: spec-driven ядро. Ошейников нет; AI-вклад раскрывается трейлером. ---
+  - repo: github/spec-kit
+    protocol: none-observed
+    decision: donate
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/github/spec-kit/main/CONTRIBUTING.md"
+        fact: "502 строки; CLA и DCO не упоминаются; AI-вклад раскрывается в PR (агент, модель, режим) и Assisted-by трейлером в коммитах"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/github/spec-kit/main/.github/PULL_REQUEST_TEMPLATE.md"
+        fact: "секция AI Disclosure в шаблоне PR; ошейников и передачи прав нет"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/github/spec-kit/main/LICENSE"
+        fact: "лицензия MIT"
+
   # --- СЕНСОРИКА: документы в Markdown. Ошейников не обнаружено. ---
   - repo: microsoft/markitdown
     protocol: none-observed
@@ -30,6 +48,18 @@ cards:
         fact: "лицензия MIT"
     note: "перепроверить при открытии первого PR: CLA-бот может появиться в момент открытия"
 
+  # --- СЕНСОРИКА: извлечение из веба. Лицензия закрыта для донорства. ---
+  - repo: firecrawl/firecrawl
+    protocol: none-observed
+    decision: consume-only
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/firecrawl/firecrawl/main/CONTRIBUTING.md"
+        fact: "71 строка; CLA и DCO не упоминаются; fork → branch → PR без передачи прав"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/firecrawl/firecrawl/main/LICENSE"
+        fact: "AGPL-3.0 — лицензия вне allowed матрицы SPEC-0006: дарить некому, тело потребляет орган как внешний узел"
+
   # --- ЭФФЕКТОРЫ: браузер. Ошейников не обнаружено; копирайт — частное лицо. ---
   - repo: browser-use/browser-use
     protocol: none-observed
@@ -45,6 +75,37 @@ cards:
         url: "https://raw.githubusercontent.com/browser-use/browser-use/main/LICENSE"
         fact: "лицензия MIT, копирайт частного лица (Gregor Zunic), не корпорации"
 
+  # --- ЭФФЕКТОРЫ: автономное действие. Ошейников нет; вход — по правилам органа. ---
+  - repo: openclaw/openclaw
+    protocol: none-observed
+    decision: donate
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/openclaw/openclaw/main/CONTRIBUTING.md"
+        fact: "284 строки; CLA и DCO не упоминаются; лимит 20 открытых PR на автора, refactor-only PR отклоняются, фичи — через issue"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/openclaw/openclaw/main/.github/pull_request_template.md"
+        fact: "шаблон требует проблему, user impact и evidence; передачи прав нет"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/openclaw/openclaw/main/LICENSE"
+        fact: "лицензия MIT"
+
+  # --- ЭФФЕКТОРЫ: реверс-инжиниринг. Декларации PR — только человеческие. ---
+  - repo: morluto/rea
+    protocol: none-observed
+    decision: patch-inside
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/morluto/rea/main/CONTRIBUTING.md"
+        fact: "451 строка; CLA и DCO не упоминаются"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/morluto/rea/main/.github/pull_request_template.md"
+        fact: "«AI agents must leave these declarations to a human» — декларации готовности PR оставляет человек; агент не может сам отправить кровь"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/morluto/rea/main/LICENSE"
+        fact: "лицензия MIT"
+    note: "ошейника нет, но правило органа человеческое: отправляет человек-владелец; улучшения тела живут внутри"
+
   # --- МЕТАБОЛИЗМ: локальный инференс. Ошейников не обнаружено. ---
   - repo: ollama/ollama
     protocol: none-observed
@@ -57,14 +118,92 @@ cards:
         url: "https://raw.githubusercontent.com/ollama/ollama/main/LICENSE"
         fact: "лицензия MIT"
 
-  # --- МЕТАБОЛИЗМ: инференс C/C++. До типирования кровь живёт в теле. ---
+  # --- МЕТАБОЛИЗМ: инференс C/C++. Типирован: ошейников нет, AI-код — с пониманием. ---
   - repo: ggml-org/llama.cpp
-    protocol: unverified
+    protocol: none-observed
+    decision: donate
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/ggml-org/llama.cpp/master/CONTRIBUTING.md"
+        fact: "209 строк; CLA и DCO не упоминаются; PR-шаблон требует согласия с guidelines и AI-disclosure"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/ggml-org/llama.cpp/master/AGENTS.md"
+        fact: "«AI-generated code is allowed. What is not allowed is submitting code you do not understand» — автор отвечает за каждую строку; фичи — issue-first"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/ggml-org/llama.cpp/master/LICENSE"
+        fact: "лицензия MIT"
+
+  # --- МЕТАБОЛИЗМ: доступ к моделям. Ошейника нет, но агентов-доноров орган не пускает. ---
+  - repo: huggingface/transformers
+    protocol: none-observed
     decision: patch-inside
     evidence:
       - date: 2026-11-02
-        url: "https://github.com/ggml-org/llama.cpp"
-        fact: "типирование CONTRIBUTING/PR-потока не проводилось; до него донорство запрещено (SPEC-0008)"
+        url: "https://raw.githubusercontent.com/huggingface/transformers/main/CONTRIBUTING.md"
+        fact: "228 строк; CLA и DCO не упоминаются"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/huggingface/transformers/main/.github/PULL_REQUEST_TEMPLATE.md"
+        fact: "«first-time contributors should not use code agents to submit PRs», автономным агентам PR/issues не открывать — правило органа закрывает путь агента-донора"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/huggingface/transformers/main/LICENSE"
+        fact: "лицензия Apache-2.0 (Hugging Face)"
+    note: "человек-владелец может отправить патч сам; улучшения тела живут внутри (адаптеры, обвязка)"
+
+  # --- НЕРВНЫЕ АЛЬТЕРНАТИВЫ: оркестрация. Ошейников нет; крупные PR — issue-first. ---
+  - repo: langchain-ai/langchain
+    protocol: none-observed
+    decision: donate
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/langchain-ai/langchain/master/.github/PULL_REQUEST_TEMPLATE.md"
+        fact: "внешние PR — только по одобренному и назначенному issue; массовые AI-описания PR закрывают; CLA нет"
+      - date: 2026-11-02
+        url: "https://docs.langchain.com/oss/python/contributing/overview"
+        fact: "гайд без CLA/DCO; AI разрешён при проверке каждого изменения"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/langchain-ai/langchain/master/LICENSE"
+        fact: "лицензия MIT"
+
+  # --- НЕРВНЫЕ АЛЬТЕРНАТИВЫ: платформа AI-приложений. Ошейник вшит в LICENSE. ---
+  - repo: langgenius/dify
+    protocol: cla
+    decision: patch-inside
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/langgenius/dify/main/LICENSE"
+        fact: "«License and Contributor Agreement», п.2: производитель может менять соглашение, вклады идут в коммерческие операции — права на кровь переходят хозяину"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/langgenius/dify/main/CONTRIBUTING.md"
+        fact: "96 строк; отсылает к лицензии-договору: «read our short License and Contributor Agreement»; CLA-бота нет — ошейник живёт в LICENSE"
+    note: "лицензия вне allowed матрицы SPEC-0006 («Apache-2.0 с условиями») — взаимности нет; обвязка пишется внутри организма"
+
+  # --- НЕРВНЫЕ АЛЬТЕРНАТИВЫ: внешний конвейер. Двойная несовместимость: fair-code + CLA. ---
+  - repo: n8n-io/n8n
+    protocol: cla
+    decision: consume-only
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/n8n-io/n8n/master/CONTRIBUTING.md"
+        fact: "CLA обязателен (Indie Open Source); PR не мержится без подписи — бот требует её"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/n8n-io/n8n/master/CONTRIBUTOR_LICENSE_AGREEMENT.md"
+        fact: "«I give n8n permission to license my contributions on any terms they like» — права на кровь переходят хозяину"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/n8n-io/n8n/master/LICENSE.md"
+        fact: "Sustainable Use License (fair-code); .ee-файлы вообще не лицензированы"
+    note: "использование — референс-развёртывание (pipeline/, ROADMAP M3); донорство не имеет смысла"
+
+  # --- ПАМЯТЬ: кодовая база в граф знаний. Ошейников нет; AI-авторство — трейлером. ---
+  - repo: Graphify-Labs/graphify
+    protocol: none-observed
+    decision: donate
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/Graphify-Labs/graphify/v8/CONTRIBUTING.md"
+        fact: "161 строка; CLA и DCO не упоминаются; AI-авторство раскрывается Co-Authored-By трейлером в коммите"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/Graphify-Labs/graphify/v8/LICENSE"
+        fact: "лицензия Apache-2.0"
 
   # --- КОЖА: UI-библиотека. Ошейник: CLA в шаблоне PR, метки «CLA Signed». ---
   - repo: react/react
@@ -82,21 +221,62 @@ cards:
         fact: "лицензия кода MIT (Meta Platforms) — свобода кода не отменяет CLA на правки"
     note: "MIT-лицензия кожи не делает тело донором: обвязка и адаптеры пишутся внутри организма"
 
-  # --- НЕРВНЫЕ АЛЬТЕРНАТИВЫ: внешний конвейер. Двойная несовместимость: fair-code + CLA. ---
-  - repo: n8n-io/n8n
-    protocol: cla
-    decision: consume-only
+  # --- КОЖА: компоненты. Ошейников не обнаружено. ---
+  - repo: shadcn-ui/ui
+    protocol: none-observed
+    decision: donate
     evidence:
       - date: 2026-11-02
-        url: "https://raw.githubusercontent.com/n8n-io/n8n/master/CONTRIBUTING.md"
-        fact: "CLA обязателен (Indie Open Source); PR не мержится без подписи — бот требует её"
+        url: "https://raw.githubusercontent.com/shadcn-ui/ui/main/CONTRIBUTING.md"
+        fact: "212 строк; CLA и DCO не упоминаются"
       - date: 2026-11-02
-        url: "https://raw.githubusercontent.com/n8n-io/n8n/master/CONTRIBUTOR_LICENSE_AGREEMENT.md"
-        fact: "«I give n8n permission to license my contributions on any terms they like» — права на кровь переходят хозяину"
+        url: "https://raw.githubusercontent.com/shadcn-ui/ui/main/LICENSE.md"
+        fact: "лицензия MIT (shadcn, 2023)"
+
+  # --- КОЖА: веб-фреймворк. Ошейников нет; описания PR — человеческие. ---
+  - repo: vercel/next.js
+    protocol: none-observed
+    decision: donate
+    evidence:
       - date: 2026-11-02
-        url: "https://raw.githubusercontent.com/n8n-io/n8n/master/LICENSE.md"
-        fact: "Sustainable Use License (fair-code); .ee-файлы вообще не лицензированы"
-    note: "использование — референс-развёртывание (ROADMAP M3); донорство не имеет смысла"
+        url: "https://raw.githubusercontent.com/vercel/next.js/canary/contributing.md"
+        fact: "CLA и DCO не упоминаются"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/vercel/next.js/canary/.github/pull_request_template.md"
+        fact: "описания PR от внешних контрибьюторов пишет человек; AI — в помощь, не вместо"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/vercel/next.js/canary/license.md"
+        fact: "лицензия MIT (Vercel, Inc.)"
+
+  # --- SELFMAP: организм рисует себя. Ошейников нет. ---
+  - repo: excalidraw/excalidraw
+    protocol: none-observed
+    decision: donate
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/excalidraw/excalidraw/master/CONTRIBUTING.md"
+        fact: "файл-указатель (3 строки) ведёт на docs.excalidraw.com"
+      - date: 2026-11-02
+        url: "https://docs.excalidraw.com/docs/introduction/contributing"
+        fact: "CLA/DCO не упоминаются; fork → branch → PR, крупные изменения — issue-first"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/excalidraw/excalidraw/master/LICENSE"
+        fact: "лицензия MIT"
+
+  # --- УДАЛЁННОСТЬ: управление Android. Файлов вклада нет — ошейников не обнаружено. ---
+  - repo: Genymobile/scrcpy
+    protocol: none-observed
+    decision: donate
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/Genymobile/scrcpy/master/CONTRIBUTING.md"
+        fact: "отсутствует (404) в корне и в .github/ — файлов вклада нет"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/Genymobile/scrcpy/master/LICENSE"
+        fact: "лицензия Apache-2.0"
 
 # Карт нет — донорства нет (G1 fail-closed, SPEC-0008): орган без карты не готов к донорству.
+# Без карт остались reference/substrate/education-органы реестра (антропics/skills, f/prompts.chat,
+# langflow, hermes-agent, Awesome-Hacking, субстрат linux/kubernetes/node/go/rust, образование):
+# тело их не патчит по определению режима — G1 защищает и их.
 # Типирование живым чтением upstream с датой — обязательный шаг перед первым патчем.

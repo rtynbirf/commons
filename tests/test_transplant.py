@@ -126,11 +126,42 @@ def test_n8n_is_consume_only() -> None:
     assert _card("n8n-io/n8n")["decision"] == "consume-only"
 
 
-def test_untyped_organ_does_not_donate() -> None:
-    """Непотипированный орган не получает донорства."""
+def test_llama_cpp_typed_to_donate() -> None:
+    """llama.cpp типирован 2026-11-02: ошейников нет — кровь можно дарить."""
     card = _card("ggml-org/llama.cpp")
-    assert card["protocol"] == "unverified"
-    assert card["decision"] != "donate"
+    assert card["protocol"] == "none-observed"
+    assert card["decision"] == "donate"
+
+
+def test_dify_collar_lives_in_license() -> None:
+    """Ошейник вшит в LICENSE (License and Contributor Agreement): dify — patch-inside."""
+    card = _card("langgenius/dify")
+    assert card["protocol"] == "cla"
+    assert card["decision"] == "patch-inside"
+
+
+def test_agent_closed_organs_stay_inside() -> None:
+    """Органы, закрывшие путь агенту-донору правилом органа (не ошейником), — patch-inside."""
+    for repo in ("huggingface/transformers", "morluto/rea"):
+        card = _card(repo)
+        assert card["protocol"] == "none-observed"
+        assert card["decision"] == "patch-inside"
+
+
+def test_restricted_license_is_consume_only() -> None:
+    """AGPL-орган вне allowed матрицы: дарить некому — consume-only."""
+    card = _card("firecrawl/firecrawl")
+    assert card["protocol"] == "none-observed"
+    assert card["decision"] == "consume-only"
+
+
+def test_untyped_organ_does_not_donate(tmp_path: Path) -> None:
+    """Непотипированный орган не получает донорства: unverified+donate — отказ 'untyped'."""
+    card = _minimal_card("ollama/ollama")
+    card["protocol"] = "unverified"
+    proc = _run_gate(tmp_path, [card])
+    assert proc.returncode == 1
+    assert "(untyped)" in proc.stdout
 
 
 def test_donating_organs_are_collarless_and_mutual() -> None:

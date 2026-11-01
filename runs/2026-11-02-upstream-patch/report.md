@@ -93,3 +93,15 @@ access token»**: fine-grained PAT не имеет права создавать
 - Шаг по-прежнему за человеком: либо классический токен (`public_repo`), либо один клик по compare-URL:
   `https://github.com/n8n-io/n8n-docs/compare/main...rtynbirf:n8n-docs:docs/mcp-trigger-parameters?expand=1`
   — заголовок и тело PR готовы в `pr-body.md` (тело — после строки `---`).
+
+## Аддендум (2026-11-02, третья сессия): PR ОТКРЫТ
+
+- **n8n-io/n8n-docs#5689** — «docs(mcp server trigger): document OAuth2 auth option and missing parameters».
+  1 коммит (`7f7270a`), +11/−0, `rtynbirf:docs/mcp-trigger-parameters` → `n8n-io:main`. PR открыл человек по
+  compare-URL с готовым телом — compare-URL оказался самым коротким путём сквозь fine-grained-барьер.
+- Реакция очереди — одна минута: лейблы `author:community`, `action:needs-review`, `scope:node-doc`;
+  GitBook-превью опубликовано; запущен AI-ревьюер (cubic). Обязательные проверки: CLA Check (unsigned —
+  до подписи), link-check, runner/vale.
+- Осталось: ревью команды docs. CLA подписан человеком **2026-11-01T23:29:42Z** (cla-assistant,
+  аккаунт rtynbirf) — редкий случай, когда «ошейник» надевается добровольно и один раз.
+  Патч доехал до upstream по своей двери; DCO-дом оставлен в порядке, чужой дом — по его правилам.

@@ -27,7 +27,19 @@ jobs:
                   continue
               if p.suffix in ('.yaml', '.yml'):
                   try:
-                      yaml.safe_load(p.read_text(encoding='utf-8'))
+                      doc = yaml.safe_load(p.read_text(encoding='utf-8'))
+                      if str(p).startswith('.github/workflows/'):
+                          # Структурный гейт: GitHub отвергает воркфлоу с пустым
+                          # job'ом (startup_failure), локальный YAML — молчит
+                          # (урок 2026-11-02: job потерял runs-on при слиянии).
+                          jobs = (doc or {}).get('jobs') or {}
+                          assert jobs, 'нет jobs'
+                          for name, job in jobs.items():
+                              assert job, f'пустой job: {name}'
+                              assert job.get('steps'), f'job без steps: {name}'
+                  except AssertionError as e:
+                      ok = False
+                      print(f'WORKFLOW FAIL {p}: {e}')
                   except Exception as e:
                       ok = False
                       print(f'YAML FAIL {p}: {e}')
@@ -84,10 +96,6 @@ jobs:
   pipeline:
     # Конвейер: n8n как внешний узел (SPEC-0007, ADR-0009) — артефакты-данные,
     # белый список команд, fail-closed на произвольный shell
-  transplant:
-    # Исходящий иммунитет: донорский протокол органов (SPEC-0008, ADR-0010) —
-    # кровь уходит в upstream только по рукопожатию (DCO) и тому, кто дарит;
-    # CLA-ошейник не подписывается — патч живёт внутри организма
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -96,6 +104,16 @@ jobs:
 
       - name: Валидатор конвейера (воркфлоу + compose)
         run: python3 -m pipeline
+
+  transplant:
+    # Исходящий иммунитет: донорский протокол органов (SPEC-0009, ADR-0011) —
+    # кровь уходит в upstream только по рукопожатию (DCO) и тому, кто дарит;
+    # CLA-ошейник не подписывается — патч живёт внутри организма
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Донорский протокол (карты донорства)
         run: python3 -m immune.donation
@@ -130,7 +148,7 @@ jobs:
           python -m pytest -q
 
   pathogens:
-    # Иммунитет против патогенов (0.9.0): известные уязвимости зависимостей
+    # Иммунитет против патогенов (0.12.0): известные уязвимости зависимостей
     # по OSV-базе (pip-audit). Барьер лицензий (job immune) — чистая функция
     # без сети (ADR-0008); патогены приходят с пищей (зависимостями), поэтому
     # ищутся там, где тело кормится, — в установленном окружении целиком.

@@ -12,6 +12,8 @@
 from __future__ import annotations
 
 import importlib
+import os
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -23,6 +25,7 @@ from blood.journal import Journal
 
 REQUIRED_FIELDS = {"name", "system", "mode", "upstream", "license", "transport", "tools", "authority"}
 TRANSPORT_REQUIREMENTS = {"stdio": {"command"}, "http": {"endpoint"}}
+_PLACEHOLDER = re.compile(r"\$\{([^}]+)\}")
 
 
 class GatewayConfigError(RuntimeError):
@@ -67,6 +70,14 @@ class Gateway:
                 raise GatewayConfigError(f"манифест: {name}: для транспорта {transport} нужны {sorted(absent)}")
             if not isinstance(entry["tools"], list) or not entry["tools"]:
                 raise GatewayConfigError(f"манифест: {name}: список tools пуст или не список")
+            if self._unresolved(name, entry):
+                # SPEC-0002 п.6: адрес/команда не развёрнуты — орган не получает адаптера и трафика,
+                # но запись в манифесте жива (veto-семантика и замены работают как раньше).
+                self._organs[name] = entry
+                continue
+            for field in ("endpoint", "command"):
+                if field in entry:
+                    entry[field] = self._expand_env(entry[field])
             self._organs[name] = entry
 
         subs = raw.get("substitutions") or {}
@@ -83,6 +94,26 @@ class Gateway:
                 self._adapters[name] = self._instantiate_adapter(dotted, entry)
 
     # --- сборка адаптера из манифеста (приёмка SPEC-0002: без кода шлюза) ---
+
+    @staticmethod
+    def _unresolved(name: str, entry: dict[str, Any]) -> str | None:
+        """SPEC-0002 п.6: незаданная ${VAR} в endpoint/command = орган не развёрнут."""
+        for field in ("endpoint", "command"):
+            value = entry.get(field)
+            items = value if isinstance(value, list) else [value]
+            for item in items:
+                if isinstance(item, str) and any(var not in os.environ for var in _PLACEHOLDER.findall(item)):
+                    return f"{name}.{field}"
+        return None
+
+    @staticmethod
+    def _expand_env(value: Any) -> Any:
+        """Расширяет ${VAR} (переменные гарантированно заданы — см. _unresolved)."""
+        if isinstance(value, str):
+            return _PLACEHOLDER.sub(lambda m: os.environ[m.group(1)], value)
+        if isinstance(value, list):
+            return [Gateway._expand_env(item) for item in value]
+        return value
 
     @staticmethod
     def _instantiate_adapter(dotted: str, entry: dict[str, Any]) -> Any:

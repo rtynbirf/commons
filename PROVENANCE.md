@@ -76,6 +76,7 @@
 | Орган | Перепроверено | SPDX | Файл лицензии | Событие подключения |
 |---|---|---|---|---|
 | microsoft/markitdown | 2026-11-01 | MIT | `LICENSE` | первый живой пульс организма, `runs/2026-11-01-first-pulse/` |
+| ggml-org/llama.cpp | 2026-11-01 | MIT | `LICENSE` | метаболизм двуорганного пульса, `runs/2026-11-01-organism-pulse/` (сервер b12032, CPU) |
 | ollama/ollama | 2026-11-01 | MIT | `LICENSE` | адаптер в ядре 0.2; замер — спайк S1 (`spikes/s1-metabolism/`) |
 | browser-use/browser-use | 2026-11-01 | MIT | `LICENSE` | адаптер в ядре 0.2; приёмка — спайк S4 |
 

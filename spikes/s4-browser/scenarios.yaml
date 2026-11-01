@@ -1,0 +1,24 @@
+# 20 сценариев приёмки browser-use (спайк S4).
+# Формат: id · цель · шаги (контракт: navigate/click/extract/screenshot) · критерий · лимит, с.
+# Шаги — декларативные: runner исполняет их через MCPStdioAdapter, цикл их не знает.
+scenarios:
+  - {id: S4-01, goal: открыть страницу и извлечь заголовок, steps: [navigate, extract], pass: заголовок не пуст, limit: 30}
+  - {id: S4-02, goal: поиск в поисковой системе, steps: [navigate, click, extract], pass: есть результаты, limit: 45}
+  - {id: S4-03, goal: перейти по ссылке из текста, steps: [navigate, click, extract], pass: URL сменился, limit: 30}
+  - {id: S4-04, goal: скриншот страницы, steps: [navigate, screenshot], pass: файл в downloads-dir, limit: 30}
+  - {id: S4-05, goal: заполнить поле и отправить форму, steps: [navigate, click, extract], pass: подтверждение видно, limit: 60}
+  - {id: S4-06, goal: извлечь таблицу со страницы, steps: [navigate, extract], pass: строки не пусты, limit: 45}
+  - {id: S4-07, goal: переключить вкладку/язык, steps: [navigate, click, extract], pass: контент изменился, limit: 45}
+  - {id: S4-08, goal: обработать диалог cookie, steps: [navigate, click, extract], pass: диалог закрыт, limit: 30}
+  - {id: S4-09, goal: открыть статью по якорю, steps: [navigate, extract], pass: якорь в URL, limit: 30}
+  - {id: S4-10, goal: скачивание файла по ссылке, steps: [navigate, click], pass: файл в downloads-dir, limit: 90}
+  - {id: S4-11, goal: пагинация — вторая страница, steps: [navigate, click, extract], pass: контент страницы 2, limit: 45}
+  - {id: S4-12, goal: извлечь метаданные (title/description), steps: [navigate, extract], pass: оба поля есть, limit: 30}
+  - {id: S4-13, goal: навигация назад/вперёд, steps: [navigate, click, navigate, extract], pass: URL корректен, limit: 45}
+  - {id: S4-14, goal: навести и кликнуть элемент меню, steps: [navigate, click, extract], pass: раздел открыт, limit: 45}
+  - {id: S4-15, goal: 404 обрабатывается без падения, steps: [navigate, extract], pass: is_error распознан, limit: 30}
+  - {id: S4-16, goal: ожидание ленивого контента, steps: [navigate, extract], pass: контент подгрузился, limit: 60}
+  - {id: S4-17, goal: извлечь список ссылок раздела, steps: [navigate, extract], pass: список ≥3 ссылок, limit: 45}
+  - {id: S4-18, goal: скриншот области после клика, steps: [navigate, click, screenshot], pass: файл создан, limit: 60}
+  - {id: S4-19, goal: переход по внешнему домену из allowlist, steps: [navigate, extract], pass: домен разрешён, limit: 45}
+  - {id: S4-20, goal: запрет домена вне allowlist (security), steps: [navigate], pass: veto/отказ, limit: 20}

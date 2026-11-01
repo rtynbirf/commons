@@ -1,9 +1,9 @@
-# Реестр органов COMMONS v0.2.1
+# Реестр органов COMMONS v0.2.2
 # Лицензии ВЕРИФИЦИРОВАНЫ живым GitHub API 2026-11-01 — матрица и расшифровка NOASSERTION: PROVENANCE.md.
 # Перед фактическим подключением лицензия перепроверяется по API при подключении (PROVENANCE §4, ADR-0005).
 # rank/stars — снимок рейтинга 2026-10-26 (organs/top100-2026-10-26.yaml), не живой счётчик.
 meta:
-  version: 0.2.1
+  version: 0.2.2
   updated: 2026-11-01
   snapshot_date: 2026-10-26
   license_verified_date: 2026-11-01
@@ -20,7 +20,7 @@ organs:
 
   # --- МЕТАБОЛИЗМ ---
   - {repo: ollama/ollama, system: metabolism, role: локальный инференс, rank: 43, stars: 184850, license_pre: MIT, mode: dependency, status: m1-adapter, note: адаптер в ядре 0.2; соединение — OLLAMA_HOST; замер — спайк S1 (spikes/s1-metabolism)}
-  - {repo: ggml-org/llama.cpp, system: metabolism, role: инференс C/C++, rank: 83, stars: 132419, license_pre: MIT, mode: dependency, status: m1-adapter, fallback_for: ollama/ollama}
+  - {repo: ggml-org/llama.cpp, system: metabolism, role: инференс C/C++, rank: 83, stars: 132419, license_pre: MIT, mode: dependency, status: connected, note: метаболизм двуорганного пульса 2026-11-01 — runs/2026-11-01-organism-pulse (сервер b12032, CPU); ollama — запас (G2)}
   - {repo: huggingface/transformers, system: metabolism, role: доступ к моделям, rank: 52, stars: 168192, license_pre: Apache-2.0, mode: dependency, status: planned-m2}
 
   # --- ЭФФЕКТОРЫ ---
@@ -35,7 +35,7 @@ organs:
   - {repo: x1xhlol/system-prompts-and-models-of-ai-tools, system: senses, role: корпус системных промптов, rank: 66, stars: 144270, license_pre: GPL-3.0, mode: reference, status: studying}
 
   # --- НЕРВНЫЕ АЛЬТЕРНАТИВЫ (оркестрация) ---
-  - {repo: langchain-ai/langchain, system: nerves_alt, role: оркестрация агентов, rank: 64, stars: 148491, license_pre: MIT, mode: dependency, status: planned-m2}
+  - {repo: langchain-ai/langchain, system: nerves_alt, role: оркестрация агентов, rank: 64, stars: 148491, license_pre: MIT, mode: dependency, status: planned-m2, note: спайк S2 замерен — каркас растёт с инструментами, ствол мозга остаётся своим}
   - {repo: langgenius/dify, system: nerves_alt, role: платформа AI-приложений, rank: 56, stars: 159593, license_pre: Apache-2.0 с условиями, mode: adapter, status: conditional-license}
   - {repo: langflow-ai/langflow, system: nerves_alt, role: визуальная сборка, rank: 59, stars: 156030, license_pre: MIT, mode: reference, status: studying}
   - {repo: n8n-io/n8n, system: nerves_alt, role: автоматизация workflows, rank: 28, stars: 208643, license_pre: fair-code (Sustainable Use), mode: external, status: not-embeddable}

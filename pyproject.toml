@@ -31,6 +31,7 @@ commons-pid1 = "brainstem.pid1:main"
 commons-immune = "immune.barrier:main"
 commons-pipeline = "pipeline.check:main"
 commons-openclaw = "openclaw.adapter:main"
+commons-transplant = "immune.donation:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

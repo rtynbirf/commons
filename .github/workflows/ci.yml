@@ -84,6 +84,10 @@ jobs:
   pipeline:
     # Конвейер: n8n как внешний узел (SPEC-0007, ADR-0009) — артефакты-данные,
     # белый список команд, fail-closed на произвольный shell
+  transplant:
+    # Исходящий иммунитет: донорский протокол органов (SPEC-0008, ADR-0010) —
+    # кровь уходит в upstream только по рукопожатию (DCO) и тому, кто дарит;
+    # CLA-ошейник не подписывается — патч живёт внутри организма
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -92,6 +96,9 @@ jobs:
 
       - name: Валидатор конвейера (воркфлоу + compose)
         run: python3 -m pipeline
+
+      - name: Донорский протокол (карты донорства)
+        run: python3 -m immune.donation
 
   effector:
     # Эффектор: openclaw как внешние руки (SPEC-0008, ADR-0010) — CLI-мост,

@@ -1,0 +1,102 @@
+# SPDX-FileCopyrightText: 2026 COMMONS contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Донорские карты органов COMMONS (SPEC-0008, ADR-0010) — данные, не код.
+# Правила меняются правкой этого файла; immune/donation.py — только механизм применения.
+# Факты типирования — живое чтение upstream на дату (PROVENANCE.md §2): факты не выдумываются,
+# каждая запись evidence несёт дату, https-URL и что именно проверено.
+version: 0.1.0
+updated: 2026-11-02
+spec: SPEC-0008
+
+# Протоколы upstream (как орган принимает кровь) и решения тела.
+protocols: [dco, none-observed, cla, unverified]
+decisions: [donate, patch-inside, consume-only]
+
+cards:
+  # --- СЕНСОРИКА: документы в Markdown. Ошейников не обнаружено. ---
+  - repo: microsoft/markitdown
+    protocol: none-observed
+    decision: donate
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/microsoft/markitdown/main/CONTRIBUTING.md"
+        fact: "CONTRIBUTING.md отсутствует (404) в корне и в .github/ — требований к вкладу нет"
+      - date: 2026-11-02
+        url: "https://github.com/microsoft/markitdown/pull/2807"
+        fact: "на живом PR нет CLA-бота и CLA-проверок"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/microsoft/markitdown/main/LICENSE"
+        fact: "лицензия MIT"
+    note: "перепроверить при открытии первого PR: CLA-бот может появиться в момент открытия"
+
+  # --- ЭФФЕКТОРЫ: браузер. Ошейников не обнаружено; копирайт — частное лицо. ---
+  - repo: browser-use/browser-use
+    protocol: none-observed
+    decision: donate
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/browser-use/browser-use/main/.github/CONTRIBUTING.md"
+        fact: "CONTRIBUTING не упоминает CLA и DCO; ведёт на contribution-guide"
+      - date: 2026-11-02
+        url: "https://docs.browser-use.com/development/contribution-guide"
+        fact: "fork → branch → PR; ни слова о CLA/DCO"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/browser-use/browser-use/main/LICENSE"
+        fact: "лицензия MIT, копирайт частного лица (Gregor Zunic), не корпорации"
+
+  # --- МЕТАБОЛИЗМ: локальный инференс. Ошейников не обнаружено. ---
+  - repo: ollama/ollama
+    protocol: none-observed
+    decision: donate
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/ollama/ollama/main/CONTRIBUTING.md"
+        fact: "88 строк; CLA и DCO не упоминаются"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/ollama/ollama/main/LICENSE"
+        fact: "лицензия MIT"
+
+  # --- МЕТАБОЛИЗМ: инференс C/C++. До типирования кровь живёт в теле. ---
+  - repo: ggml-org/llama.cpp
+    protocol: unverified
+    decision: patch-inside
+    evidence:
+      - date: 2026-11-02
+        url: "https://github.com/ggml-org/llama.cpp"
+        fact: "типирование CONTRIBUTING/PR-потока не проводилось; до него донорство запрещено (SPEC-0008)"
+
+  # --- КОЖА: UI-библиотека. Ошейник: CLA в шаблоне PR, метки «CLA Signed». ---
+  - repo: react/react
+    protocol: cla
+    decision: patch-inside
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/facebook/react/main/.github/PULL_REQUEST_TEMPLATE.md"
+        fact: "п.10 шаблона PR: «If you haven't already, complete the CLA»"
+      - date: 2026-11-02
+        url: "https://github.com/facebook/react/pulls"
+        fact: "метки «CLA Signed» на множестве PR — ошейник исполняется ботом"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/facebook/react/main/LICENSE"
+        fact: "лицензия кода MIT (Meta Platforms) — свобода кода не отменяет CLA на правки"
+    note: "MIT-лицензия кожи не делает тело донором: обвязка и адаптеры пишутся внутри организма"
+
+  # --- НЕРВНЫЕ АЛЬТЕРНАТИВЫ: внешний конвейер. Двойная несовместимость: fair-code + CLA. ---
+  - repo: n8n-io/n8n
+    protocol: cla
+    decision: consume-only
+    evidence:
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/n8n-io/n8n/master/CONTRIBUTING.md"
+        fact: "CLA обязателен (Indie Open Source); PR не мержится без подписи — бот требует её"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/n8n-io/n8n/master/CONTRIBUTOR_LICENSE_AGREEMENT.md"
+        fact: "«I give n8n permission to license my contributions on any terms they like» — права на кровь переходят хозяину"
+      - date: 2026-11-02
+        url: "https://raw.githubusercontent.com/n8n-io/n8n/master/LICENSE.md"
+        fact: "Sustainable Use License (fair-code); .ee-файлы вообще не лицензированы"
+    note: "использование — референс-развёртывание (ROADMAP M3); донорство не имеет смысла"
+
+# Карт нет — донорства нет (G1 fail-closed, SPEC-0008): орган без карты не готов к донорству.
+# Типирование живым чтением upstream с датой — обязательный шаг перед первым патчем.

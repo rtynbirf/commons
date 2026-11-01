@@ -10,7 +10,7 @@ type: software
 authors:
   - name: "rtynbirf"
     website: "https://github.com/rtynbirf"
-version: 0.11.0
+version: 0.12.0
 date-released: "2026-11-02"
 license: Apache-2.0
 repository-code: "https://github.com/rtynbirf/commons"
@@ -24,7 +24,7 @@ keywords:
   - ontology
   - upstream-first
 abstract: >-
-  Исполнимое ядро организма (0.9): ствол мозга (канонический цикл), синапсы
+  Исполнимое ядро организма (0.12): ствол мозга (канонический цикл), синапсы
   (MCP-шлюз), кровь (конверт с ценой, append-only, пишется в момент события),
   живой организм PID 1 (boot → сердцебиение → shutdown; ЧЕЛОВЕК=PID=1),
   память исполняется (граф + вектора + replay из крови; движок — орган
@@ -36,6 +36,8 @@ abstract: >-
   в CI), первый патч в upstream (n8n-docs: документирование MCP Server Trigger
   по исходнику узла), эффектор — openclaw как внешние руки (CLI-мост
   с белым списком методов, руки без воли, данные-политика fail-closed,
-  commons-openclaw в CI); 253 приёмочных теста; харнессы шести спайков — честные отказы без серверов;
+  commons-openclaw в CI), анализ крови (гематология — вся пролитая кровь валидна
+  навсегда; патогены — OSV-скан корма, dependabot, OpenSSF Scorecard);
+  272 приёмочных теста; харнессы шести спайков — честные отказы без серверов;
   организм рисует себя сам (mermaid и excalidraw). Поведение живёт в спеках,
   код следует за спекой.

@@ -1,6 +1,6 @@
 # Чек-лист практик open-source 2025–2026 и их статус здесь
 
-Дата: 2026-11-01 · Волна 2 · Версия: 0.1.1
+Дата: 2026-11-02 · Волна 2 · Версия: 0.2.0
 
 Консолидация актуальных практик (GitHub Community Standards, REUSE 3.3, OpenSSF Scorecard, ADR/MADR,
 DCO, SemVer, docs-as-code, spec-driven development, MCP, SBOM) с вердиктом: MUST / SHOULD / LATER
@@ -20,9 +20,9 @@ DCO, SemVer, docs-as-code, spec-driven development, MCP, SBOM) с вердикт
 | 10 | SemVer + теги + GitHub Releases как датированные якоря | SHOULD | ✅ релизы v0.1.0 и v0.1.1; CHANGELOG по Keep a Changelog |
 | 11 | Docs-as-code: markdown в git, проверка текста в CI | MUST | ✅ 0.1.0 (валидация YAML/JSON + статус спек); markdownlint — LATER |
 | 12 | Spec-driven development: поведение в спеках, исполняемых агентами | MUST | ✅ геном `specs/`, шаблоны в `docs/templates/`; S5 — приёмка |
-| 13 | OpenSSF Scorecard (20 чеков: pinned deps, token-permissions, …) | SHOULD | частично: actions запинены по SHA, минимальные permissions; бейдж — после первого релиза-кода |
+| 13 | OpenSSF Scorecard (20 чеков: pinned deps, token-permissions, …) | SHOULD | ✅ 0.12.0: workflow `scorecard.yml` (action v2.4.2 по SHA, SARIF → Code Scanning), бейдж в README; до того — actions запинены по SHA, минимальные permissions |
 | 14 | OpenSSF Best Practices Badge | LATER | после M1, когда появится исполняемый код |
-| 15 | SBOM (SPDX/CycloneDX) и supply-chain гигиена | SHOULD (CI) / LATER (SBOM) | CI-гигиена ✅; SBOM — при первом генерируемом артефакте |
+| 15 | SBOM (SPDX/CycloneDX) и supply-chain гигиена | SHOULD (CI) / LATER (SBOM) | CI-гигиена ✅; 0.12.0: OSV-скан зависимостей (pip-audit, job `pathogens`) + dependabot (pip/actions); SBOM — при первом генерируемом артефакте |
 | 16 | MCP как стандарт интеграции + `llms.txt` для агент-клиентов | SHOULD | ✅ MCP — ядро синапсов (ADR-0002); `llms.txt` 0.1.1 |
 
 ## Что изменилось против практик 2020-х

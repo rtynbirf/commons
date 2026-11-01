@@ -30,6 +30,8 @@ Since **0.9.0 the organism has an external pipeline** ([SPEC-0007](specs/SPEC-00
 
 Since **0.11.0 the organism has hands** ([SPEC-0008](specs/SPEC-0008-effector.md), [ADR-0010](docs/adr/ADR-0010-cli-bridge-effector.md)): openclaw is connected behind the brainstem as the effector — a CLI bridge `openclaw gateway call` with a method whitelist (`health`/`status`/`chat.send`/`chat.abort`); parameters are structured data serialized by the body (no shell strings are ever built); hands without will — they execute brainstem impulses, they don't decide; the live gateway and the token stay with the human (PID 1).
 
+Since **0.12.0 the organism gave its blood for a full workup**: hematology re-reads all poured blood against the schema (SPEC-0003 v0.4.0 §6), an OSV scan hunts known pathogens in the feed (pip-audit), dependabot delivers antigens weekly, and OpenSSF Scorecard issues the immunity passport.
+
 ## Core artifacts
 
 | Artifact | Purpose |

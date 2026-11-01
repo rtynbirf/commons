@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: YAML и JSON валидны
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, sys
+          import yaml
+          ok = True
+          for p in sorted(pathlib.Path('.').rglob('*')):
+              if p.is_dir() or '.git' in p.parts:
+                  continue
+              if p.suffix in ('.yaml', '.yml'):
+                  try:
+                      yaml.safe_load(p.read_text(encoding='utf-8'))
+                  except Exception as e:
+                      ok = False
+                      print(f'YAML FAIL {p}: {e}')
+              elif p.suffix == '.json':
+                  try:
+                      json.loads(p.read_text(encoding='utf-8'))
+                  except Exception as e:
+                      ok = False
+                      print(f'JSON FAIL {p}: {e}')
+          sys.exit(0 if ok else 1)
+          PY
+
+      - name: Спеки имеют статус
+        run: |
+          for f in specs/*.md; do
+            grep -qi '^[[:space:]]*-*[[:space:]]*Статус:' "$f" || { echo "нет статуса: $f"; exit 1; }
+          done
+          echo "все спеки снабжены статусом"
+
+      - name: Конверт крови соответствует SPEC-0003
+        run: |
+          python3 - <<'PY'
+          import json, pathlib
+          schema = json.loads(pathlib.Path('blood/envelope.schema.json').read_text(encoding='utf-8'))
+          required = {'id', 'ts', 'type', 'source', 'organ', 'trace_id', 'payload', 'cost'}
+          assert required.issubset(schema['properties']), 'не все обязательные поля в схеме'
+          assert set(schema['required']) == required, 'required в схеме не совпадает с контрактом'
+          print('схема крови согласована со SPEC-0003')
+          PY

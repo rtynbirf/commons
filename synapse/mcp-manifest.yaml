@@ -1,0 +1,57 @@
+# Манифест синапсов COMMONS: декларация органов как MCP-серверов (SPEC-0002, ADR-0002).
+# Источник истины для шлюза: орган без записи здесь для тела не существует (veto).
+version: 0.1.0
+updated: 2026-11-01
+transport_default: stdio
+
+organs:
+  - name: ollama
+    system: metabolism
+    mode: dependency
+    upstream: https://github.com/ollama/ollama
+    license: MIT
+    transport: http
+    endpoint: ${OLLAMA_HOST}
+    healthcheck: GET /api/tags
+    tools: [list_models, generate, chat, embeddings]
+    authority: {network: localhost-only, fs: none}
+
+  - name: llama.cpp
+    system: metabolism
+    mode: dependency
+    upstream: https://github.com/ggml-org/llama.cpp
+    license: MIT
+    transport: http
+    endpoint: ${LLAMA_SERVER_URL}
+    healthcheck: GET /health
+    tools: [completion, embedding]
+    authority: {network: localhost-only, fs: none}
+    note: запас для ollama — тест отключения (SPEC-0001 G2)
+
+  - name: markitdown
+    system: senses
+    mode: dependency
+    upstream: https://github.com/microsoft/markitdown
+    license: MIT
+    transport: stdio
+    command: markitdown-mcp
+    healthcheck: initialize handshake
+    tools: [convert_to_markdown]
+    authority: {fs: read-only-input-dir, network: none}
+
+  - name: browser-use
+    system: effectors
+    mode: dependency
+    upstream: https://github.com/browser-use/browser-use
+    license: MIT
+    transport: stdio
+    command: browser-use-mcp
+    healthcheck: initialize handshake
+    tools: [navigate, click, extract, screenshot]
+    authority: {network: allowlist, fs: downloads-dir}
+
+# Таблица замен: орган -> список резервов (тест отключения, SPEC-0001 G2).
+substitutions:
+  ollama: [llama.cpp]
+  markitdown: []
+  browser-use: []

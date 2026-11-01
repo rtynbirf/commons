@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.md text
+*.yaml text
+*.yml text
+*.json text
+*.py text
+*.sh text eol=lf
+LICENSE text

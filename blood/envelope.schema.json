@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rtynbirf/commons/blob/main/blood/envelope.schema.json",
+  "title": "COMMONS Blood Envelope",
+  "description": "Конверт события крови организма (SPEC-0003). Событие без цены недействительно.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "ts", "type", "source", "organ", "trace_id", "payload", "cost"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID события"
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Момент события, UTC"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "plan",
+        "act",
+        "observe",
+        "reflect",
+        "halt",
+        "veto",
+        "error",
+        "security.violation",
+        "organ.health",
+        "organ.replace"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "description": "Эмитент: brainstem | synapse | organ:<name>",
+      "minLength": 1
+    },
+    "organ": {
+      "type": "string",
+      "description": "Орган, к которому относится событие (или self для системных)",
+      "minLength": 1
+    },
+    "trace_id": {
+      "type": "string",
+      "description": "Идентификатор сессии/задачи для трассировки",
+      "minLength": 1
+    },
+    "payload": {
+      "type": "object",
+      "description": "Содержание события, свободная структура"
+    },
+    "cost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tokens_in", "tokens_out", "seconds"],
+      "properties": {
+        "tokens_in": { "type": "integer", "minimum": 0 },
+        "tokens_out": { "type": "integer", "minimum": 0 },
+        "seconds": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

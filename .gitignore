@@ -1,0 +1,35 @@
+# ОС
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Редакторы
+.idea/
+.vscode/
+*.swp
+
+# Секреты и окружение
+.env
+*.pem
+*.key
+token*.txt
+credentials*.json
+
+# Логи и временные файлы
+*.log
+tmp/
+tmp.*
+
+# Языки и сборка
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/
+target/
+
+# Git
+*.orig
+*.rej

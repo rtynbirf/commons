@@ -1,0 +1,112 @@
+# Снимок рейтинга «Топ-100 самых популярных проектов GitHub»
+# Критерий: количество GitHub Stars (мера популярности, НЕ качества, безопасности или полезности).
+# Исходные параметры: публичные репозитории, без форков и архивных проектов.
+# Источник: GitHub Search API, сортировка по числу звёзд; снимок от 2026-10-26 — живые счётчики уже выше.
+# Хранится как исходные данные программы COMMONS; записан владельцем проекта.
+meta:
+  snapshot_date: "2026-10-26"
+  criterion: "GitHub Stars"
+  scope: "публичные репозитории, без форков и архивов"
+  source: "GitHub Search API + каталог mickpletcher/best-of-github (weekly-top-100-github-repositories.md)"
+  disclaimer: "Популярность != качество != активность. Позиции сохранены как есть, включая межкатегорийное ранжирование."
+entries:
+  - {rank: 1, repo: "codecrafters-io/build-your-own-x", stars: 556359, note: "Создание собственных технологий с нуля"}
+  - {rank: 2, repo: "sindresorhus/awesome", stars: 524990, note: "Огромная коллекция полезных ресурсов"}
+  - {rank: 3, repo: "public-apis/public-apis", stars: 492330, note: "Каталог бесплатных API"}
+  - {rank: 4, repo: "freeCodeCamp/freeCodeCamp", stars: 457960, note: "Обучение программированию"}
+  - {rank: 5, repo: "EbookFoundation/free-programming-books", stars: 400163, note: "Бесплатные книги по программированию"}
+  - {rank: 6, repo: "openclaw/openclaw", stars: 393128, note: "Автономный AI-агент"}
+  - {rank: 7, repo: "morluto/rea", stars: 389257, note: "Обратная разработка с помощью агентов"}
+  - {rank: 8, repo: "donnemartin/system-design-primer", stars: 375649, note: "Проектирование крупных систем"}
+  - {rank: 9, repo: "nilbuild/developer-roadmap", stars: 370456, note: "Дорожные карты разработчиков"}
+  - {rank: 10, repo: "jwasham/coding-interview-university", stars: 363409, note: "Программа обучения Computer Science"}
+  - {rank: 11, repo: "awesome-selfhosted/awesome-selfhosted", stars: 330602, note: "Самостоятельный хостинг сервисов"}
+  - {rank: 12, repo: "vinta/awesome-python", stars: 330399, note: "Инструменты и библиотеки Python"}
+  - {rank: 13, repo: "obra/superpowers", stars: 305417, note: "Система навыков и методология AI-разработки"}
+  - {rank: 14, repo: "mattpocock/skills", stars: 303783, note: "Навыки для инженерной работы с AI"}
+  - {rank: 15, repo: "affaan-m/ECC", stars: 289363, note: "Оптимизация AI-агентов разработки"}
+  - {rank: 16, repo: "practical-tutorials/project-based-learning", stars: 288048, note: "Обучение через реальные проекты"}
+  - {rank: 17, repo: "996icu/996.ICU", stars: 277178, note: "Проект о переработках в IT"}
+  - {rank: 18, repo: "deepseek-ai/deepseek-harness", stars: 262302, note: "Расширяемая система DeepSeek"}
+  - {rank: 19, repo: "NousResearch/hermes-agent", stars: 257279, note: "Саморазвивающийся AI-агент"}
+  - {rank: 20, repo: "torvalds/linux", stars: 253533, note: "Ядро Linux"}
+  - {rank: 21, repo: "trimstray/the-book-of-secret-knowledge", stars: 253389, note: "Технические знания, инструменты и руководства"}
+  - {rank: 22, repo: "react/react", stars: 251864, note: "Библиотека пользовательских интерфейсов"}
+  - {rank: 23, repo: "TheAlgorithms/Python", stars: 225533, note: "Алгоритмы на Python"}
+  - {rank: 24, repo: "multica-ai/andrej-karpathy-skills", stars: 224255, note: "Рекомендации по работе AI-кодировщиков"}
+  - {rank: 25, repo: "anomalyco/opencode", stars: 221797, note: "Открытый AI-агент программирования"}
+  - {rank: 26, repo: "vuejs/vue", stars: 212633, note: "Vue.js, версия 2"}
+  - {rank: 27, repo: "ossu/computer-science", stars: 210369, note: "Бесплатное образование по Computer Science"}
+  - {rank: 28, repo: "n8n-io/n8n", stars: 208643, note: "Автоматизация рабочих процессов"}
+  - {rank: 29, repo: "DigitalPlatDev/FreeDomain", stars: 205869, note: "Бесплатные домены"}
+  - {rank: 30, repo: "yt-dlp/yt-dlp", stars: 202444, note: "Загрузчик видео и аудио"}
+  - {rank: 31, repo: "tensorflow/tensorflow", stars: 201268, note: "Машинное обучение"}
+  - {rank: 32, repo: "trekhleb/javascript-algorithms", stars: 196697, note: "Алгоритмы на JavaScript"}
+  - {rank: 33, repo: "massgravel/Microsoft-Activation-Scripts", stars: 196219, note: "Инструменты активации Windows и Office"}
+  - {rank: 34, repo: "firecrawl/firecrawl", stars: 195544, note: "Извлечение данных из интернета для AI"}
+  - {rank: 35, repo: "ultraworkers/claw-code", stars: 194985, note: "Автономная разработка с AI"}
+  - {rank: 36, repo: "microsoft/vscode", stars: 194330, note: "Редактор Visual Studio Code"}
+  - {rank: 37, repo: "microsoft/markitdown", stars: 192313, note: "Преобразование документов в Markdown"}
+  - {rank: 38, repo: "avelino/awesome-go", stars: 190451, note: "Инструменты и библиотеки Go"}
+  - {rank: 39, repo: "ohmyzsh/ohmyzsh", stars: 190171, note: "Расширение командной оболочки Zsh"}
+  - {rank: 40, repo: "Significant-Gravitas/AutoGPT", stars: 187759, note: "Автономные AI-агенты"}
+  - {rank: 41, repo: "jackfrued/Python-100-Days", stars: 187457, note: "Обучение Python за 100 дней"}
+  - {rank: 42, repo: "CyC2018/CS-Notes", stars: 186348, note: "Конспекты по информатике"}
+  - {rank: 43, repo: "ollama/ollama", stars: 184850, note: "Запуск языковых моделей локально"}
+  - {rank: 44, repo: "getify/You-Dont-Know-JS", stars: 184834, note: "Серия книг по JavaScript"}
+  - {rank: 45, repo: "521xueweihan/HelloGitHub", stars: 184673, note: "Интересные открытые проекты"}
+  - {rank: 46, repo: "anthropics/skills", stars: 183913, note: "Публичная библиотека AI-навыков"}
+  - {rank: 47, repo: "flutter/flutter", stars: 180378, note: "Кроссплатформенная разработка"}
+  - {rank: 48, repo: "DietrichGebert/ponytail", stars: 176753, note: "Подходы к оптимизации работы AI-разработчика"}
+  - {rank: 49, repo: "github/gitignore", stars: 176064, note: "Шаблоны .gitignore"}
+  - {rank: 50, repo: "twbs/bootstrap", stars: 175015, note: "CSS-фреймворк для веб-интерфейсов"}
+  - {rank: 51, repo: "f/prompts.chat", stars: 174638, note: "Коллекция AI-промптов"}
+  - {rank: 52, repo: "huggingface/transformers", stars: 168192, note: "Модели машинного обучения и NLP"}
+  - {rank: 53, repo: "AUTOMATIC1111/stable-diffusion-webui", stars: 165151, note: "Интерфейс генерации изображений Stable Diffusion"}
+  - {rank: 54, repo: "msitarzewski/agency-agents", stars: 164157, note: "Набор специализированных AI-агентов"}
+  - {rank: 55, repo: "jlevy/the-art-of-command-line", stars: 162602, note: "Практическое руководство по командной строке"}
+  - {rank: 56, repo: "langgenius/dify", stars: 159593, note: "Создание AI-приложений и агентов"}
+  - {rank: 57, repo: "Snailclimb/JavaGuide", stars: 159268, note: "Руководство по Java и backend"}
+  - {rank: 58, repo: "open-webui/open-webui", stars: 156811, note: "Интерфейс взаимодействия с AI-моделями"}
+  - {rank: 59, repo: "langflow-ai/langflow", stars: 156030, note: "Визуальная сборка AI-агентов"}
+  - {rank: 60, repo: "clash-verge-rev/clash-verge-rev", stars: 154038, note: "Графический сетевой клиент"}
+  - {rank: 61, repo: "anthropics/claude-code", stars: 153436, note: "AI-программист в терминале"}
+  - {rank: 62, repo: "Genymobile/scrcpy", stars: 153189, note: "Управление Android с компьютера"}
+  - {rank: 63, repo: "farion1231/cc-switch", stars: 148906, note: "Переключение AI-инструментов"}
+  - {rank: 64, repo: "langchain-ai/langchain", stars: 148491, note: "Разработка приложений на основе языковых моделей"}
+  - {rank: 65, repo: "airbnb/javascript", stars: 148045, note: "Стандарт оформления JavaScript"}
+  - {rank: 66, repo: "x1xhlol/system-prompts-and-models-of-ai-tools", stars: 144270, note: "Системные промпты и модели AI-инструментов"}
+  - {rank: 67, repo: "vercel/next.js", stars: 143301, note: "React-фреймворк для веб-приложений"}
+  - {rank: 68, repo: "Comfy-Org/ComfyUI", stars: 143159, note: "Модульный интерфейс генеративного AI"}
+  - {rank: 69, repo: "yangshun/tech-interview-handbook", stars: 143158, note: "Подготовка к техническим собеседованиям"}
+  - {rank: 70, repo: "Shubhamsaboo/awesome-llm-apps", stars: 143119, note: "Примеры AI-приложений и агентов"}
+  - {rank: 71, repo: "github/spec-kit", stars: 142980, note: "Инструментарий разработки через спецификации (SDD)"}
+  - {rank: 72, repo: "iptv-org/iptv", stars: 142425, note: "Каталог публичных IPTV-каналов"}
+  - {rank: 73, repo: "ytdl-org/youtube-dl", stars: 141398, note: "Загрузчик видео"}
+  - {rank: 74, repo: "nextlevelbuilder/ui-ux-pro-max-skill", stars: 140718, note: "AI-инструменты проектирования интерфейсов"}
+  - {rank: 75, repo: "ripienaar/free-for-dev", stars: 140059, note: "Бесплатные инструменты для разработчиков"}
+  - {rank: 76, repo: "microsoft/PowerToys", stars: 139972, note: "Утилиты для Windows"}
+  - {rank: 77, repo: "golang/go", stars: 139611, note: "Язык программирования Go"}
+  - {rank: 78, repo: "garrytan/gstack", stars: 137790, note: "Набор инструментов AI-разработчика"}
+  - {rank: 79, repo: "labuladong/fucking-algorithm", stars: 135972, note: "Изучение алгоритмов"}
+  - {rank: 80, repo: "Graphify-Labs/graphify", stars: 135831, note: "Превращение кодовой базы в граф знаний"}
+  - {rank: 81, repo: "harry0703/MoneyPrinterTurbo", stars: 135306, note: "Автоматизированное создание видео"}
+  - {rank: 82, repo: "excalidraw/excalidraw", stars: 134589, note: "Рисование схем и диаграмм"}
+  - {rank: 83, repo: "ggml-org/llama.cpp", stars: 132419, note: "Запуск языковых моделей на C/C++"}
+  - {rank: 84, repo: "krahets/hello-algo", stars: 131260, note: "Визуальное изучение алгоритмов"}
+  - {rank: 85, repo: "openai/codex", stars: 131003, note: "AI-агент программирования"}
+  - {rank: 86, repo: "Chalarangelo/30-seconds-of-code", stars: 129340, note: "Короткие примеры программирования"}
+  - {rank: 87, repo: "kubernetes/kubernetes", stars: 128707, note: "Управление контейнерами"}
+  - {rank: 88, repo: "rustdesk/rustdesk", stars: 127131, note: "Удалённый рабочий стол"}
+  - {rank: 89, repo: "react/react-native", stars: 126795, note: "Создание мобильных приложений"}
+  - {rank: 90, repo: "shadcn-ui/ui", stars: 126584, note: "Компоненты пользовательских интерфейсов"}
+  - {rank: 91, repo: "Hack-with-Github/Awesome-Hacking", stars: 123681, note: "Коллекция ресурсов по информационной безопасности"}
+  - {rank: 92, repo: "VoltAgent/awesome-design-md", stars: 123643, note: "Дизайн-системы и инструкции для AI"}
+  - {rank: 93, repo: "electron/electron", stars: 123560, note: "Создание настольных приложений"}
+  - {rank: 94, repo: "nodejs/node", stars: 123109, note: "Среда выполнения JavaScript"}
+  - {rank: 95, repo: "microsoft/generative-ai-for-beginners", stars: 122206, note: "Обучение генеративному AI"}
+  - {rank: 96, repo: "rust-lang/rust", stars: 120832, note: "Язык программирования Rust"}
+  - {rank: 97, repo: "justjavac/free-programming-books-zh_CN", stars: 119368, note: "Бесплатные книги по программированию на китайском"}
+  - {rank: 98, repo: "browser-use/browser-use", stars: 119187, note: "Управление браузером через AI-агентов"}
+  - {rank: 99, repo: "2dust/v2rayN", stars: 119152, note: "Сетевой клиент для Windows, Linux и macOS"}
+  - {rank: 100, repo: "godotengine/godot", stars: 119107, note: "Игровой движок Godot"}

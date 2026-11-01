@@ -1,0 +1,39 @@
+# OpenSSF Scorecard — паспорт иммунитета тела (0.9.0; практика #13,
+# docs/practices-checklist.md): независимый аудит supply-chain практик,
+# результаты — SARIF в Code Scanning. Бейдж — в README.
+# Пины по SHA зафиксированы из живого git ls-remote 2026-11-02 (PROVENANCE.md §2).
+name: scorecard
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * 1" # еженедельно, понедельник 04:17 UTC — вне общего часа
+
+permissions: read-all
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      # security-events: SARIF → Code Scanning; id-token: публикация результатов
+      # по OIDC — без долгоживущих токенов; contents: read — минимум на checkout.
+      security-events: write
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Тело проходит осмотр (OpenSSF Scorecard)
+        uses: ossf/scorecard-action@05b42c624433fc40578a4040d5cf5e36ddca8cde # v2.4.2 (2026-11-02)
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Паспорт — в Code Scanning
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1 (2026-11-02)
+        with:
+          sarif_file: results.sarif

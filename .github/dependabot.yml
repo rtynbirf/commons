@@ -1,0 +1,15 @@
+# Антигенная стимуляция (0.9.0): обновления зависимостей — пища иммунитета, не шум.
+# pip — тело (pyproject.toml); github-actions — пинненные по SHA воркфлоу
+# (практика Pinned-Dependencies, docs/practices-checklist.md #13).
+# Что переварено, решает иммунитет: job pathogens (OSV) и приёмки core.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

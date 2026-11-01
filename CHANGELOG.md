@@ -2,6 +2,21 @@
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/); версии — SemVer.
 
+## [0.2.0] — 2026-11-01
+
+### Added
+
+- **Исполнимое ядро** (ADR-0004): Python-пакет `commons-organism` в анатомических папках.
+  - `blood/`: конверт с валидацией по JSON Schema (draft 2020-12) + append-only журнал; сумма цен по трейсу.
+  - `synapse/`: шлюз — манифест как источник истины, veto необъявленного органа/инструмента, автоматическая замена по `substitutions`, динамическая загрузка адаптеров из манифеста (приёмка SPEC-0002: новый орган — правка манифеста, не кода).
+  - `brainstem/`: канонический цикл PLAN→ACT→OBSERVE→REFLECT; бюджет G3 читается из крови; HALT; пустой план запрещён.
+  - Адаптеры органов: ollama (HTTP, токены из ответа), llama.cpp (HTTP, запас), универсальный MCP-stdio (markitdown, browser-use и будущие органы).
+- **26 приёмочных тестов** (`tests/`): G1 реконструкция сессии, G2 тест отключения, G3 бюджет, второй закон (нет вызовов мимо синапсов), veto, security.violation, валидность схемы крови.
+- **Организм рисует себя сам**: `scripts/selfmap.py` → `docs/selfmap.md` (mermaid из живого реестра; AUTO-GENERATED).
+- **Карточки органов M1**: `organs/{ollama,llama.cpp,markitdown,browser-use}/README.md` по шаблону карточки.
+- Манифест синапсов 0.2.0: поле `adapter` у всех четырёх органов.
+- CI: джоба `core` — pytest на Python 3.12 (setup-python запинен по SHA).
+
 ## [0.1.1] — 2026-11-01
 
 ### Added

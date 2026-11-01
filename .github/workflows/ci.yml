@@ -68,3 +68,20 @@ jobs:
 
       - name: REUSE lint
         uses: fsfe/reuse-action@bb774aa972c2a89ff34781233d275075cbddf542 # v5
+
+  core:
+    # Исполнимое ядро 0.2: приёмки спек SPEC-0001..0003 как pytest (ADR-0004)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
+        with:
+          python-version: "3.12"
+
+      - name: Тесты ядра (26 приёмок)
+        run: |
+          python -m pip install --disable-pip-version-check --quiet '.[dev]'
+          python -m pytest -q

@@ -7,6 +7,7 @@
 - [README.md](README.md): вход для человека — аксиомы, семь систем, три закона.
 - [PROVENANCE.md](PROVENANCE.md): происхождение содержимого; верифицированная лицензионная матрица органов. Здесь нет ни байта чужого кода.
 - [docs/manifesto.md](docs/manifesto.md): ЦЕЛОЕ и части; ἰδιώτης против κοινός; три закона.
+- [docs/selfmap.md](docs/selfmap.md): карта организма (AUTO-GENERATED из живого реестра; генератор — scripts/selfmap.py).
 - [docs/research-plan.md](docs/research-plan.md): план инженерного исследования 31 проекта, три приоритета.
 - [docs/lenses.md](docs/lenses.md): шесть линз оценки с весами и порогами.
 - [docs/spikes.md](docs/spikes.md): пять спайков — приёмочные эксперименты S1–S5.
@@ -15,10 +16,13 @@
 - [docs/repo-structure-study.md](docs/repo-structure-study.md): структура 10 эталонных репозиториев, TOP-10 перенятых паттернов.
 - [docs/practices-checklist.md](docs/practices-checklist.md): 16 практик open-source 2025–2026 и их статус здесь.
 - [docs/glossary.md](docs/glossary.md): словарь организма.
-- [docs/adr/](docs/adr/): журнал решений (почему так).
+- [docs/adr/](docs/adr/): журнал решений (почему так; ADR-0004 — исполнимое ядро 0.2).
 - [specs/](specs/): геном — SPEC-0001 ствол мозга, SPEC-0002 синапсы, SPEC-0003 кровь.
+- [brainstem/](brainstem/): исполняемый цикл PLAN→ACT→OBSERVE→REFLECT (ядро 0.2).
+- [synapse/](synapse/): MCP-шлюз + адаптеры органов (ollama, llama.cpp, универсальный MCP-stdio).
+- [blood/](blood/): конверт с ценой + append-only журнал.
 - [organs/registry.yaml](organs/registry.yaml): реестр органов с режимами и верифицированными лицензиями.
-- [synapse/mcp-manifest.yaml](synapse/mcp-manifest.yaml): органы как MCP-серверы.
+- [synapse/mcp-manifest.yaml](synapse/mcp-manifest.yaml): органы как MCP-серверы; поле `adapter` ведёт к классу адаптера.
 - [blood/envelope.schema.json](blood/envelope.schema.json): конверт крови (JSON Schema).
 - [ROADMAP.md](ROADMAP.md): вехи M1–M3 и Definition of One.
 - [CONTRIBUTING.md](CONTRIBUTING.md): как стать клеткой; DCO, REUSE, провенанс.
@@ -31,3 +35,5 @@
 3. Вызовы органов — только через MCP-синапсы, с конвертом крови и ценой (SPEC-0003).
 4. Не добавлять чужой код/тексты: провенанс — PROVENANCE.md, лицензии — REUSE.toml.
 5. Метрики — только из живого GitHub API с датой, либо пометка «предварительно».
+6. Новый орган подключается правкой манифеста (поле `adapter`), без правки шлюза (SPEC-0002).
+7. docs/selfmap.md не правится руками — только через `python3 scripts/selfmap.py`.

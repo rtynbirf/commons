@@ -7,12 +7,14 @@
 ![license](https://img.shields.io/badge/license-Apache--2.0-blue)
 ![REUSE](https://img.shields.io/badge/REUSE-3.3--compliant-blueviolet)
 ![provenance](https://img.shields.io/badge/provenance-verified%202026--11--01-brightgreen)
-![stage](https://img.shields.io/badge/stage-0.1.1%20blueprint-orange)
+![stage](https://img.shields.io/badge/stage-0.2.0%20core-orange)
 [English](README.en.md)
 
 ## Что это
 
 COMMONS — проект-организм, собранный из топ-100 публичных GitHub-репозиториев. Снимок рейтинга от 26.10.2026 хранится как данные: [`organs/top100-2026-10-26.yaml`](organs/top100-2026-10-26.yaml).
+
+С **0.2.0 организм исполняется**: ствол мозга, синапсы и кровь — работающий код, чьи приёмки SPEC-0001..0003 гоняются в CI как тесты.
 
 Мы сознательно **не** сливаем чужие кодовые базы в монолит: это породило бы десятки мёртвых ответвлений. Вместо этого:
 
@@ -59,8 +61,8 @@ commons/
 ├── REUSE.toml                     # SPDX-лицензирование (REUSE 3.3, проверяется CI)
 ├── PROVENANCE.md                  # провенанс: «их ничего здесь нет» + матрица лицензий
 ├── CITATION.cff                   # как цитировать проект
-├── ROADMAP.md                     # M1 → M2 → M3, Definition of One
-├── CHANGELOG.md · SUPPORT.md
+├── pyproject.toml                 # пакет commons-organism (ядро 0.2)
+├── ROADMAP.md · CHANGELOG.md · SUPPORT.md
 ├── CONTRIBUTING.md                # как стать клеткой (DCO, REUSE, провенанс)
 ├── SECURITY.md · CODE_OF_CONDUCT.md
 ├── THIRD_PARTY_NOTICES.md         # атрибуция органов и лицензии
@@ -69,26 +71,26 @@ commons/
 │   ├── SPEC-0001-brainstem-loop.md
 │   ├── SPEC-0002-synapse-mcp.md
 │   └── SPEC-0003-blood-envelope.md
-├── organs/                        # РЕЕСТР ОРГАНОВ
+├── brainstem/                     # СТВОЛ МОЗГА: канонический цикл (SPEC-0001)
+├── synapse/                       # СИНАПСЫ: MCP-шлюз + адаптеры органов (SPEC-0002)
+├── blood/                         # КРОВЬ: конверт + append-only журнал (SPEC-0003)
+├── tests/                         # 26 приёмок спек в форме pytest
+├── organs/                        # РЕЕСТР ОРГАНОВ + карточки органов
 │   ├── registry.yaml              # кто подключён, режим, лицензия
-│   └── top100-2026-10-26.yaml     # снимок рейтинга топ-100
-├── synapse/
-│   └── mcp-manifest.yaml          # декларация органов как MCP-серверов
-├── blood/
-│   └── envelope.schema.json       # JSON Schema конверта событий
+│   ├── top100-2026-10-26.yaml     # снимок рейтинга топ-100
+│   └── ollama/ · llama.cpp/ · markitdown/ · browser-use/
+├── synapse/mcp-manifest.yaml      # декларация органов как MCP-серверов
+├── blood/envelope.schema.json     # JSON Schema конверта событий
+├── scripts/selfmap.py             # организм рисует себя сам
 ├── docs/
 │   ├── manifesto.md               # аксиомы и аргументация
-│   ├── organ-map.md               # карта органов
-│   ├── research-plan.md           # план исследования 31 проекта
-│   ├── lenses.md · spikes.md      # линзы оценки · спайки S1–S5
-│   ├── rating-verification.md     # живая верификация рейтинга 2026-11-01
-│   ├── repo-structure-study.md    # структуры 10 эталонов, TOP-10 паттернов
-│   ├── practices-checklist.md     # 16 практик 2025–2026 и их статус
-│   ├── glossary.md                # словарь организма
-│   ├── repo-practices-2026.md     # первая волна изучения практик
+│   ├── selfmap.md                 # AUTO-GENERATED карта из живого реестра
+│   ├── organ-map.md · research-plan.md · lenses.md · spikes.md
+│   ├── rating-verification.md · repo-structure-study.md
+│   ├── practices-checklist.md · glossary.md · repo-practices-2026.md
 │   ├── templates/                 # шаблоны: спека · ADR · карточка органа
 │   └── adr/                       # журнал решений (почему)
-└── .github/                       # CI (валидация + REUSE lint) и шаблоны issues
+└── .github/                       # CI (валидация + REUSE + pytest) и шаблоны
 ```
 
 ## Быстрый старт
@@ -99,6 +101,21 @@ commons/
 4. Канал оценки кандидатов: [`docs/lenses.md`](docs/lenses.md) → [`docs/spikes.md`](docs/spikes.md).
 5. Агенту: начать с [`llms.txt`](llms.txt), правила — в [`AGENTS.md`](AGENTS.md).
 6. Заявить новый орган: issue по шаблону [«Заявка органа»](.github/ISSUE_TEMPLATE/organ-proposal.md).
+
+## Организм жив: ядро 0.2
+
+```bash
+pip install '.[dev]'
+python -m pytest -q        # 26 приёмок SPEC-0001..0003
+python3 scripts/selfmap.py # организм рисует себя сам → docs/selfmap.md
+```
+
+- **Ствол мозга** (`brainstem/`): цикл PLAN → ACT → OBSERVE → REFLECT, бюджет G3, HALT.
+- **Синапсы** (`synapse/`): шлюз читает манифест; veto необъявленного; замены по таблице `substitutions`; адаптеры загружаются из манифеста — новый орган = правка манифеста, не кода.
+- **Кровь** (`blood/`): конверт с обязательной ценой + append-only журнал; сессия реконструируется полностью.
+- **Органы M1**: адаптеры ollama (HTTP) и llama.cpp (запас), универсальный MCP-stdio для markitdown и browser-use; карточки — в `organs/<имен>/README.md`.
+
+Реальные соединения настраиваются на машине организма: `OLLAMA_HOST`, `LLAMA_SERVER_URL`, установленные `markitdown-mcp` / `browser-use-mcp`. В CI органы — фейки по контракту адаптера.
 
 ## Дорожная карта
 

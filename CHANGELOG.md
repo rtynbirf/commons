@@ -2,6 +2,26 @@
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/); версии — SemVer.
 
+## [0.6.0] — 2026-11-02
+
+### Added
+
+- **Память исполняется** (код следует за SPEC-0005): пакет `memory/` —
+  * `memory/__init__.py` — исполняемый контракт: протоколы Memory/VectorIndex/MemoryGraph + embed_text (базовая линия — hashing trick, dim 256);
+  * `memory/vectors.py` — SQLiteVectorIndex: векторный индекс, базовая линия ADR-0007 (brute-force cosine KNN, stdlib sqlite3);
+  * `memory/graph.py` — MemoryGraph: узлы source/organ/tool, рёбра — обмены с trace_id (via — последние 3);
+  * `memory/replay.py` — G1: восстановление памяти из крови (reflect-конверты — те же, что наблюдает живой фасад);
+  * `memory/engine.py` — MemoryFacade/DefaultMemory + memory_from_manifest: движок — орган в манифесте (G2), не развёрнут → None (degrade).
+- **Цикл помнит**: `Loop(..., memory=...)` — PLAN читает память read-only (`memory_context` в плане), после REFLECT конверт индексируется; отказ памяти — событие `error` (reason memory_unavailable), цикл живёт без неё (degrade SPEC-0005).
+- **41 новая приёмка** (хранилище 15 + цикл 20 + интеграция 6), всего **121**: G1-эквивалентность живой памяти и replay (в т.ч. на крови первого пульса), G2-замена движка правкой манифеста, G3-локальность, degrade — всё в CI.
+
+### Changed
+
+- `brainstem/loop.py`: keyword-only параметр `memory` — назад-совместимо; `_emit` возвращает записанный конверт.
+- Спайк S6: базовая линия sqlite3 стала первой реализацией памяти (`memory/vectors.py`); живые движки — метриками на хосте.
+- Семантика replay согласована с п.1 SPEC-0005 интеграцией: память хранит reflect-обмены — ровно то же, что индексирует живой фасад (иначе G1 нарушается); план/act/observe остаются в крови, не в памяти.
+- `REUSE.toml`: покрыт пакет `memory/` (98 → 105 файлов).
+
 ## [0.5.0] — 2026-11-02
 
 ### Added

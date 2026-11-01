@@ -11,12 +11,14 @@
 
 from __future__ import annotations
 
+import copy
 import time
 from dataclasses import dataclass, field
 from typing import Any
 
 from blood.envelope import Cost, make, new_trace_id
 from blood.journal import Journal
+from memory import Memory
 from synapse.gateway import Gateway, OrganUnavailable, SynapseVeto
 
 
@@ -50,16 +52,53 @@ class Budget:
 
 
 class Loop:
-    """Ствол мозга: план → действие → наблюдение → рефлексия."""
+    """Ствол мозга: план → действие → наблюдение → рефлексия.
 
-    def __init__(self, gateway: Gateway, journal: Journal) -> None:
+    Память (SPEC-0005) — необязательный кэш-советник: PLAN читает её read-only
+    перед планом, индексация — только после REFLECT. Отказ памяти — degrade:
+    событие error в кровь, цикл продолжает без неё; кровь остаётся истиной.
+    """
+
+    def __init__(self, gateway: Gateway, journal: Journal, *, memory: Memory | None = None) -> None:
         self.gateway = gateway
         self.journal = journal
+        self.memory = memory
 
     # --- кровь ---
 
-    def _emit(self, event_type: str, organ: str, payload: dict[str, Any], trace_id: str) -> None:
-        self.journal.append(make(event_type, "brainstem", organ, trace_id, payload, Cost()))
+    def _emit(self, event_type: str, organ: str, payload: dict[str, Any], trace_id: str) -> dict[str, Any]:
+        """Пишет конверт в кровь и возвращает его — память помнит уже записанное (SPEC-0005 п.1)."""
+        return self.journal.append(make(event_type, "brainstem", organ, trace_id, payload, Cost()))
+
+    # --- память (SPEC-0005): кэш-советник, отказ — degrade, кровь — истина ---
+
+    def _recall(self, intent: str, trace_id: str) -> list[dict[str, Any]]:
+        """Read-only контекст памяти перед PLAN (SPEC-0005 п.5).
+
+        Память недоступна — событие error в кровь, шаг идёт без контекста
+        (degrade SPEC-0005): отказ памяти никогда не останавливает цикл.
+        Возвращается копия: память не должна иметь шанса мутировать кровь.
+        """
+        if self.memory is None:
+            return []
+        try:
+            return copy.deepcopy(self.memory.context(intent))
+        except Exception:  # noqa: BLE001 — отказной режим SPEC-0005: цикл живёт без памяти
+            self._emit("error", "memory", {"reason": "memory_unavailable"}, trace_id)
+            return []
+
+    def _remember(self, envelope: dict[str, Any]) -> None:
+        """Индексация после REFLECT (SPEC-0005 п.1): рефлексия уже в крови.
+
+        Память упала — событие error в кровь, цикл продолжается без неё
+        (degrade SPEC-0005); сам REFLECT-конверт не трогается — кровь истина.
+        """
+        if self.memory is None:
+            return
+        try:
+            self.memory.observe(envelope)
+        except Exception:  # noqa: BLE001 — отказной режим SPEC-0005
+            self._emit("error", "memory", {"reason": "memory_unavailable"}, envelope["trace_id"])
 
     # --- приёмка G3: бюджет читается из крови, а не из памяти цикла ---
 
@@ -86,19 +125,23 @@ class Loop:
                 self._emit("halt", "self", {"reason": f"бюджет исчерпан: {reason}", "at_step": index}, trace_id)
                 return False
 
-            self._emit("plan", step.organ, {"index": index, "tool": step.tool, "intent": step.intent}, trace_id)
+            plan_payload: dict[str, Any] = {"index": index, "tool": step.tool, "intent": step.intent}
+            memory_context = self._recall(step.intent, trace_id)  # read-only, до PLAN (SPEC-0005 п.5)
+            if memory_context:
+                plan_payload["memory_context"] = memory_context
+            self._emit("plan", step.organ, plan_payload, trace_id)
             try:
                 result = self.gateway.call(step.organ, step.tool, step.payload, trace_id)
             except SynapseVeto as veto:
-                self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": f"veto: {veto}"}, trace_id)
+                self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": f"veto: {veto}"}, trace_id))
                 return False
             except OrganUnavailable as failure:
-                self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": f"organ: {failure}"}, trace_id)
+                self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": f"organ: {failure}"}, trace_id))
                 return False
 
             self._emit("observe", step.organ, {"result": _normalize(result), "tool": step.tool}, trace_id)
             satisfied = result is not None  # рефлексия M1: намерение = вызов вернул результат
-            self._emit("reflect", "self", {"intent": step.intent, "satisfied": satisfied}, trace_id)
+            self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": satisfied}, trace_id))
             if not satisfied:
                 return False
         return True

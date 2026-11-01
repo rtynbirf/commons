@@ -2,6 +2,24 @@
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/); версии — SemVer.
 
+## [0.13.0] — 2026-11-02
+
+### Added
+
+- **Трансплантология — донорский протокол органов** (M3; SPEC-0008 v0.1.0 — спека раньше кода, ADR-0010):
+  * **Исходящий иммунитет**: SPEC-0006 решает, что входит в тело; SPEC-0008 — куда тело отдаёт свою кровь. Аксиома: дарим только по рукопожатию (DCO) и тому, кто дарит; CLA-ошейник не подписывается — патч живёт внутри организма;
+  * **Донорские карты** — данные `organs/donation.yaml`: факты живого типирования upstream 2026-11-02 (evidence с датой и https-URL): microsoft/markitdown, browser-use/browser-use, ollama/ollama — ошейников не обнаружено (`donate`); facebook/react — CLA в шаблоне PR и метки «CLA Signed» (`patch-inside`); n8n-io/n8n — CLA («I give n8n permission to license my contributions on any terms they like») + fair-code (`consume-only`); ggml-org/llama.cpp — не типирован (`patch-inside` до типирования);
+  * **Механизм** `immune/donation.py` — чистая функция без сети: отказы `collar` / `untyped` / `not-mutual` (дарим тому, кто дарит — лицензия из allowed матрицы SPEC-0006) / `unknown-organ` / `duplicate` / `missing`; fail-closed (G1), данные не код (G2), итог `TRANSPLANT: N ok, M failed` (G3);
+  * **CI-гейт**: job `transplant` (`python -m immune.donation`, консольный скрипт `commons-transplant`) — рядом с `commons-immune`.
+- **18 новых приёмок** (донорский протокол), всего **290**; словари протоколов и решений сверяются в трёх источниках: спека = данные = код — дрейф невозможен.
+
+### Changed
+
+- ROADMAP M3: «первые патчи в upstream» — только типированным по SPEC-0008 органам (markitdown, browser-use, ollama) с перепроверкой карты перед каждым PR; react и n8n получают улучшения внутри тела.
+- `docs/practices-checklist.md`: практика #9 «DCO вместо CLA» распространена на исходящее донорство (v0.3.0, волна 3).
+- PROVENANCE §2: донорские факты (CLA/DCO/лицензии upstream) фиксируются живым чтением upstream-файлов на дату.
+- llms.txt: SPEC-0008, `organs/donation.yaml`, инвариант 10 (кровь наружу — только по донорской карте).
+
 ## [0.12.0] — 2026-11-02
 
 ### Added

@@ -116,3 +116,7 @@ access token»**: fine-grained PAT не имеет права создавать
   и в собственный форк → 403. Дожим (`scripts/finish_wave.sh`): пушcommons + пуш ветки +
   попытка PR + статус n8n; PR в microsoft после пуша — один клик compare-URL
   (fine-grained не умеет PR в чужих репо — это ограничение класса токена, не прав).
+- Гейт открыт (токен №2, Contents: write): провенанс в origin/main (`25d5af3..050f6f1`),
+  ветка `fix/html-docx-escape-pipes` запушена в форк `rtynbirf/markitdown`; PR в
+  microsoft/markitdown API-вызовом → 403 (класс токена, ожидаемо) — остался compare-URL
+  или classic-токен с `public_repo`. n8n#5689 — open, blocked = только ревью людей.

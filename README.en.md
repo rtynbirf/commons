@@ -20,11 +20,16 @@ Since **0.4.0 the organism lives in time**: PID 1 is a heartbeat daemon (`boot �
 
 Since **0.5.0 the organism has a memory genome** ([SPEC-0005](specs/SPEC-0005-memory.md): memory is a derivative of blood — the journal is the truth, memory is an advisory cache), an engine decision ([ADR-0007](docs/adr/ADR-0007-memory-engines.md), all four vector candidates Apache-2.0, verified via the live GitHub API 2026-11-02), and a second self-portrait — an excalidraw map generated from the live registry ([`docs/organ-map.excalidraw`](docs/organ-map.excalidraw), 36 organs, 13 systems).
 
+Since **0.6.0 memory runs**: graph + vectors + replay from the blood; PLAN reads it read-only; the engine is an organ in the manifest.
+
+Since **0.7.0 immunity runs**: the license barrier as code ([SPEC-0006](specs/SPEC-0006-immunity.md), [ADR-0008](docs/adr/ADR-0008-license-barrier.md)) — rules live in data (`immune/license-matrix.yaml`), an unknown license is rejected from embedding (fail-closed, G1), rules change by editing YAML, not code (G2), and the `python -m immune` gate in CI turns a PR red before AGPL/fair-code enters the body.
+
 ## Core artifacts
 
 | Artifact | Purpose |
 |---|---|
-| `specs/` | Genome: canonical agent loop, MCP synapse contract, blood envelope contract, living organism (PID 1) |
+| `specs/` | Genome: canonical agent loop, MCP synapse contract, blood envelope contract, living organism (PID 1), memory, license immunity |
+| `immune/` | License barrier: rules-as-data matrix + `(license, mode) → verdict` + `commons-immune` CI gate |
 | `organs/registry.yaml` | Which organs are connected, in which mode (dependency / adapter / external / reference / substrate), with verified licenses |
 | `synapse/mcp-manifest.yaml` | Declarative manifest of organs as MCP servers |
 | `blood/envelope.schema.json` | JSON Schema of the event envelope (every call carries its cost) |

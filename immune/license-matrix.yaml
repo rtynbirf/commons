@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: 2026 COMMONS contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Лицензионная матрица иммунитета COMMONS (SPEC-0006) — данные, не код.
+# Правила меняются правкой этого файла; код пакета immune — только механизм применения (G2).
+# Строки лицензий — license_pre реестра органов: человеческие оценки, верифицированные
+# живым GitHub API на дату (PROVENANCE.md §3); строка лицензии сверяется дословно.
+version: 0.1.0
+updated: 2026-11-02
+
+# Режимы органа (organs/registry.yaml modes). core_modes — встраивание в тело:
+# код органа переносится в организм, максимальная строгость иммунитета.
+modes: [dependency, adapter, external, reference, substrate, education]
+core_modes: [dependency, adapter]
+
+# Разрешённые повсеместно (permissive OSI, верифицировано).
+allowed:
+  - MIT
+  - Apache-2.0
+  - BSD-3-Clause
+  - CC0-1.0
+  - MIT OR Apache-2.0
+  - MIT-подобная
+
+# Условные: лицензия -> перечень режимов, где допустима.
+conditional:
+  "Apache-2.0 с условиями": [adapter, external, reference, substrate, education]  # dify
+
+# Ограниченные: в core_modes — запрет (не встраиваем); вне тела — допустимо.
+restricted:
+  - AGPL-3.0
+  - GPL-3.0
+  - GPL-2.0
+  - NOASSERTION
+  - "fair-code (Sustainable Use)"
+  - "по-навыковые (ToU Anthropic)"

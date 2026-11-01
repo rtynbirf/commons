@@ -18,6 +18,7 @@ path = [
   "blood/**",
   "brainstem/**",
   "memory/**",
+  "immune/**",
   "tests/**",
   "scripts/**",
   "spikes/**",

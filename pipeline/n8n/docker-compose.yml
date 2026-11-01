@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2026 COMMONS contributors
+# SPDX-License-Identifier: Apache-2.0
+#
+# Референс-развёртывание внешнего конвейера n8n (SPEC-0007, ADR-0009).
+# n8n — внешний узел (fair-code, Sustainable Use): не встроен в тело (SPEC-0006),
+# поднимается человеком на своём хосте (PID 1, SPEC-0004). Секреты — не в репо.
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: commons-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_SECURE_COOKIE=false
+      - GENERIC_TIMEZONE=Europe/Moscow
+    volumes:
+      - n8n_data:/home/node/.n8n
+volumes:
+  n8n_data:

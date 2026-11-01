@@ -16,15 +16,16 @@
 - [docs/repo-structure-study.md](docs/repo-structure-study.md): структура 10 эталонных репозиториев, TOP-10 перенятых паттернов.
 - [docs/practices-checklist.md](docs/practices-checklist.md): 16 практик open-source 2025–2026 и их статус здесь.
 - [docs/glossary.md](docs/glossary.md): словарь организма.
-- [docs/adr/](docs/adr/): журнал решений (почему так; ADR-0004 — исполнимое ядро 0.2, ADR-0005 — ритуал подключения органа, ADR-0006 — ЧЕЛОВЕК=PID=1, ADR-0007 — движки памяти, ADR-0008 — иммунитет как код).
+- [docs/adr/](docs/adr/): журнал решений (почему так; ADR-0004 — исполнимое ядро 0.2, ADR-0005 — ритуал подключения органа, ADR-0006 — ЧЕЛОВЕК=PID=1, ADR-0007 — движки памяти, ADR-0008 — иммунитет как код, ADR-0009 — внешний конвейер).
 - [runs/](runs/): жизнь организма — артефакты реальных прогонов (первый пульс: runs/2026-11-01-first-pulse/).
 - [spikes/](spikes/): харнессы спайков — S1 метаболизм (харнесс), S2 цикл (замерен 2026-11-01: SPEC-0001 в силе), S3 оркестрация (харнесс: матрица лицензий + проба эндпоинтов), S4 браузер (20 сценариев + `--validate`), S5 геном (selfcheck «спека ↔ код» в CI), S6 память (базовая линия sqlite3 в CI, ADR-0007).
-- [specs/](specs/): геном — SPEC-0001 ствол мозга, SPEC-0002 синапсы, SPEC-0003 кровь, SPEC-0004 живой организм (PID 1), SPEC-0005 память, SPEC-0006 иммунитет (лицензионный барьер).
+- [specs/](specs/): геном — SPEC-0001 ствол мозга, SPEC-0002 синапсы, SPEC-0003 кровь, SPEC-0004 живой организм (PID 1), SPEC-0005 память, SPEC-0006 иммунитет (лицензионный барьер), SPEC-0007 конвейер (n8n как внешний узел).
 - [memory/](memory/): память организма (SPEC-0005) — исполняемый контракт, граф знаний, SQLiteVectorIndex (базовая линия ADR-0007), replay из крови; движок — орган в манифесте (G2), PLAN читает read-only.
 - [brainstem/](brainstem/): исполняемый цикл PLAN→ACT→OBSERVE→REFLECT с бюджетом G3 (лимиты на трейс и на вызов — поле `budget` в манифесте, порог → `alert`, исчерпание → HALT) + живой организм PID 1 (`brainstem/pid1.py`, запуск — `scripts/pid1.py`).
 - [synapse/](synapse/): MCP-шлюз + адаптеры органов (ollama, llama.cpp, универсальный MCP-stdio).
 - [blood/](blood/): конверт с ценой + append-only журнал.
 - [immune/](immune/): иммунитет — лицензионный барьер тела (SPEC-0006, ADR-0008): матрица правил — данные `immune/license-matrix.yaml`, вердикт `(license, mode) → Decision`, гейт `python -m immune` в CI; fail-closed на неизвестную лицензию во встраивание (G1).
+- [pipeline/](pipeline/): внешний конвейер (SPEC-0007, ADR-0009) — n8n как внешний узел: референс-развёртывание (`pipeline/n8n/docker-compose.yml`) и воркфлоу (`pipeline/n8n/workflows/*.json`) — данные с белым списком команд, валидатор `python -m pipeline` в CI; n8n не встраивается (fair-code — только external по SPEC-0006), пульс — только через ствол мозга.
 - [organs/registry.yaml](organs/registry.yaml): реестр органов с режимами и верифицированными лицензиями.
 - [synapse/mcp-manifest.yaml](synapse/mcp-manifest.yaml): органы как MCP-серверы; поле `adapter` ведёт к классу адаптера.
 - [blood/envelope.schema.json](blood/envelope.schema.json): конверт крови (JSON Schema).

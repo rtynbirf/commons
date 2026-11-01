@@ -4,7 +4,7 @@
 # rank/stars — снимок рейтинга 2026-10-26 (organs/top100-2026-10-26.yaml), не живой счётчик.
 meta:
   version: 0.2.2
-  updated: 2026-11-01
+  updated: 2026-11-02
   snapshot_date: 2026-10-26
   license_verified_date: 2026-11-01
 
@@ -38,7 +38,7 @@ organs:
   - {repo: langchain-ai/langchain, system: nerves_alt, role: оркестрация агентов, rank: 64, stars: 148491, license_pre: MIT, mode: dependency, status: planned-m2, note: спайк S2 замерен — каркас растёт с инструментами, ствол мозга остаётся своим}
   - {repo: langgenius/dify, system: nerves_alt, role: платформа AI-приложений, rank: 56, stars: 159593, license_pre: Apache-2.0 с условиями, mode: adapter, status: conditional-license}
   - {repo: langflow-ai/langflow, system: nerves_alt, role: визуальная сборка, rank: 59, stars: 156030, license_pre: MIT, mode: reference, status: studying}
-  - {repo: n8n-io/n8n, system: nerves_alt, role: автоматизация workflows, rank: 28, stars: 208643, license_pre: fair-code (Sustainable Use), mode: external, status: not-embeddable}
+  - {repo: n8n-io/n8n, system: nerves_alt, role: автоматизация workflows, rank: 28, stars: 208643, license_pre: fair-code (Sustainable Use), mode: external, status: not-embeddable, note: референс-развёртывание внешнего конвейера — pipeline/n8n (0.9.0, SPEC-0007); не встраивается}
 
   # --- ПАМЯТЬ ---
   - {repo: Graphify-Labs/graphify, system: memory, role: кодовая база в граф знаний, rank: 80, stars: 135831, license_pre: Apache-2.0, mode: dependency, status: candidate-m2, note: векторная БД выбирается в Этапе 0}

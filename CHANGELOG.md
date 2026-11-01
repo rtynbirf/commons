@@ -2,6 +2,25 @@
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/); версии — SemVer.
 
+## [0.9.0] — 2026-11-02
+
+### Added
+
+- **Конвейер исполняется** (M3, код следует за SPEC-0007, ADR-0009): n8n — внешний узел (fair-code, Sustainable Use; реестр: `mode: external`, статус `not-embeddable`); **референс-развёртывание, не встраивание**:
+  * `pipeline/n8n/docker-compose.yml` — референс-развёртывание n8n у владельца (PID 1: поднимает и убивает человек, секреты — не в репо);
+  * `pipeline/n8n/workflows/*.json` — три воркфлоу-данных: пульс (`commons-pid1 --max-beats 1`), иммунный гейт (`commons-immune`), приёмки (`python3 -m pytest -q`) — только точки входа организма, пульс только через ствол мозга;
+  * `pipeline/check.py` — валидатор: структура воркфлоу, известные типы узлов, белый список команд (shell-метасимволы — отказ), compose без привилегий; без сети и времени; fail-closed (G1), артефакты — данные (G2), каждый вердикт несёт правило и причину (G3);
+  * `pipeline/__main__.py` + команда `commons-pipeline` — гейт: провал валидации — ненулевой код возврата, красный PR.
+- **Спека SPEC-0007** («Конвейер — n8n как внешний узел», спека до кода) + **ADR-0009** («внешний конвейер — референс-развёртывание, не встраивание»).
+- **Гейт в CI**: отдельный job `pipeline` — `python -m pipeline` (воркфлоу + compose).
+- **18 новых приёмок** (`tests/test_pipeline_n8n.py`), всего **233**: живые артефакты чисты (`PIPELINE: 4 ok, 0 failed`), `curl … | sh` → `command-not-allowed`, инъекция после легальной команды → отказ, неизвестный узел → fail-closed, compose-правила, CLI exit-коды; барьерная демонстрация SPEC-0006 на живом реестре: n8n (fair-code + external) проходит барьер, та же лицензия в `dependency` — красный.
+
+### Changed
+
+- `pyproject.toml`: пакет `pipeline*` включён в дистрибуцию; команда `commons-pipeline`.
+- CI: новый job `pipeline` — параллельно validate/reuse/immune/core.
+- README/README.en: история версий дополнена 0.9.0; `organs/registry.yaml`: у записи n8n — примечание о референс-развёртывании.
+
 ## [0.8.0] — 2026-11-02
 
 ### Added

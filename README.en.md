@@ -26,12 +26,15 @@ Since **0.7.0 immunity runs**: the license barrier as code ([SPEC-0006](specs/SP
 
 Since **0.8.0 metabolism is budgeted** (SPEC-0001 G3): trace-level and per-call limits declared in the manifest (`budget` field), threshold crossing emits an `alert` event into the blood, exhaustion HALTs the loop.
 
+Since **0.9.0 the organism has an external pipeline** ([SPEC-0007](specs/SPEC-0007-pipeline.md), [ADR-0009](docs/adr/ADR-0009-external-pipeline.md)): n8n stays an external node (fair-code, not embeddable — the registry keeps it in `external` mode); the reference deployment and exported workflows are **data** with a command whitelist (organ entry points only), arbitrary shell fails validation (G1 fail-closed); the pulse goes only through the brainstem (`commons-pid1`); the `python -m pipeline` gate in CI turns a violating PR red.
+
 ## Core artifacts
 
 | Artifact | Purpose |
 |---|---|
 | `specs/` | Genome: canonical agent loop, MCP synapse contract, blood envelope contract, living organism (PID 1), memory, license immunity |
 | `immune/` | License barrier: rules-as-data matrix + `(license, mode) → verdict` + `commons-immune` CI gate |
+| `pipeline/` | External pipeline (n8n): reference deployment + workflow data + `commons-pipeline` CI gate |
 | `organs/registry.yaml` | Which organs are connected, in which mode (dependency / adapter / external / reference / substrate), with verified licenses |
 | `synapse/mcp-manifest.yaml` | Declarative manifest of organs as MCP servers |
 | `blood/envelope.schema.json` | JSON Schema of the event envelope (every call carries its cost) |

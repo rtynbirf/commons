@@ -1,0 +1,52 @@
+{
+  "name": "COMMONS — иммунный барьер",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days"
+            }
+          ]
+        }
+      },
+      "id": "9e3a4b5c-6d7f-4a81-8c92-3d4e5f6a7b82",
+      "name": "Расписание (раз в сутки)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "command": "commons-immune"
+      },
+      "id": "0f4b5c6d-7e8a-4b92-9da3-4e5f6a7b8c93",
+      "name": "Иммунный барьер (commons-immune)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Расписание (раз в сутки)": {
+      "main": [
+        [
+          {
+            "node": "Иммунный барьер (commons-immune)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}

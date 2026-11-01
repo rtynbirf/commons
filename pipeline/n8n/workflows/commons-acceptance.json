@@ -1,0 +1,44 @@
+{
+  "name": "COMMONS — приёмки (pytest)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "1a5c6d7e-8f9b-4ca3-8eb4-5f6a7b8c9da4",
+      "name": "Ручной запуск",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "command": "python3 -m pytest -q"
+      },
+      "id": "2b6d7e8f-9a0c-4db4-9fc5-6a7b8c9d0eb5",
+      "name": "Приёмки (pytest)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        220,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Ручной запуск": {
+      "main": [
+        [
+          {
+            "node": "Приёмки (pytest)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {}
+}

@@ -1,0 +1,169 @@
+"""MCP-шлюз — SPEC-0002.
+
+Правила шлюза:
+1. Источник истины — `synapse/mcp-manifest.yaml`; манифест не валиден — шлюз не стартует.
+2. Орган или инструмент без записи в манифесте → событие `veto`.
+3. Неотвечающий орган уходит к замене из таблицы `substitutions` (`organ.replace`).
+4. Адаптер органа загружается по полю `adapter` манифеста: новый орган подключается
+   правкой манифеста, без правки кода шлюза (приёмка SPEC-0002).
+5. Каждый вызов попадает в кровь как `act` с заполненной ценой.
+"""
+
+from __future__ import annotations
+
+import importlib
+import time
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+from blood.envelope import Cost, make
+from blood.journal import Journal
+
+REQUIRED_FIELDS = {"name", "system", "mode", "upstream", "license", "transport", "tools", "authority"}
+TRANSPORT_REQUIREMENTS = {"stdio": {"command"}, "http": {"endpoint"}}
+
+
+class GatewayConfigError(RuntimeError):
+    """Манифест не валиден — шлюз не стартует (SPEC-0002)."""
+
+
+class SynapseVeto(RuntimeError):
+    """Вызов не прошёл через манифест: орган или инструмент не объявлены."""
+
+
+class OrganUnavailable(RuntimeError):
+    """Орган и все его замены недоступны."""
+
+
+class AuthorityViolation(RuntimeError):
+    """Орган превысил полномочия — событие `security.violation` (SPEC-0002)."""
+
+
+class Gateway:
+    """Шлюз синапсов: единственный способ дотянуться до органа."""
+
+    def __init__(self, manifest_path: str | Path, journal: Journal | None = None) -> None:
+        self.journal = journal
+        path = Path(manifest_path)
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if not isinstance(raw, dict) or not isinstance(raw.get("organs"), list):
+            raise GatewayConfigError("манифест: отсутствует список organs")
+
+        self._organs: dict[str, dict[str, Any]] = {}
+        for entry in raw["organs"]:
+            if not isinstance(entry, dict) or not REQUIRED_FIELDS.issubset(entry):
+                missing = REQUIRED_FIELDS - set(entry or {})
+                raise GatewayConfigError(f"манифест: запись без полей {sorted(missing)}")
+            name = entry["name"]
+            if name in self._organs:
+                raise GatewayConfigError(f"манифест: две записи с именем {name!r}")
+            transport = entry["transport"]
+            if transport not in TRANSPORT_REQUIREMENTS:
+                raise GatewayConfigError(f"манифест: {name}: неизвестный транспорт {transport!r}")
+            absent = TRANSPORT_REQUIREMENTS[transport] - set(entry)
+            if absent:
+                raise GatewayConfigError(f"манифест: {name}: для транспорта {transport} нужны {sorted(absent)}")
+            if not isinstance(entry["tools"], list) or not entry["tools"]:
+                raise GatewayConfigError(f"манифест: {name}: список tools пуст или не список")
+            self._organs[name] = entry
+
+        subs = raw.get("substitutions") or {}
+        self._substitutions: dict[str, list[str]] = {str(k): list(v) for k, v in subs.items()}
+        for organ, reserves in self._substitutions.items():
+            unknown = [r for r in reserves if r not in self._organs]
+            if unknown:
+                raise GatewayConfigError(f"манифест: замены для {organ} ссылаются на неизвестные органы {unknown}")
+
+        self._adapters: dict[str, Any] = {}
+        for name, entry in self._organs.items():
+            dotted = entry.get("adapter")
+            if dotted:
+                self._adapters[name] = self._instantiate_adapter(dotted, entry)
+
+    # --- сборка адаптера из манифеста (приёмка SPEC-0002: без кода шлюза) ---
+
+    @staticmethod
+    def _instantiate_adapter(dotted: str, entry: dict[str, Any]) -> Any:
+        try:
+            module_path, class_name = dotted.split(":")
+            cls = getattr(importlib.import_module(module_path), class_name)
+        except Exception as exc:  # noqa: BLE001 — ошибка конфигурации всегда
+            raise GatewayConfigError(f"адаптер {dotted!r} не загрузился: {exc}") from exc
+        return cls(entry)
+
+    def bind_adapter(self, organ: str, adapter: Any) -> None:
+        """Явная привязка адаптера (тесты и подмена без правки манифеста)."""
+        if organ not in self._organs:
+            raise SynapseVeto(f"{organ!r} не существует: нет записи в манифесте")
+        self._adapters[organ] = adapter
+
+    # --- кровь ---
+
+    def _emit(self, event_type: str, organ: str, payload: dict[str, Any], cost: Cost | None = None, trace_id: str = "-") -> None:
+        if self.journal is not None:
+            self.journal.append(make(event_type, "synapse", organ, trace_id, payload, cost))
+
+    # --- health ---
+
+    def health(self, organ: str) -> bool:
+        adapter = self._adapters.get(organ)
+        if adapter is None:
+            return False
+        try:
+            return bool(adapter.health())
+        except Exception:  # noqa: BLE001 — не отвечающий орган = нездоров
+            return False
+
+    def manifest_entry(self, organ: str) -> dict[str, Any]:
+        return dict(self._organs[organ])
+
+    @property
+    def organ_names(self) -> list[str]:
+        return list(self._organs)
+
+    # --- вызов ---
+
+    def call(self, organ: str, tool: str, payload: dict[str, Any] | None, trace_id: str) -> Any:
+        """Вызов органа через синапс. Любой исход попадает в кровь."""
+        entry = self._organs.get(organ)
+        if entry is None:
+            self._emit("veto", organ, {"reason": "орган не объявлен в манифесте", "tool": tool}, trace_id=trace_id)
+            raise SynapseVeto(f"{organ!r}: органа нет в манифесте")
+
+        if tool not in entry["tools"]:
+            self._emit("veto", organ, {"reason": "инструмент не объявлен в манифесте", "tool": tool}, trace_id=trace_id)
+            raise SynapseVeto(f"{organ}.{tool}: инструмент не объявлен в манифесте")
+
+        adapter = self._adapters.get(organ)
+        if adapter is None or not self.health(organ):
+            substitute = self._find_substitute(organ, trace_id)
+            if substitute is None:
+                self._emit("error", organ, {"reason": "орган недоступен, замены нет", "tool": tool}, trace_id=trace_id)
+                raise OrganUnavailable(f"{organ}: недоступен и замен нет")
+            return self.call(substitute, tool, payload, trace_id)
+
+        started = time.monotonic()
+        try:
+            result, cost = adapter.invoke(tool, payload or {})
+        except AuthorityViolation:
+            self._emit("security.violation", organ, {"reason": "превышены полномочия", "tool": tool}, trace_id=trace_id)
+            raise
+        except Exception as exc:  # noqa: BLE001 — отказной режим SPEC-0001: событие error
+            self._emit("error", organ, {"reason": f"орган упал: {exc}", "tool": tool}, trace_id=trace_id)
+            raise OrganUnavailable(f"{organ}.{tool}: {exc}") from exc
+
+        measured = max(float(cost.get("seconds", 0.0)) if isinstance(cost, dict) else cost.seconds, time.monotonic() - started)
+        cost_dict = cost.as_dict() if hasattr(cost, "as_dict") else dict(cost)
+        cost_dict["seconds"] = round(measured, 6)
+
+        self._emit("act", organ, {"tool": tool, "payload": payload or {}}, Cost.from_dict(cost_dict), trace_id)
+        return result
+
+    def _find_substitute(self, failed: str, trace_id: str) -> str | None:
+        for reserve in self._substitutions.get(failed, []):
+            if self.health(reserve):
+                self._emit("organ.replace", failed, {"from": failed, "to": reserve}, trace_id=trace_id)
+                return reserve
+        return None

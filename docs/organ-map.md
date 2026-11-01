@@ -1,6 +1,6 @@
-# Карта органов COMMONS v0.1.0
+# Карта органов COMMONS v0.1.1
 
-Дата: 2026-11-01 · Ранг и звёзды — снимок 26.10.2026 (`organs/top100-2026-10-26.yaml`) · Лицензии — предварительные, сверяются по файлу LICENSE на дату подключения.
+Дата: 2026-11-01 · Ранг и звёзды — снимок 26.10.2026 (`organs/top100-2026-10-26.yaml`) · Лицензии верифицированы живым GitHub API 2026-11-01 ([PROVENANCE.md](../PROVENANCE.md)); перед подключением перепроверяются по файлу LICENSE upstream.
 
 Режимы: **зависимость** — работает в теле (только permissive); **адаптер** — наш тонкий код вокруг органа; **внешний узел** — вне тела (AGPL/fair-code/проприетарные); **референс** — только изучение; **субстрат** — среда, не модифицируем; **обучение** — репродукция клеток команды.
 
@@ -9,8 +9,8 @@
 | Система | Орган | Ранг | Режим | Лицензия (предв.) |
 |---|---|---|---|---|
 | Геном | github/spec-kit | 71 | зависимость | MIT |
-| Геном | anthropics/skills | 46 | зависимость | MIT |
-| Геном | obra/superpowers | 13 | референс | проверяется |
+| Геном | anthropics/skills | 46 | референс (открытый формат) | по-навыковые (ToU Anthropic) |
+| Геном | obra/superpowers | 13 | референс | MIT |
 | Ствол мозга | собственный канонический цикл (SPEC-0001) | — | свой код | — |
 | Ствол мозга | референсы: openclaw (6), claude-code (61), opencode (25), codex (85) | — | референс | смешанные |
 | Синапсы | MCP-шлюз (SPEC-0002) | — | свой код | — |
@@ -18,9 +18,9 @@
 | Метаболизм | ollama/ollama | 43 | зависимость | MIT |
 | Метаболизм | ggml-org/llama.cpp | 83 | зависимость (запас ollama) | MIT |
 | Метаболизм | huggingface/transformers | 52 | зависимость | Apache-2.0 |
-| Память | Graphify-Labs/graphify | 80 | кандидат (M2) | проверяется |
+| Память | Graphify-Labs/graphify | 80 | кандидат (M2) | Apache-2.0 |
 | Память | векторная БД | — | выбор в Этапе 0 | — |
-| Иммунитет | Hack-with-Github/Awesome-Hacking (знания) | 91 | референс | проверяется |
+| Иммунитет | Hack-with-Github/Awesome-Hacking (знания) | 91 | референс | CC0-1.0 |
 | Иммунитет | лицензионный барьер в CI | — | политика | — |
 
 ## Периферия
@@ -29,10 +29,11 @@
 |---|---|---|---|---|
 | Сенсорика | microsoft/markitdown | 37 | зависимость | MIT |
 | Сенсорика | firecrawl/firecrawl | 34 | внешний узел (hosted API) | AGPL-3.0 |
-| Сенсорика | x1xhlol/system-prompts-and-models-of-ai-tools | 66 | референс-корпус | проверяется |
+| Сенсорика | x1xhlol/system-prompts-and-models-of-ai-tools | 66 | референс-корпус | GPL-3.0 |
 | Эффекторы | openclaw/openclaw | 6 | зависимость (M2) | MIT |
 | Эффекторы | browser-use/browser-use | 98 | зависимость (M1) | MIT |
-| Эффекторы | morluto/rea | 7 | адаптер (опционально) | проверяется |
+| Эффекторы | morluto/rea | 7 | адаптер (опционально) | MIT |
+| Эффекторы | NousResearch/hermes-agent | — | референс | MIT |
 | Нервные альтернативы | langchain-ai/langchain | 64 | зависимость (M2) | MIT |
 | Нервные альтернативы | langgenius/dify | 56 | адаптер, условная | Apache-2.0 с условиями |
 | Нервные альтернативы | langflow-ai/langflow | 59 | референс | MIT |
@@ -49,9 +50,9 @@
 | Субстрат | kubernetes/kubernetes | 87 | субстрат | Apache-2.0 |
 | Субстрат | nodejs/node | 94 | субстрат | MIT |
 | Субстрат | golang/go · rust-lang/rust | 77 · 96 | субстрат | BSD-3 · MIT/Apache |
-| Репродукция | codecrafters-io/build-your-own-x | 1 | обучение | проверяется |
-| Репродукция | donnemartin/system-design-primer | 8 | обучение | проверяется |
-| Репродукция | ossu/computer-science | 27 | обучение | MIT-подобная |
+| Репродукция | codecrafters-io/build-your-own-x | 1 | обучение | NOASSERTION (только чтение) |
+| Репродукция | donnemartin/system-design-primer | 8 | обучение | NOASSERTION (только чтение) |
+| Репродукция | ossu/computer-science | 27 | обучение | MIT |
 
 ## Вне организма
 

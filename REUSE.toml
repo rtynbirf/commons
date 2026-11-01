@@ -1,0 +1,32 @@
+version = 1
+
+# COMMONS: единая лицензия Apache-2.0 на всё содержимое (ADR-0003).
+# Лицензионные тексты (LICENSE, LICENSES/) распознаются REUSE автоматически;
+# для всего остального действует override-аннотация ниже.
+
+[[annotations]]
+path = [
+  "*.md",
+  "*.txt",
+  "*.cff",
+  "*.toml",
+  "*.example",
+  "docs/**",
+  "specs/**",
+  "organs/**",
+  "synapse/**",
+  "blood/**",
+  ".github/**",
+  ".editorconfig",
+  ".gitattributes",
+  ".gitignore",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 COMMONS · rtynbirf · провенанс: PROVENANCE.md"
+SPDX-License-Identifier = "Apache-2.0"
+
+[[annotations]]
+path = ["LICENSE"]
+precedence = "override"
+SPDX-FileCopyrightText = "Канонический текст Apache License 2.0 (apache.org)"
+SPDX-License-Identifier = "Apache-2.0"

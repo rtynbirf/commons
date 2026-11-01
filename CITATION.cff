@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+title: "COMMONS — один организм из лучших открытых проектов"
+message: >-
+  COMMONS — организм, собранный из живых upstream-проектов человечества.
+  Органы не форкаются: единым делается обмен — геном (спеки), синапсы (MCP),
+  кровь (конверт событий с ценой вызова), иммунитет (лицензионный барьер).
+  ЦЕЛОЕ = ЧЕЛОВЕК > суммы частей; идиот (ἰδιώτης, «частный») — узел,
+  замкнувший обмен с целым; commons (κοινός) — противоположное движение.
+type: software
+authors:
+  - name: "rtynbirf"
+    website: "https://github.com/rtynbirf"
+version: 0.1.1
+date-released: "2026-11-01"
+license: Apache-2.0
+repository-code: "https://github.com/rtynbirf/commons"
+url: "https://github.com/rtynbirf/commons"
+keywords:
+  - commons
+  - organism
+  - ai-agents
+  - mcp
+  - spec-driven-development
+  - ontology
+  - upstream-first
+abstract: >-
+  Blueprint-стадия организма (0.1): геном из трёх спецификаций, реестр органов,
+  синапс-манифест MCP, схема конверта крови, провенанс с верифицированной
+  лицензионной матрицей. Поведение живёт в спеках, код приходит в M1.

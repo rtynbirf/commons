@@ -1,10 +1,12 @@
-# Реестр органов COMMONS v0.1.0
-# Лицензии предварительные: перед подключением проверять по файлу LICENSE upstream (закон иммунитета).
+# Реестр органов COMMONS v0.1.1
+# Лицензии ВЕРИФИЦИРОВАНЫ живым GitHub API 2026-11-01 — матрица и расшифровка NOASSERTION: PROVENANCE.md.
+# Перед фактическим подключением лицензия дополнительно перепроверяется по файлу LICENSE upstream (закон иммунитета).
 # rank/stars — снимок рейтинга 2026-10-26 (organs/top100-2026-10-26.yaml), не живой счётчик.
 meta:
-  version: 0.1.0
+  version: 0.1.1
   updated: 2026-11-01
   snapshot_date: 2026-10-26
+  license_verified_date: 2026-11-01
 
 modes: [dependency, adapter, external, reference, substrate, education]
 systems: [genome, brainstem, synapse, blood, metabolism, memory, senses, effectors, nerves_alt, glands, skin, selfmap, remote, immune_knowledge, substrate, reproduction]
@@ -12,9 +14,9 @@ systems: [genome, brainstem, synapse, blood, metabolism, memory, senses, effecto
 organs:
   # --- ГЕНОМ ---
   - {repo: github/spec-kit, system: genome, role: spec-driven ядро, rank: 71, stars: 142980, license_pre: MIT, mode: dependency, status: planned-m1}
-  - {repo: anthropics/skills, system: genome, role: библиотека навыков, rank: 46, stars: 183913, license_pre: MIT, mode: dependency, status: planned-m1}
-  - {repo: obra/superpowers, system: genome, role: методология и навыки, rank: 13, stars: 305417, license_pre: неизвестна, mode: reference, status: studying}
-  - {repo: f/prompts.chat, system: genome, role: коллекция промптов, rank: 51, stars: 174638, license_pre: CC-вариант, mode: reference, status: studying}
+  - {repo: anthropics/skills, system: genome, role: открытый формат навыков, rank: 46, stars: 183913, license_pre: по-навыковые (ToU Anthropic), mode: reference, status: studying, note: контент не копируем; свои навыки пишем сами по открытому формату}
+  - {repo: obra/superpowers, system: genome, role: методология и навыки, rank: 13, stars: 305417, license_pre: MIT, mode: reference, status: studying}
+  - {repo: f/prompts.chat, system: genome, role: коллекция промптов, rank: 51, stars: 174638, license_pre: NOASSERTION, mode: reference, status: studying}
 
   # --- МЕТАБОЛИЗМ ---
   - {repo: ollama/ollama, system: metabolism, role: локальный инференс, rank: 43, stars: 184850, license_pre: MIT, mode: dependency, status: planned-m1}
@@ -24,12 +26,13 @@ organs:
   # --- ЭФФЕКТОРЫ ---
   - {repo: openclaw/openclaw, system: effectors, role: автономное действие, rank: 6, stars: 393128, license_pre: MIT, mode: dependency, status: planned-m2}
   - {repo: browser-use/browser-use, system: effectors, role: браузер, rank: 98, stars: 119187, license_pre: MIT, mode: dependency, status: planned-m1}
-  - {repo: morluto/rea, system: effectors, role: реверс-инжиниринг агентами, rank: 7, stars: 389257, license_pre: неизвестна, mode: adapter, status: studying}
+  - {repo: morluto/rea, system: effectors, role: реверс-инжиниринг агентами, rank: 7, stars: 389257, license_pre: MIT, mode: adapter, status: studying}
+  - {repo: NousResearch/hermes-agent, system: effectors, role: автономный агент, rank: вне-топ-100, stars: 259386, license_pre: MIT, mode: reference, status: studying}
 
   # --- СЕНСОРИКА ---
   - {repo: microsoft/markitdown, system: senses, role: документы в Markdown, rank: 37, stars: 192313, license_pre: MIT, mode: dependency, status: planned-m1}
   - {repo: firecrawl/firecrawl, system: senses, role: извлечение из веба, rank: 34, stars: 195544, license_pre: AGPL-3.0, mode: external, status: hosted-api-only}
-  - {repo: x1xhlol/system-prompts-and-models-of-ai-tools, system: senses, role: корпус системных промптов, rank: 66, stars: 144270, license_pre: неизвестна, mode: reference, status: studying}
+  - {repo: x1xhlol/system-prompts-and-models-of-ai-tools, system: senses, role: корпус системных промптов, rank: 66, stars: 144270, license_pre: GPL-3.0, mode: reference, status: studying}
 
   # --- НЕРВНЫЕ АЛЬТЕРНАТИВЫ (оркестрация) ---
   - {repo: langchain-ai/langchain, system: nerves_alt, role: оркестрация агентов, rank: 64, stars: 148491, license_pre: MIT, mode: dependency, status: planned-m2}
@@ -38,7 +41,7 @@ organs:
   - {repo: n8n-io/n8n, system: nerves_alt, role: автоматизация workflows, rank: 28, stars: 208643, license_pre: fair-code (Sustainable Use), mode: external, status: not-embeddable}
 
   # --- ПАМЯТЬ ---
-  - {repo: Graphify-Labs/graphify, system: memory, role: кодовая база в граф знаний, rank: 80, stars: 135831, license_pre: неизвестна, mode: dependency, status: candidate-m2, note: векторная БД выбирается в Этапе 0}
+  - {repo: Graphify-Labs/graphify, system: memory, role: кодовая база в граф знаний, rank: 80, stars: 135831, license_pre: Apache-2.0, mode: dependency, status: candidate-m2, note: векторная БД выбирается в Этапе 0}
 
   # --- ЖЕЛЕЗЫ (медиа) ---
   - {repo: Comfy-Org/ComfyUI, system: glands, role: генеративные пайплайны, rank: 68, stars: 143159, license_pre: GPL-3.0, mode: external, status: separate-process}
@@ -55,7 +58,7 @@ organs:
   - {repo: rustdesk/rustdesk, system: remote, role: удалённый рабочий стол, rank: 88, stars: 127131, license_pre: AGPL-3.0, mode: external, status: not-embeddable}
 
   # --- ИММУНИТЕТ (знания) ---
-  - {repo: Hack-with-Github/Awesome-Hacking, system: immune_knowledge, role: база знаний ИБ, rank: 91, stars: 123681, license_pre: неизвестна, mode: reference, status: studying}
+  - {repo: Hack-with-Github/Awesome-Hacking, system: immune_knowledge, role: база знаний ИБ, rank: 91, stars: 123681, license_pre: CC0-1.0, mode: reference, status: studying}
 
   # --- СУБСТРАТ (не модифицируем) ---
   - {repo: torvalds/linux, system: substrate, role: ядро ОС, rank: 20, stars: 253533, license_pre: GPL-2.0, mode: substrate, status: substrate}
@@ -65,14 +68,14 @@ organs:
   - {repo: rust-lang/rust, system: substrate, role: язык Rust, rank: 96, stars: 120832, license_pre: MIT OR Apache-2.0, mode: substrate, status: substrate}
 
   # --- РЕПРОДУКЦИЯ (обучение клеток) ---
-  - {repo: codecrafters-io/build-your-own-x, system: reproduction, role: обучение с нуля, rank: 1, stars: 556359, license_pre: неизвестна, mode: education, status: education}
-  - {repo: donnemartin/system-design-primer, system: reproduction, role: проектирование систем, rank: 8, stars: 375649, license_pre: неизвестна, mode: education, status: education}
+  - {repo: codecrafters-io/build-your-own-x, system: reproduction, role: обучение с нуля, rank: 1, stars: 556359, license_pre: NOASSERTION, mode: education, status: education}
+  - {repo: donnemartin/system-design-primer, system: reproduction, role: проектирование систем, rank: 8, stars: 375649, license_pre: NOASSERTION, mode: education, status: education}
   - {repo: ossu/computer-science, system: reproduction, role: CS-образование, rank: 27, stars: 210369, license_pre: MIT-подобная, mode: education, status: education}
 
 # Ствол мозга, синапсы, кровь — собственный код (см. specs/).
 # Референсы ствола мозга: openclaw (#6), anthropics/claude-code (#61), anomalyco/opencode (#25), openai/codex (#85).
 excluded:
-  - {repo: anthropics/claude-code, rank: 61, reason: проприетарный внешний инструмент}
-  - {repo: openai/codex, rank: 85, reason: внешний инструмент разработчика}
+  - {repo: anthropics/claude-code, rank: 61, reason: проприетарная лицензия (NOASSERTION, подтверждено API 2026-11-01); внешний инструмент}
+  - {repo: openai/codex, rank: 85, reason: внешний инструмент разработчика (лицензия репо Apache-2.0, доступ к сервису — по условиям OpenAI)}
   - {repo: 2dust/v2rayN, rank: 99, reason: сетевой клиент среды, вне тела}
   - {repo: clash-verge-rev/clash-verge-rev, rank: 60, reason: сетевой клиент среды, вне тела}

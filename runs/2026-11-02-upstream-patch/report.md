@@ -86,3 +86,10 @@ access token»**: fine-grained PAT не имеет права создавать
 - PR уходит одним шагом человека → ROADMAP-строка закрывается в 0.10.x.
 - Канал «docs-vs-code дрейф» для органов, где у организма компетентный профиль
   (MCP, конвейеры, кровь) — переиспользуемый маршрут первых патчей.
+
+## Аддендум (2026-11-02, вторая сессия)
+
+- Попытка открыть PR через GitHub API токеном владельца: `POST /repos/n8n-io/n8n-docs/pulls` → **HTTP 403** «Resource not accessible by personal access token». Причина: токен fine-grained — GitHub не даёт write-операций (создание PR) в чужих публичных репозиториях, какими бы правами ни обладал владелец.
+- Шаг по-прежнему за человеком: либо классический токен (`public_repo`), либо один клик по compare-URL:
+  `https://github.com/n8n-io/n8n-docs/compare/main...rtynbirf:n8n-docs:docs/mcp-trigger-parameters?expand=1`
+  — заголовок и тело PR готовы в `pr-body.md` (тело — после строки `---`).

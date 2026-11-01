@@ -21,9 +21,12 @@ We deliberately do **not** merge foreign codebases into a monolith — that woul
 | Artifact | Purpose |
 |---|---|
 | `specs/` | Genome: canonical agent loop, MCP synapse contract, blood envelope contract |
-| `organs/registry.yaml` | Which organs are connected, in which mode (dependency / adapter / external / reference / substrate) |
+| `organs/registry.yaml` | Which organs are connected, in which mode (dependency / adapter / external / reference / substrate), with verified licenses |
 | `synapse/mcp-manifest.yaml` | Declarative manifest of organs as MCP servers |
 | `blood/envelope.schema.json` | JSON Schema of the event envelope (every call carries its cost) |
+| `PROVENANCE.md` | Origin declaration + live-verified license matrix (GitHub API, 2026-11-01) |
+| `REUSE.toml` | File-level SPDX licensing (REUSE 3.3), machine-checked in CI |
+| `CITATION.cff` | How to cite the project |
 | `docs/adr/` | Architecture decision records (the "why") |
 
 ## Three laws
@@ -34,6 +37,14 @@ We deliberately do **not** merge foreign codebases into a monolith — that woul
 
 Docs are primarily in Russian. Specs are the source of truth; code comes later.
 
+## Provenance
+
+Nothing here is copied: no foreign code, texts, logos or media — only names, links and verified facts
+(live GitHub API license matrix, dated 2026-11-01, in [`PROVENANCE.md`](PROVENANCE.md)). File-level
+licensing is machine-checked via REUSE 3.3 ([`REUSE.toml`](REUSE.toml) + `reuse lint` in CI). Every
+commit carries a DCO `Signed-off-by` line. Agents should start from [`llms.txt`](llms.txt) and
+[`AGENTS.md`](AGENTS.md).
+
 ## License
 
-Apache-2.0 — see [LICENSE](LICENSE).
+Apache-2.0 — see [LICENSE](LICENSE). Rationale (in Russian): [ADR-0003](docs/adr/ADR-0003-apache-2.0.md).

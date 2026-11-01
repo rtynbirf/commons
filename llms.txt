@@ -1,0 +1,33 @@
+# COMMONS
+
+> Один организм из лучших открытых проектов человечества. Органы остаются на upstream — единым становится обмен: геном (спеки), синапсы (MCP), кровь (события с ценой), иммунитет (лицензии). ЦЕЛОЕ = ЧЕЛОВЕК > суммы частей.
+
+## Документы
+
+- [README.md](README.md): вход для человека — аксиомы, семь систем, три закона.
+- [PROVENANCE.md](PROVENANCE.md): происхождение содержимого; верифицированная лицензионная матрица органов. Здесь нет ни байта чужого кода.
+- [docs/manifesto.md](docs/manifesto.md): ЦЕЛОЕ и части; ἰδιώτης против κοινός; три закона.
+- [docs/research-plan.md](docs/research-plan.md): план инженерного исследования 31 проекта, три приоритета.
+- [docs/lenses.md](docs/lenses.md): шесть линз оценки с весами и порогами.
+- [docs/spikes.md](docs/spikes.md): пять спайков — приёмочные эксперименты S1–S5.
+- [docs/organ-map.md](docs/organ-map.md): карта ядра и периферии организма.
+- [docs/rating-verification.md](docs/rating-verification.md): живая верификация рейтинга GitHub API 2026-11-01; владельцы и адреса — тоже ветки.
+- [docs/repo-structure-study.md](docs/repo-structure-study.md): структура 10 эталонных репозиториев, TOP-10 перенятых паттернов.
+- [docs/practices-checklist.md](docs/practices-checklist.md): 16 практик open-source 2025–2026 и их статус здесь.
+- [docs/glossary.md](docs/glossary.md): словарь организма.
+- [docs/adr/](docs/adr/): журнал решений (почему так).
+- [specs/](specs/): геном — SPEC-0001 ствол мозга, SPEC-0002 синапсы, SPEC-0003 кровь.
+- [organs/registry.yaml](organs/registry.yaml): реестр органов с режимами и верифицированными лицензиями.
+- [synapse/mcp-manifest.yaml](synapse/mcp-manifest.yaml): органы как MCP-серверы.
+- [blood/envelope.schema.json](blood/envelope.schema.json): конверт крови (JSON Schema).
+- [ROADMAP.md](ROADMAP.md): вехи M1–M3 и Definition of One.
+- [CONTRIBUTING.md](CONTRIBUTING.md): как стать клеткой; DCO, REUSE, провенанс.
+- [CITATION.cff](CITATION.cff): как сослаться на проект.
+
+## Инварианты для агентов
+
+1. Спеки — источник истины; код следует за спекой.
+2. Органы не форкать; патчи — в upstream (ADR-0001).
+3. Вызовы органов — только через MCP-синапсы, с конвертом крови и ценой (SPEC-0003).
+4. Не добавлять чужой код/тексты: провенанс — PROVENANCE.md, лицензии — REUSE.toml.
+5. Метрики — только из живого GitHub API с датой, либо пометка «предварительно».

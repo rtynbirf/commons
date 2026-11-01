@@ -5,6 +5,9 @@
 
 [![ci](https://github.com/rtynbirf/commons/actions/workflows/ci.yml/badge.svg)](https://github.com/rtynbirf/commons/actions/workflows/ci.yml)
 ![license](https://img.shields.io/badge/license-Apache--2.0-blue)
+![REUSE](https://img.shields.io/badge/REUSE-3.3--compliant-blueviolet)
+![provenance](https://img.shields.io/badge/provenance-verified%202026--11--01-brightgreen)
+![stage](https://img.shields.io/badge/stage-0.1.1%20blueprint-orange)
 [English](README.en.md)
 
 ## Что это
@@ -51,11 +54,14 @@ COMMONS — проект-организм, собранный из топ-100 п
 ```
 commons/
 ├── README.md · README.en.md       # двуязычный вход
-├── AGENTS.md                      # инструкции для AI-агентов
-├── LICENSE                        # Apache-2.0
+├── AGENTS.md · llms.txt           # входы для агентов (правила + карта)
+├── LICENSE · LICENSES/            # Apache-2.0, канонический текст
+├── REUSE.toml                     # SPDX-лицензирование (REUSE 3.3, проверяется CI)
+├── PROVENANCE.md                  # провенанс: «их ничего здесь нет» + матрица лицензий
+├── CITATION.cff                   # как цитировать проект
 ├── ROADMAP.md                     # M1 → M2 → M3, Definition of One
 ├── CHANGELOG.md · SUPPORT.md
-├── CONTRIBUTING.md                # как стать клеткой или органом
+├── CONTRIBUTING.md                # как стать клеткой (DCO, REUSE, провенанс)
 ├── SECURITY.md · CODE_OF_CONDUCT.md
 ├── THIRD_PARTY_NOTICES.md         # атрибуция органов и лицензии
 ├── .env.example · .editorconfig · .gitattributes · .gitignore
@@ -64,7 +70,7 @@ commons/
 │   ├── SPEC-0002-synapse-mcp.md
 │   └── SPEC-0003-blood-envelope.md
 ├── organs/                        # РЕЕСТР ОРГАНОВ
-│   ├── registry.yaml              # кто подключён и в каком режиме
+│   ├── registry.yaml              # кто подключён, режим, лицензия
 │   └── top100-2026-10-26.yaml     # снимок рейтинга топ-100
 ├── synapse/
 │   └── mcp-manifest.yaml          # декларация органов как MCP-серверов
@@ -73,17 +79,26 @@ commons/
 ├── docs/
 │   ├── manifesto.md               # аксиомы и аргументация
 │   ├── organ-map.md               # карта органов
-│   ├── repo-practices-2026.md     # изученные практики перед созданием
+│   ├── research-plan.md           # план исследования 31 проекта
+│   ├── lenses.md · spikes.md      # линзы оценки · спайки S1–S5
+│   ├── rating-verification.md     # живая верификация рейтинга 2026-11-01
+│   ├── repo-structure-study.md    # структуры 10 эталонов, TOP-10 паттернов
+│   ├── practices-checklist.md     # 16 практик 2025–2026 и их статус
+│   ├── glossary.md                # словарь организма
+│   ├── repo-practices-2026.md     # первая волна изучения практик
+│   ├── templates/                 # шаблоны: спека · ADR · карточка органа
 │   └── adr/                       # журнал решений (почему)
-└── .github/                       # CI и шаблоны issues
+└── .github/                       # CI (валидация + REUSE lint) и шаблоны issues
 ```
 
 ## Быстрый старт
 
 1. Прочитать аксиомы: [`docs/manifesto.md`](docs/manifesto.md).
 2. Пройти геном: [`specs/`](specs/).
-3. Посмотреть состав органов и режимы: [`organs/registry.yaml`](organs/registry.yaml).
-4. Заявить новый орган: issue по шаблону [«Заявка органа»](.github/ISSUE_TEMPLATE/organ-proposal.md).
+3. Посмотреть состав органов, режимы и верифицированные лицензии: [`organs/registry.yaml`](organs/registry.yaml).
+4. Канал оценки кандидатов: [`docs/lenses.md`](docs/lenses.md) → [`docs/spikes.md`](docs/spikes.md).
+5. Агенту: начать с [`llms.txt`](llms.txt), правила — в [`AGENTS.md`](AGENTS.md).
+6. Заявить новый орган: issue по шаблону [«Заявка органа»](.github/ISSUE_TEMPLATE/organ-proposal.md).
 
 ## Дорожная карта
 
@@ -97,6 +112,12 @@ commons/
 
 Снимок топ-100 по звёздам (26.10.2026, GitHub Search API, без форков и архивов) — это снимок, а не живой счётчик. Звёзды — мера популярности, не качества, не безопасности и не активности; окончательную оценку органу даёт его поведение в обмене с целым.
 
-## Лицензия
+Живая сверка 2026-11-01: дельты звёзд, верифицированные лицензии и переезды владельцев (react, opencode, ComfyUI, prompts.chat, developer-roadmap) — [`docs/rating-verification.md`](docs/rating-verification.md). Идентичность органа — его обмен, а не адрес.
 
-Apache-2.0 — см. [LICENSE](LICENSE). Обоснование выбора: [`docs/adr/ADR-0003-apache-2.0.md`](docs/adr/ADR-0003-apache-2.0.md).
+## Лицензия и провенанс
+
+- **Apache-2.0** — см. [LICENSE](LICENSE); обоснование: [`docs/adr/ADR-0003-apache-2.0.md`](docs/adr/ADR-0003-apache-2.0.md). Грант на патенты включён — броня целого от патентных претензий.
+- **Провенанс** — [PROVENANCE.md](PROVENANCE.md): здесь нет ни байта чужого кода, текстов, логотипов или медиа. Органы присутствуют как имена, ссылки и верифицированные факты; матрица лицензий проверена живым GitHub API 2026-11-01.
+- **REUSE 3.3 / SPDX** — пофайловое лицензирование в [`REUSE.toml`](REUSE.toml), машинная проверка `reuse lint` в CI.
+- **DCO** — каждый коммит несёт `Signed-off-by` ([CONTRIBUTING.md](CONTRIBUTING.md)).
+- **CITATION.cff** — как сослаться на проект.

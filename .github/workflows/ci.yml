@@ -5,11 +5,16 @@ on:
     branches: [main]
   pull_request:
 
+# Минимальные полномочия воркфлоу (Scorecard Token-Permissions)
+permissions:
+  contents: read
+
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # Пин по SHA (Scorecard Pinned-Dependencies); v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: YAML и JSON валидны
         run: |
@@ -52,3 +57,14 @@ jobs:
           assert set(schema['required']) == required, 'required в схеме не совпадает с контрактом'
           print('схема крови согласована со SPEC-0003')
           PY
+
+  reuse:
+    # Иммунитет: пофайловое лицензирование REUSE 3.3 (SPDX) — PROVENANCE.md машинно-проверяем
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: REUSE lint
+        uses: fsfe/reuse-action@bb774aa972c2a89ff34781233d275075cbddf542 # v5

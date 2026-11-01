@@ -36,6 +36,8 @@ Since **0.13.0 the organism has transplantology** ([SPEC-0009](specs/SPEC-0009-t
 
 Since **0.14.0 the whole registry is visible**: 18 donation cards — every patch-target organ typed with live facts (2026-11-02); the body donates only to those who donate.
 
+Since **0.15.0 the body requires no channel** ([SPEC-0010](specs/SPEC-0010-persona.md), [ADR-0012](docs/adr/ADR-0012-persona-channels.md)): the mandate — «I am blind, I am deaf, I am mute, I have no hands». Text is the universal nerve in both directions: everything the organism says is text (markdown, JSONL blood, worded gate summaries like `IMMUNE: 41 ok, 0 failed` plus exit codes), everything it hears is text (commands, YAML data, environment variables). Pictures never speak alone — the excalidraw organ map has a text twin ([docs/organ-map.md](docs/organ-map.md)) generated from the same live registry; control is one command, no combos or timings. The persona-proof is Helen Keller: 578 days of sight and hearing across 32,115 days of life — and 12 books ([runs/2026-11-02-persona/](runs/2026-11-02-persona/report.md)).
+
 | Artifact | Purpose |
 |---|---|
 | `specs/` | Genome: canonical agent loop, MCP synapse contract, blood envelope contract, living organism (PID 1), memory, license immunity |

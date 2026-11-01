@@ -24,6 +24,7 @@ DCO, SemVer, docs-as-code, spec-driven development, MCP, SBOM) с вердикт
 | 14 | OpenSSF Best Practices Badge | LATER | после M1, когда появится исполняемый код |
 | 15 | SBOM (SPDX/CycloneDX) и supply-chain гигиена | SHOULD (CI) / LATER (SBOM) | CI-гигиена ✅; 0.12.0: OSV-скан зависимостей (pip-audit, job `pathogens`) + dependabot (pip/actions); SBOM — при первом генерируемом артефакте |
 | 16 | MCP как стандарт интеграции + `llms.txt` для агент-клиентов | SHOULD | ✅ MCP — ядро синапсов (ADR-0002); `llms.txt` 0.1.1 |
+| 17 | Доступность: текст как универсальный канал (alt у изображений, словесные итоги гейтов, без аудио-only, без безымянных ссылок) | SHOULD (CI) | ✅ 0.15.0: SPEC-0010 + ADR-0012 — инвариант каналов исполняется машиной (`tests/test_persona.py`), а не декларируется |
 
 ## Что изменилось против практик 2020-х
 

@@ -16,7 +16,9 @@ We deliberately do **not** merge foreign codebases into a monolith — that woul
 
 **The whole is greater than the sum of its parts** — achieved through exchange, not through merging.
 
-Since **0.3.0 the organism lives in time**: PID 1 is a heartbeat daemon (`boot → organ.health → shutdown`); every controlled death is recorded in the blood; a second instance gets a veto; the doctrine is **HUMAN=PID=1** — the human remains the init: no unit files, no autostart, launch and kill are done by human hands only ([SPEC-0004](specs/SPEC-0004-pid1.md), [ADR-0006](docs/adr/ADR-0006-pid1.md), first artifacts in [`runs/2026-11-01-pid1/`](runs/2026-11-01-pid1/)).
+Since **0.4.0 the organism lives in time**: PID 1 is a heartbeat daemon (`boot → organ.health → shutdown`); every controlled death is recorded in the blood; a second instance gets a veto; the doctrine is **HUMAN=PID=1** — the human remains the init: no unit files, no autostart, launch and kill are done by human hands only ([SPEC-0004](specs/SPEC-0004-pid1.md), [ADR-0006](docs/adr/ADR-0006-pid1.md), first artifacts in [`runs/2026-11-01-pid1/`](runs/2026-11-01-pid1/)).
+
+Since **0.5.0 the organism has a memory genome** ([SPEC-0005](specs/SPEC-0005-memory.md): memory is a derivative of blood — the journal is the truth, memory is an advisory cache), an engine decision ([ADR-0007](docs/adr/ADR-0007-memory-engines.md), all four vector candidates Apache-2.0, verified via the live GitHub API 2026-11-02), and a second self-portrait — an excalidraw map generated from the live registry ([`docs/organ-map.excalidraw`](docs/organ-map.excalidraw), 36 organs, 13 systems).
 
 ## Core artifacts
 

@@ -10,16 +10,16 @@
 - [docs/selfmap.md](docs/selfmap.md): карта организма (AUTO-GENERATED из живого реестра; генератор — scripts/selfmap.py).
 - [docs/research-plan.md](docs/research-plan.md): план инженерного исследования 31 проекта, три приоритета.
 - [docs/lenses.md](docs/lenses.md): шесть линз оценки с весами и порогами.
-- [docs/spikes.md](docs/spikes.md): пять спайков — приёмочные эксперименты S1–S5.
-- [docs/organ-map.md](docs/organ-map.md): карта ядра и периферии организма.
+- [docs/spikes.md](docs/spikes.md): шесть спайков — приёмочные эксперименты S1–S6.
+- [docs/organ-map.md](docs/organ-map.md): карта ядра и периферии организма; автопортрет в excalidraw — docs/organ-map.excalidraw (AUTO-GENERATED из живого реестра, генератор scripts/organ_map.py).
 - [docs/rating-verification.md](docs/rating-verification.md): живая верификация рейтинга GitHub API 2026-11-01; владельцы и адреса — тоже ветки.
 - [docs/repo-structure-study.md](docs/repo-structure-study.md): структура 10 эталонных репозиториев, TOP-10 перенятых паттернов.
 - [docs/practices-checklist.md](docs/practices-checklist.md): 16 практик open-source 2025–2026 и их статус здесь.
 - [docs/glossary.md](docs/glossary.md): словарь организма.
-- [docs/adr/](docs/adr/): журнал решений (почему так; ADR-0004 — исполнимое ядро 0.2, ADR-0005 — ритуал подключения органа).
+- [docs/adr/](docs/adr/): журнал решений (почему так; ADR-0004 — исполнимое ядро 0.2, ADR-0005 — ритуал подключения органа, ADR-0006 — ЧЕЛОВЕК=PID=1, ADR-0007 — движки памяти).
 - [runs/](runs/): жизнь организма — артефакты реальных прогонов (первый пульс: runs/2026-11-01-first-pulse/).
-- [spikes/](spikes/): харнессы спайков — S1 метаболизм (харнесс), S2 цикл (замерен 2026-11-01: SPEC-0001 в силе), S3 оркестрация (харнесс: матрица лицензий + проба эндпоинтов), S4 браузер (20 сценариев + `--validate`), S5 геном (selfcheck «спека ↔ код» в CI).
-- [specs/](specs/): геном — SPEC-0001 ствол мозга, SPEC-0002 синапсы, SPEC-0003 кровь, SPEC-0004 живой организм (PID 1).
+- [spikes/](spikes/): харнессы спайков — S1 метаболизм (харнесс), S2 цикл (замерен 2026-11-01: SPEC-0001 в силе), S3 оркестрация (харнесс: матрица лицензий + проба эндпоинтов), S4 браузер (20 сценариев + `--validate`), S5 геном (selfcheck «спека ↔ код» в CI), S6 память (базовая линия sqlite3 в CI, ADR-0007).
+- [specs/](specs/): геном — SPEC-0001 ствол мозга, SPEC-0002 синапсы, SPEC-0003 кровь, SPEC-0004 живой организм (PID 1), SPEC-0005 память.
 - [brainstem/](brainstem/): исполняемый цикл PLAN→ACT→OBSERVE→REFLECT (ядро 0.2) + живой организм PID 1 (`brainstem/pid1.py`, запуск — `scripts/pid1.py`).
 - [synapse/](synapse/): MCP-шлюз + адаптеры органов (ollama, llama.cpp, универсальный MCP-stdio).
 - [blood/](blood/): конверт с ценой + append-only журнал.
@@ -38,6 +38,6 @@
 4. Не добавлять чужой код/тексты: провенанс — PROVENANCE.md, лицензии — REUSE.toml.
 5. Метрики — только из живого GitHub API с датой, либо пометка «предварительно».
 6. Новый орган подключается правкой манифеста (поле `adapter`), без правки шлюза (SPEC-0002).
-7. docs/selfmap.md не правится руками — только через `python3 scripts/selfmap.py`.
+7. docs/selfmap.md и docs/organ-map.excalidraw не правятся руками — только через `python3 scripts/selfmap.py` и `python3 scripts/organ_map.py`.
 8. Новый орган подключается по ритуалу ADR-0005: перепроверка лицензии живым API → живой пульс через синапсы (`runs/`) → приёмка в CI; артефакты прогона — собственный труд организма.
 9. ЧЕЛОВЕК=PID=1 (SPEC-0004, ADR-0006): организм запускает и убивает только человек; каждая управляемая остановка — событие `shutdown` в крови; юнит-файлы демонов в репо не входят; второй живой экземпляр получает veto.

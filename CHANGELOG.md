@@ -2,6 +2,26 @@
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/); версии — SemVer.
 
+## [0.14.0] — 2026-11-02
+
+### Added
+
+- **Типирование реестра до конца** (M3, SPEC-0008 v0.1.1) — 12 новых донорских карт живым чтением upstream 2026-11-02 (evidence с датой и https-URL):
+  * **Ошейников не обнаружено → `donate`**: `github/spec-kit` (MIT; AI-вклад — Assisted-by трейлером), `openclaw/openclaw` (MIT; лимит 20 PR, фичи — через issue), `langchain-ai/langchain` (MIT; крупные PR — issue-first), `Graphify-Labs/graphify` (Apache-2.0; AI-авторство — Co-Authored-By), `shadcn-ui/ui`, `vercel/next.js` (описания PR — человеческие), `excalidraw/excalidraw`, `Genymobile/scrcpy` (файлов вклада нет вовсе);
+  * **Путь агенту-донору закрыт правилом органа → `patch-inside`**: `huggingface/transformers` («first-time contributors should not use code agents», автономным агентам PR не открывать), `morluto/rea` («AI agents must leave these declarations to a human»);
+  * **Ошейник вшит в LICENSE → `patch-inside`**: `langgenius/dify` — «License and Contributor Agreement»: производитель может менять соглашение, вклады идут в коммерческие операции;
+  * **AGPL вне allowed → `consume-only`**: `firecrawl/firecrawl` — дарить некому, тело потребляет как внешний узел;
+  * **llama.cpp типирован**: `unverified` → `donate` — ошейников нет; AGENTS.md: «AI-generated code is allowed. What is not allowed is submitting code you do not understand».
+- **Итог**: 18 карт покрывают все патч-цели реестра; reference/substrate/education карт не имеют — тело их не патчит (G1 «нет карты — донорства нет» защищает и их).
+- **4 новых приёмки** (донорский протокол), всего **294**; правило `untyped` перепроверено на механизме.
+
+### Changed
+
+- `specs/SPEC-0008` v0.1.1: приёмка «unverified не имеет donate» перепроверена на механизме; cla-органы в приёмке пополнены dify.
+- ROADMAP M3: типирование реестра закрыто; первые патчи — типированным донорским органам, перед каждым PR — перепроверка карты.
+- `docs/practices-checklist.md` #9: карты донорства — весь реестр типирован живыми фактами с датой.
+- llms.txt: инвариант 10 пополнился dify (ошейник в LICENSE) и правилом органов против агентов-доноров.
+
 ## [0.13.0] — 2026-11-02
 
 ### Added

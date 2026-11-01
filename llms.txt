@@ -28,7 +28,7 @@
 - [pipeline/](pipeline/): внешний конвейер (SPEC-0007, ADR-0009) — n8n как внешний узел: референс-развёртывание (`pipeline/n8n/docker-compose.yml`) и воркфлоу (`pipeline/n8n/workflows/*.json`) — данные с белым списком команд, валидатор `python -m pipeline` в CI; n8n не встраивается (fair-code — только external по SPEC-0006), пульс — только через ствол мозга.
 - [openclaw/](openclaw/): эффектор (SPEC-0008, ADR-0010) — openclaw как внешние руки: мост через CLI `openclaw gateway call` с белым списком методов (health/status/chat.send/chat.abort, параметры — данные JSON, shell не строится), данные-политика (`openclaw/reference/effector-policy.json`: loopback, токен только env, exec под approvals), валидатор `python3 -m openclaw check` в CI; руки без воли — исполняют импульсы ствола, не решают; живой gateway — на хосте владельца (PID 1).
 - [organs/registry.yaml](organs/registry.yaml): реестр органов с режимами и верифицированными лицензиями.
-- [organs/donation.yaml](organs/donation.yaml): донорские карты — протокол upstream (CLA/DCO/нет ошейника), evidence с датой, решение тела (donate / patch-inside / consume-only).
+- [organs/donation.yaml](organs/donation.yaml): донорские карты (18, 2026-11-02) — протокол upstream (CLA/DCO/нет ошейника), evidence с датой, решение тела (donate / patch-inside / consume-only).
 - [synapse/mcp-manifest.yaml](synapse/mcp-manifest.yaml): органы как MCP-серверы; поле `adapter` ведёт к классу адаптера.
 - [blood/envelope.schema.json](blood/envelope.schema.json): конверт крови (JSON Schema).
 - [ROADMAP.md](ROADMAP.md): вехи M1–M3 и Definition of One.
@@ -46,4 +46,4 @@
 7. docs/selfmap.md и docs/organ-map.excalidraw не правятся руками — только через `python3 scripts/selfmap.py` и `python3 scripts/organ_map.py`.
 8. Новый орган подключается по ритуалу ADR-0005: перепроверка лицензии живым API → живой пульс через синапсы (`runs/`) → приёмка в CI; артефакты прогона — собственный труд организма.
 9. ЧЕЛОВЕК=PID=1 (SPEC-0004, ADR-0006): организм запускает и убивает только человек; каждая управляемая остановка — событие `shutdown` в крови; юнит-файлы демонов в репо не входят; второй живой экземпляр получает veto.
-10. Кровь наружу — только по донорской карте (SPEC-0007, ADR-0009): патчи отправляются только upstream-органам без CLA-ошейника и с протоколом, зафиксированным с датой; CLA-органы (react, n8n) получают улучшения внутри тела (`patch-inside`/`consume-only`).
+10. Кровь наружу — только по донорской карте (SPEC-0008, ADR-0010): патчи отправляются только upstream-органам без CLA-ошейника и с протоколом, зафиксированным с датой; CLA-органы (react, n8n, dify) и органы, закрывшие путь агенту правилом органа (transformers, rea), получают улучшения внутри тела (`patch-inside`/`consume-only`).

@@ -32,11 +32,9 @@ Since **0.11.0 the organism has hands** ([SPEC-0008](specs/SPEC-0008-effector.md
 
 Since **0.12.0 the organism gave its blood for a full workup**: hematology re-reads all poured blood against the schema (SPEC-0003 v0.4.0 §6), an OSV scan hunts known pathogens in the feed (pip-audit), dependabot delivers antigens weekly, and OpenSSF Scorecard issues the immunity passport.
 
-Since **0.11.0 the organism has transplantology** ([SPEC-0008](specs/SPEC-0008-transplant.md), [ADR-0010](docs/adr/ADR-0010-donation-protocol.md)): a donation protocol — blood leaves for upstream only by handshake (DCO) and only to those who donate; the CLA collar is not signed — the patch lives inside the body.
+Since **0.12.0 the organism has transplantology** ([SPEC-0008](specs/SPEC-0008-transplant.md), [ADR-0010](docs/adr/ADR-0010-donation-protocol.md)): a donation protocol — blood leaves for upstream only by handshake (DCO) and only to those who donate; the CLA collar is not signed — the patch lives inside the body.
 
-Since **0.10.0 the organism has transplantology** (SPEC-0007, ADR-0009): a donation protocol — blood leaves the body only by handshake (DCO) and only to those who give freely; the CLA collar is never signed — the patch lives inside the organism.
-
-## Core artifacts
+Since **0.14.0 the whole registry is visible**: 18 donation cards — every patch-target organ typed with live facts (2026-11-02); the body donates only to those who donate.
 
 | Artifact | Purpose |
 |---|---|

@@ -13,6 +13,7 @@ CI-джоба `hygiene` приговорена проверками: обеща�
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -23,6 +24,13 @@ _spec = importlib.util.spec_from_file_location("doctor", SCRIPT)
 doctor = importlib.util.module_from_spec(_spec)
 sys.modules["doctor"] = doctor
 _spec.loader.exec_module(doctor)
+
+_report_spec = importlib.util.spec_from_file_location(
+    "doctor_report", REPO_ROOT / "scripts" / "doctor_report.py"
+)
+doctor_report = importlib.util.module_from_spec(_report_spec)
+sys.modules["doctor_report"] = doctor_report
+_report_spec.loader.exec_module(doctor_report)
 
 
 def _touch(root: Path, name: str, text: str = "") -> Path:
@@ -439,3 +447,106 @@ def test_weekly_sweep_is_scheduled() -> None:
     assert "lychee" in fleas_wf, "внешние ссылки не проверяются свипом"
     # Право — минимальное (Scorecard Token-Permissions), как и во всём доме.
     assert "contents: read" in fleas_wf
+
+
+# --- гейты 0.23.0: секреты, память воротов, hardening ---
+
+
+def _fake_token() -> str:
+    # Урок волны-8 выдержан: сырой пример блохи в статике — сам блоха.
+    # Пример строится в рантайме — приёмка не кормит гейт собственным ядом.
+    return "ghp_" + "4f9a" * 9
+
+
+def test_github_token_is_caught_and_masked(tmp_path: Path) -> None:
+    token = _fake_token()
+    _touch(tmp_path, "README.md", f"ключ в стенах: {token}\n")
+
+    ok, fleas = doctor.check_no_secrets(tmp_path)
+
+    assert ok == 0
+    assert len(fleas) == 1, fleas
+    assert "GitHub PAT" in fleas[0]
+    assert token[:8] in fleas[0], "маска обязана вести к месту блохи"
+    assert token not in "".join(fleas), "ловец не размножает пойманное: секрет не печатается"
+
+
+def test_private_key_is_caught(tmp_path: Path) -> None:
+    # Маркер строится в рантайме (урок волны-8 живьём): пример блохи
+    # в статике — сам блоха; песочница и гейт согласны: литерала не живёт.
+    marker = "-----BEGIN RSA " + "PRIVATE" + " KEY" + "-----"
+    _touch(tmp_path, "docs/key.md", marker + "\n")
+
+    ok, fleas = doctor.check_no_secrets(tmp_path)
+
+    assert ok == 0
+    assert len(fleas) == 1, fleas
+    assert "приватный ключ" in fleas[0]
+
+
+def test_secret_in_runs_is_caught_poison_is_not_history(tmp_path: Path) -> None:
+    # Кровь не переписывается — но секрет не кровь, а яд: runs/ в зоне гейта.
+    _touch(tmp_path, "runs/2026-11-02-x/blood.jsonl", '{"payload": "' + _fake_token() + '"}\n')
+
+    ok, fleas = doctor.check_no_secrets(tmp_path)
+
+    assert ok == 0
+    assert len(fleas) == 1, fleas
+    assert "runs/" in fleas[0]
+
+
+def test_secretfree_house_is_clean(tmp_path: Path) -> None:
+    # Ловцы в статике — не секрет: паттерн формой не подставлен.
+    _touch(tmp_path, "README.md", "ключи описаны словами, а не формой\n")
+    _touch(tmp_path, "scripts/law.py", 'PATTERN = r"\\bAKIA[0-9A-Z]{16}\\b"  # ловец, не секрет\n')
+
+    ok, fleas = doctor.check_no_secrets(tmp_path)
+
+    assert (ok, fleas) == (2, [])
+
+
+def _clean_house(root: Path) -> None:
+    """Минимальный зелёный дом: все 11 гейтов чисты."""
+    _touch(root, "pyproject.toml", 'version = "0.23.0"\n[project.scripts]\ncommons-x = "mod_x:main"\n')
+    _touch(root, "mod_x.py", "def main(): ...\n")
+    _touch(root, "CITATION.cff", "version: 0.23.0\n")
+    _touch(root, "CHANGELOG.md", "## [0.23.0] — 2026-11-02\n")
+    _touch(root, "README.md", "Дом 0.23.0. Руки: commons-x\n")
+    _touch(root, "README.en.md", "House 0.23.0.\n")
+    _touch(root, "ROADMAP.md", "дело\n")
+    _touch(root, "docs/personas.md", "### W-0001 — дело\nХочу: дело.\nСтатус: СЛУЖЕНО — артефакт.\n")
+
+
+def test_doctor_json_report_is_machine_readable(tmp_path: Path, capsys) -> None:
+    # W-0017: коллега-агент читает ворота без человека — отчёт парсится,
+    # все гейты перечислены, зелёный дом даёт exit 0.
+    _clean_house(tmp_path)
+
+    code = doctor.main(["--json", str(tmp_path)])
+    report = json.loads(capsys.readouterr().out)
+
+    assert code == 0
+    assert report["total_fleas"] == 0
+    assert report["gates"][0]["gate"] == "counts"
+    assert "secrets" in [g["gate"] for g in report["gates"]]
+
+
+def test_doctor_json_reports_fleas_and_fails_closed(tmp_path: Path, capsys) -> None:
+    _clean_house(tmp_path)
+    _touch(tmp_path, "docs/note.md", f"утечка: {_fake_token()}\n")
+
+    code = doctor.main(["--json", str(tmp_path)])
+
+    report = json.loads(capsys.readouterr().out)
+    assert code == 1
+    assert report["total_fleas"] >= 1
+    assert any("GitHub PAT" in f for g in report["gates"] for f in g["fleas"])
+
+
+def test_doctor_report_renders_summary_table() -> None:
+    table = doctor_report.render(
+        {"gates": [{"gate": "counts", "ok": 3, "fleas": []}], "total_ok": 3, "total_fleas": 0}
+    )
+
+    assert "| counts | 3 | 0 |" in table
+    assert "Итог: 3 ok, 0 failed" in table

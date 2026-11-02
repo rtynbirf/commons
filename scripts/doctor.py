@@ -42,10 +42,26 @@ docs/personas.md — машина сама изображает людей, ко
 (JTBD × персоны × continuous discovery), каждая хотёлка W-NNNN несёт
 хозяина, статус и связи. Гейт wants: хотёлка-сирота (упомянута вне
 реестра) и хотёлка без «Статус:» — блоха, fail-closed.
+
+Волна-9 (0.23.0) — «иммунитет на автомате II»: синтез мировой практики
+2025–2026 — secret-scanning (gitleaks, trufflehog, push protection) и
+машиночитаемые отчёты линтеров (lychee-action: json + артефакт + job
+summary). Гейт secrets: ключ не живёт в доме (W-0004) — ловим форму,
+не содержимое, офлайн и детерминированно (SPEC-0006); скан шире прочих
+гейтов — и кровь runs/: яд не история. Кровь не переписывается, но
+секрет — не кровь, а яд: ротация и изъятие — единственное законное
+исключение. Ловец не размножает пойманное: в отчёте маска, не секрет.
+--json: память воротов машиночитаема — коллега-агент (W-0017)
+перечитывает ворота без человека; человекочитаемая таблица —
+scripts/doctor_report.py, оба воркфлоу печатают её в $GITHUB_STEP_SUMMARY.
+
+Запуск: python3 scripts/doctor.py [--json] [корень]
+  →  DOCTOR: N ok, M failed; exit 1 при M>0
 """
 
 from __future__ import annotations
 
+import json
 import re
 import sys
 from pathlib import Path
@@ -373,6 +389,67 @@ def check_conflict_markers(root: Path) -> tuple[int, list[str]]:
     return ok, fleas
 
 
+# Секрет-паттерны (волна-9, синтез gitleaks/trufflehog): детерминированный
+# минимум — ловим форму токена, не содержимое и не «похоже на секрет».
+SECRET_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\bgh[pousr]_[A-Za-z0-9]{36}\b"), "GitHub PAT"),
+    (re.compile(r"\bgithub_pat_[A-Za-z0-9_]{22,}\b"), "GitHub fine-grained PAT"),
+    (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "AWS access key id"),
+    (re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b"), "Slack token"),
+    (re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b"), "Google API key"),
+    (
+        re.compile(
+            r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP |ENCRYPTED )?PRIVATE KEY(?: BLOCK)?-----"
+        ),
+        "приватный ключ",
+    ),
+)
+
+# Текстовые суффиксы в зоне секрет-скана; .env ловится отдельным именем —
+# Path('.env').suffix пуст.
+SECRET_SUFFIXES = frozenset({
+    ".md", ".py", ".json", ".jsonl", ".yml", ".yaml", ".toml", ".cff",
+    ".txt", ".sh", ".env", ".cfg", ".ini", ".js", ".ts", ".html", ".css",
+    ".csv", ".sql",
+})
+
+
+def _mask(secret: str) -> str:
+    """Ловец не размножает пойманное: в отчёт идёт маска, не секрет."""
+    return secret[:8] + "…"
+
+
+def check_no_secrets(root: Path) -> tuple[int, list[str]]:
+    """Ключ не живёт в доме (W-0004): секрет-скан формы, не содержимого —
+    синтез gitleaks/trufflehog без сети: доктор офлайн и детерминирован
+    (SPEC-0006). Скан шире гигиены — и кровь runs/: яд не история; кровь
+    не переписывается, но секрет не кровь, а яд: ротация и изъятие из
+    истории — единственное законное исключение из append-only."""
+    fleas: list[str] = []
+    ok = 0
+    for path in sorted(root.rglob("*")):
+        if not path.is_file() or (path.suffix not in SECRET_SUFFIXES and path.name != ".env"):
+            continue
+        if ".git" in path.parts:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue  # не текст — не наша еда (детерминированно)
+        fleas_here: list[str] = []
+        for i, line in enumerate(text.splitlines(), 1):
+            for regex, kind in SECRET_PATTERNS:
+                for m in regex.finditer(line):
+                    fleas_here.append(
+                        f"{path.relative_to(root)}:{i}: {kind} {_mask(m.group(0))}"
+                        " — секрет не живёт в доме: отзови и ротируй (W-0004)"
+                    )
+        fleas.extend(fleas_here)
+        if not fleas_here:
+            ok += 1
+    return ok, fleas
+
+
 GATES = (
     ("counts", check_no_stale_counts),
     ("versions", check_version_sync),
@@ -384,6 +461,7 @@ GATES = (
     ("cli-sync", check_cli_sync),
     ("changelog", check_changelog_discipline),
     ("conflict-markers", check_conflict_markers),
+    ("secrets", check_no_secrets),
 )
 
 
@@ -391,17 +469,38 @@ def main(argv: list[str] | None = None) -> int:
     # Волна-6: CLI обязан передавать аргументы — раньше `doctor.py /путь`
     # молча проверял родной дом (argv дохло на границе __main__):
     # инъекция в копию дома возвращала ложное «чисто».
-    root = ROOT if not argv else Path(argv[0]).resolve()
+    args = list(argv) if argv else []
+    json_mode = "--json" in args
+    args = [a for a in args if a != "--json"]
+    root = ROOT if not args else Path(args[0]).resolve()
+    gates_report: list[dict] = []
     total_ok = 0
     total_fleas: list[str] = []
     for name, gate in GATES:
         ok, fleas = gate(root)
         total_ok += ok
         total_fleas.extend(fleas)
-        print(f"doctor/{name}: {ok} ok, {len(fleas)} failed")
-        for flea in fleas:
-            print(f"  BLOHA: {flea}")
-    print(f"DOCTOR: {total_ok} ok, {len(total_fleas)} failed")
+        gates_report.append({"gate": name, "ok": ok, "fleas": fleas})
+        if not json_mode:
+            print(f"doctor/{name}: {ok} ok, {len(fleas)} failed")
+            for flea in fleas:
+                print(f"  BLOHA: {flea}")
+    if json_mode:
+        # Волна-9: память воротов машиночитаема (W-0017) — коллега-агент
+        # перечитывает ворота без человека; человекочитаемая таблица —
+        # scripts/doctor_report.py (summary в воркфлоу).
+        print(json.dumps(
+            {
+                "root": str(root),
+                "gates": gates_report,
+                "total_ok": total_ok,
+                "total_fleas": len(total_fleas),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ))
+    else:
+        print(f"DOCTOR: {total_ok} ok, {len(total_fleas)} failed")
     return 1 if total_fleas else 0
 
 

@@ -50,6 +50,8 @@ Since **0.20.0 the machine imagines the people itself** ([docs/personas.md](docs
 
 Since **0.22.0 authority is enforced at runtime** (SPEC-0002 v0.4.0): the guard (an audit hook) interrupts any organ call that steps beyond the declared `fs`/`network`/`process` powers before the violation happens — `security.violation` in the blood, the trace closed with reflect+halt; the manifest carries an executable, fail-closed authority grammar; an impostor adapter is refused at binding — see [`runs/2026-11-02-wave7-authority/`](runs/2026-11-02-wave7-authority/report.md).
 
+Since **0.23.0 the doctor traps poison and reports to machines** (wave №9, beat 1): the secrets gate hunts exposed keys (GitHub/AWS/Slack/Google/PEM shapes) in the statics and in the blood (runs/) — every catch is masked in the report, the trapper does not multiply what it traps; `--json` makes every run machine-readable for colleague agents (wiring the trace into the gates themselves is beat 2, waiting for a key with the `workflow` scope).
+
 | Artifact | Purpose |
 |---|---|
 | `specs/` | Genome: canonical agent loop, MCP synapse contract, blood envelope contract, living organism (PID 1), memory, license immunity |

@@ -54,6 +54,9 @@ jobs:
     # Внешние ссылки: доктор по догме офлайн (детерминизм, SPEC-0006),
     # поэтому сеть вынесена в плановый свип. lychee: ретраи, токен для
     # GitHub-лимитов, красный = мёртвая ссылка.
+    # medium.com — стена ботов (403 всем не-браузерам датацентровых IP,
+    # живой прогон 41471082096; часом ранее тот же свип был зелёным) —
+    # свип краснеет от мёртвых ссылок, а не от чужих ошейников.
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -71,6 +74,7 @@ jobs:
           args: >-
             --no-progress --max-retries 3 --max-concurrency 4 --timeout 20
             --exclude "github\.com/<owner"
+            --exclude "medium\.com"
             --exclude "localhost|127\.0\.0\.1"
             README.md README.en.md ROADMAP.md CHANGELOG.md llms.txt docs specs
           fail: true

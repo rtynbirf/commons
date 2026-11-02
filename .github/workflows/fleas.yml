@@ -1,0 +1,60 @@
+# Свип по расписанию (0.18.0): блохи ловятся не только на push/PR —
+# ссылки умирают сами, без пушей. Недельный свип — синтез мировой практики
+# scheduled sweeps (lychee, docs nightlies). Красный свип = блоха,
+# выметается немедленно; «на автомате пахать» приговорено приёмкой
+# (tests/test_hygiene.py::test_weekly_sweep_is_scheduled).
+# Пины по SHA зафиксированы живым GitHub API 2026-11-02 (PROVENANCE.md §2).
+name: fleas
+
+on:
+  schedule:
+    - cron: "43 2 * * 1" # еженедельно, понедельник 02:43 UTC — вне общего часа
+  workflow_dispatch:
+
+# Минимальные полномочия воркфлоу (Scorecard Token-Permissions)
+permissions:
+  contents: read
+
+jobs:
+  doctor:
+    # Офлайн-гейты дома — тот же доктор, что и в ci.yml, но по расписанию
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Доктор дома (гигиена документации)
+        run: python3 scripts/doctor.py
+
+      - name: Автопортреты свежи (гейт --check + регенерация)
+        run: |
+          python3 scripts/organ_map.py --check
+          python3 scripts/selfmap.py
+          git diff --exit-code -- docs/selfmap.md
+
+  links:
+    # Внешние ссылки: доктор по догме офлайн (детерминизм, SPEC-0006),
+    # поэтому сеть вынесена в плановый свип. lychee: ретраи, токен для
+    # GitHub-лимитов, красный = мёртвая ссылка.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Внешние ссылки живы (lychee)
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0 (2026-11-02)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: >-
+            --no-progress --max-retries 3 --max-concurrency 4 --timeout 20
+            --exclude "github\.com/<owner"
+            --exclude "localhost|127\.0\.0\.1"
+            README.md README.en.md ROADMAP.md CHANGELOG.md llms.txt docs specs
+          fail: true

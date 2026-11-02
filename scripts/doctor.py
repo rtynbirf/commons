@@ -19,6 +19,13 @@ docs-tests (документация проверяется как код). Вс
 fail-closed: неизвестное — красное (закон иммунитета, SPEC-0006).
 
 Запуск: python3 scripts/doctor.py   →   DOCTOR: N ok, M failed; exit 1 при M>0
+
+Свип по расписанию (0.18.0): fleas.yml — тот же доктор + внешние ссылки
+(lychee) еженедельно: ссылки умирают сами, без пушей. Новые гейты 0.18.0:
+конфликт-маркеры (незалитый конфликт в md/py — блоха) и расширенные
+числа-протухатели — счётчик «N практик» (урок llms.txt: «17 практик» при
+живых 18) и версия в stage-бейдже (урок README: бейдж на 0.15.0 при живых
+0.17). Статика не счётчик: живое число берётся из источника.
 """
 
 from __future__ import annotations
@@ -37,6 +44,10 @@ PATH_SCOPE_FILES = ("README.md", "ROADMAP.md")
 CITATION = "CITATION.cff"
 
 COUNT_RE = re.compile(r"\b\d{2,4}\s+приём", re.IGNORECASE)
+PRACTICES_RE = re.compile(r"\b\d+\s+практик", re.IGNORECASE)
+BADGE_RE = re.compile(r"stage-\d+\.\d+", re.IGNORECASE)
+CONFLICT_EQ_RE = re.compile(r"^={7}$", re.M)
+CONFLICT_ANY_RE = re.compile(r"^(<{7}|>{7})", re.M)
 MD_LINK = re.compile(r"\[([^\]]*)\]\(([^)\s]+)\)")
 MD_LINK_RIGHT = re.compile(r"\]\([^)\s]+\)")
 BACKTICK_PATH = re.compile(
@@ -54,17 +65,27 @@ def _rel_lines(rel: Path) -> list[str]:
 
 
 def check_no_stale_counts(root: Path) -> tuple[int, list[str]]:
-    """Число приёмок живёт в pytest, не в статике: README/CITATION без счётчиков."""
+    """Числа-протухатели не живут в статике: счётчик приёмок — в pytest,
+    счётчик практик — в чеклисте, стадия — в бейдже без версии.
+    llms.txt — в зоне: урок «17 практик» пойман живьём 2026-11-02."""
     fleas: list[str] = []
     ok = 0
-    for name in (*README_FILES, CITATION):
+    rules = (
+        (COUNT_RE, "протухающее число приёмок {claim!r} — счётчик живёт в `python -m pytest -q`, не в статике"),
+        (PRACTICES_RE, "протухающий счётчик практик {claim!r} — живое число в docs/practices-checklist.md"),
+        (BADGE_RE, "версия в stage-бейдже протухает ({claim}) — стадия в бейдже, версия в CHANGELOG"),
+    )
+    for name in (*README_FILES, CITATION, "llms.txt"):
         rel = root / name
+        if not rel.exists():
+            continue
         found = False
         for i, line in enumerate(_rel_lines(rel), 1):
-            m = COUNT_RE.search(line)
-            if m:
-                found = True
-                fleas.append(f"{name}:{i}: протухающее число приёмок {m.group(0)!r} — счётчик живёт в `python -m pytest -q`, не в статике")
+            for regex, message in rules:
+                m = regex.search(line)
+                if m:
+                    found = True
+                    fleas.append(f"{name}:{i}: " + message.format(claim=m.group(0)))
         if not found:
             ok += 1
     return ok, fleas
@@ -238,6 +259,40 @@ def check_changelog_discipline(root: Path) -> tuple[int, list[str]]:
     return 2 - len(fleas), fleas
 
 
+def _hygiene_files(root: Path):
+    for path in sorted(root.rglob("*")):
+        if path.suffix not in (".md", ".py") or not path.is_file():
+            continue
+        if ".git" in path.parts or "runs" in path.parts:
+            continue
+        yield path
+
+
+def check_conflict_markers(root: Path) -> tuple[int, list[str]]:
+    """Незалитый конфликт в доме = блоха: <<<<<<< и >>>>>>> в md/py.
+    Строка `=======` под заголовком (setext) — не блоха, пока рядом нет
+    угловых маркеров. Кровь runs/ не переписывается — вне зоны."""
+    fleas: list[str] = []
+    ok = 0
+    for path in _hygiene_files(root):
+        text = path.read_text(encoding="utf-8")
+        fleas_here: list[str] = []
+        for i, line in enumerate(text.splitlines(), 1):
+            stripped = line.strip()
+            if stripped.startswith(("<<<<<<<", ">>>>>>>")):
+                fleas_here.append(
+                    f"{path.relative_to(root)}:{i}: конфликт-маркер {stripped[:9]!r} — залей или отмени"
+                )
+        if CONFLICT_EQ_RE.search(text) and CONFLICT_ANY_RE.search(text):
+            fleas_here.append(
+                f"{path.relative_to(root)}: `=======` рядом с угловыми маркерами — незалитый конфликт"
+            )
+        fleas.extend(fleas_here)
+        if not fleas_here:
+            ok += 1
+    return ok, fleas
+
+
 GATES = (
     ("counts", check_no_stale_counts),
     ("versions", check_version_sync),
@@ -247,6 +302,7 @@ GATES = (
     ("spec-adr-refs", check_spec_adr_refs),
     ("cli-sync", check_cli_sync),
     ("changelog", check_changelog_discipline),
+    ("conflict-markers", check_conflict_markers),
 )
 
 

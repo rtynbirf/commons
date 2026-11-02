@@ -20,12 +20,13 @@ DCO, SemVer, docs-as-code, spec-driven development, MCP, SBOM) с вердикт
 | 10 | SemVer + теги + GitHub Releases как датированные якоря | SHOULD | ✅ релизы v0.1.0 и v0.1.1; CHANGELOG по Keep a Changelog |
 | 11 | Docs-as-code: markdown в git, проверка текста в CI | MUST | ✅ 0.1.0 (валидация YAML/JSON + статус спек); markdownlint — LATER |
 | 12 | Spec-driven development: поведение в спеках, исполняемых агентами | MUST | ✅ геном `specs/`, шаблоны в `docs/templates/`; S5 — приёмка |
-| 13 | OpenSSF Scorecard (20 чеков: pinned deps, token-permissions, …) | SHOULD | ✅ 0.12.0: workflow `scorecard.yml` (action v2.4.2 по SHA, SARIF → Code Scanning), бейдж в README; до того — actions запинены по SHA, минимальные permissions |
+| 13 | OpenSSF Scorecard (20 чеков: pinned deps, token-permissions, …) | SHOULD | ✅ 0.12.0: workflow `scorecard.yml` (action запинена по SHA — живая версия в шапке workflow, SARIF → Code Scanning), бейдж в README; до того — actions запинены по SHA, минимальные permissions |
 | 14 | OpenSSF Best Practices Badge | LATER | после M1, когда появится исполняемый код |
 | 15 | SBOM (SPDX/CycloneDX) и supply-chain гигиена | SHOULD (CI) / LATER (SBOM) | CI-гигиена ✅; 0.12.0: OSV-скан зависимостей (pip-audit, job `pathogens`) + dependabot (pip/actions); SBOM — при первом генерируемом артефакте |
 | 16 | MCP как стандарт интеграции + `llms.txt` для агент-клиентов | SHOULD | ✅ MCP — ядро синапсов (ADR-0002); `llms.txt` 0.1.1 |
 | 17 | Доступность: текст как универсальный канал (alt у изображений, словесные итоги гейтов, без аудио-only, без безымянных ссылок) | SHOULD (CI) | ✅ 0.15.0: SPEC-0010 + ADR-0012 — инвариант каналов исполняется машиной (`tests/test_persona.py`), а не декларируется |
 | 18 | Docs-drift гигиена: версии, ссылки, пути и точки входа документации проверяются машиной (link-check, version-sync, changelog-lint — референсы: lychee, release-please, Keep a Changelog) | MUST (CI) | ✅ 0.16.0: `scripts/doctor.py` + job `hygiene` — блоха красит PR; автопортреты под гейтом свежести `--check` |
+| 19 | Свип по расписанию: docs-drift и внешние ссылки перепроверяются машиной без пушей — cron-свип (референсы: lychee scheduled sweeps, docs nightlies) | MUST (CI) | ✅ 0.18.0: workflow `fleas.yml` — доктор + внешние ссылки (lychee, запинена по SHA) еженедельно, cron вне общего часа |
 
 ## Что изменилось против практик 2020-х
 

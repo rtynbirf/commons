@@ -13,7 +13,7 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      # Пин по SHA (Scorecard Pinned-Dependencies); v4.2.2
+      # Пин по SHA (Scorecard Pinned-Dependencies); v7.0.1 (верифицировано живым API 2026-11-02)
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: YAML и JSON валидны

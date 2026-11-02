@@ -200,6 +200,73 @@ def test_unreleased_section_is_caught(tmp_path: Path) -> None:
     assert "[Unreleased]" in fleas[0]
 
 
+# --- гейты 0.18.0: конфликт-маркеры и числа-протухатели пополнены ---
+
+
+def test_conflict_marker_is_caught(tmp_path: Path) -> None:
+    _touch(
+        tmp_path,
+        "README.md",
+        "<<<<<<< HEAD\nнаша строка\n=======\nчужая строка\n>>>>>>> feature\n",
+    )
+
+    ok, fleas = doctor.check_conflict_markers(tmp_path)
+
+    assert ok == 0
+    assert len(fleas) >= 2, fleas
+    assert any("конфликт-маркер" in f for f in fleas)
+
+
+def test_setext_underline_is_not_a_conflict(tmp_path: Path) -> None:
+    # Подчёркивание заголовка (setext) ровно из семи `=` — легально,
+    # пока рядом нет угловых маркеров.
+    _touch(tmp_path, "docs/note.md", "Заголовок\n=======\n")
+
+    ok, fleas = doctor.check_conflict_markers(tmp_path)
+
+    assert (ok, fleas) == (1, [])
+
+
+def test_practices_counter_is_caught(tmp_path: Path) -> None:
+    # Урок llms.txt: «17 практик» при живых 18 — статика не счётчик.
+    _touch(tmp_path, "README.md")
+    _touch(tmp_path, "README.en.md")
+    _touch(tmp_path, "CITATION.cff")
+    _touch(tmp_path, "llms.txt", "- чеклист: 17 практик open-source и их статус\n")
+
+    ok, fleas = doctor.check_no_stale_counts(tmp_path)
+
+    assert ok == 3
+    assert len(fleas) == 1, fleas
+    assert "практик" in fleas[0]
+
+
+def test_stage_badge_version_is_caught(tmp_path: Path) -> None:
+    # Урок README: бейдж stage-0.15.0 при живых 0.17 — версия в бейдже гниёт.
+    _touch(
+        tmp_path,
+        "README.md",
+        "![stage](https://img.shields.io/badge/stage-0.15.0%20persona-orange)\n",
+    )
+    _touch(tmp_path, "README.en.md")
+    _touch(tmp_path, "CITATION.cff")
+
+    ok, fleas = doctor.check_no_stale_counts(tmp_path)
+
+    assert ok == 2  # чисты только README.en.md и CITATION.cff
+    assert len(fleas) == 1, fleas
+    assert "stage" in fleas[0]
+
+
+def test_missing_llms_does_not_crash_counts_gate(tmp_path: Path) -> None:
+    # Фейковая карта без llms.txt: гейт терпит отсутствие, не падает.
+    _touch(tmp_path, "README.md", "чисто\n")
+
+    ok, fleas = doctor.check_no_stale_counts(tmp_path)
+
+    assert (ok, fleas) == (1, [])
+
+
 def test_headless_changelog_section_is_caught(tmp_path: Path) -> None:
     _touch(tmp_path, "CHANGELOG.md", "## [1.2.3]\n")
 
@@ -233,3 +300,16 @@ def test_doctor_fails_closed_on_flea_house(tmp_path: Path) -> None:
     _touch(tmp_path, "CHANGELOG.md", "## [0.16.0] — 2026-11-02\n")
 
     assert doctor.main([str(tmp_path)]) == 1
+
+
+def test_weekly_sweep_is_scheduled() -> None:
+    # Обещание «на автомате пахать» приговорено приёмкой: свип существует,
+    # он по расписанию, в нём доктор и внешние ссылки (lychee).
+    fleas_wf = (REPO_ROOT / ".github" / "workflows" / "fleas.yml").read_text(encoding="utf-8")
+
+    assert "schedule:" in fleas_wf, "свип не по расписанию — ссылки умирают сами, без пушей"
+    assert "cron:" in fleas_wf, "cron свипа не задан"
+    assert "scripts/doctor.py" in fleas_wf, "доктор не в свипе"
+    assert "lychee" in fleas_wf, "внешние ссылки не проверяются свипом"
+    # Право — минимальное (Scorecard Token-Permissions), как и во всём доме.
+    assert "contents: read" in fleas_wf

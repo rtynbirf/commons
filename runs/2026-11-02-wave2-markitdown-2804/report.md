@@ -74,3 +74,18 @@ pull requests»**, комментариев нет — полоса свобод
 - Рабочая копия `work/markitdown` несёт правки другого агента (.devcontainer,
   .github/…) — не тронуты; волна работала в отдельном worktree.
 - commons: чужие правки в полёте; в коммит волны входит только её run-каталог.
+
+## Дожим (токен №5): PR открыт, ритуалов ноль
+
+- Токен №5 (ghp-классика, `public_repo`): ветка `fix/ipynb-nbformat-structural-sniff`
+  (aaf26e7) запушена в форк, `POST /repos/microsoft/markitdown/pulls` → **HTTP 201**:
+  **microsoft/markitdown#2810** — «fix(ipynb): require notebook structure, not marker
+  substrings» (Fixes #2804; head aaf26e7 → main, maintainer_can_modify).
+- Очередь на стрелке: поиск по head-ветке — 0 PR; Development у #2804 — пусто.
+  Дубликатов нет, полоса чистая.
+- **CLA Microsoft сработала аккаунт-вайл**: `license/cla: completed/success` в первый
+  же момент, policy-service даже не прокомментировал — реплай `agree` в #2808 закрыл
+  вопрос за все будущие волны в органы Microsoft. Волна-2 прошла без единого ручного
+  шага человека — от разведки до открытого PR.
+- Состояние после дожима: #2810 — open, blocked = только ревью людей; #2808 —
+  без движений (ждёт мейнтейнеров); n8n#5689 — в ожидании ревью (проверено ранее).

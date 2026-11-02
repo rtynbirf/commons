@@ -4,6 +4,8 @@
 # выметается немедленно; «на автомате пахать» приговорено приёмкой
 # (tests/test_hygiene.py::test_weekly_sweep_is_scheduled).
 # Пины по SHA зафиксированы живым GitHub API 2026-11-02 (PROVENANCE.md §2).
+# Волна-9 (0.23.0): память воротов — каждый свип оставляет json-отчёт
+# артефактом и таблицу в summary (W-0017); ворота не висят (timeout).
 name: fleas
 
 on:
@@ -19,6 +21,7 @@ jobs:
   doctor:
     # Офлайн-гейты дома — тот же доктор, что и в ci.yml, но по расписанию
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -26,8 +29,20 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Доктор дома (гигиена документации)
-        run: python3 scripts/doctor.py
+      - name: Доктор дома (машиночитаемый отчёт)
+        run: python3 scripts/doctor.py --json > doctor-report.json
+
+      - name: Память воротов — таблица в summary
+        if: always()
+        run: python3 scripts/doctor_report.py doctor-report.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Память воротов — артефакт прогона
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4 (верифицировано живым API 2026-11-02)
+        with:
+          name: doctor-report-${{ github.run_id }}
+          path: doctor-report.json
+          if-no-files-found: error
 
       - name: Автопортреты свежи (гейт --check + регенерация)
         run: |
@@ -40,6 +55,7 @@ jobs:
     # поэтому сеть вынесена в плановый свип. lychee: ретраи, токен для
     # GitHub-лимитов, красный = мёртвая ссылка.
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:

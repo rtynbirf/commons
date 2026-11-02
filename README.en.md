@@ -52,6 +52,8 @@ Since **0.22.0 authority is enforced at runtime** (SPEC-0002 v0.4.0): the guard 
 
 Since **0.23.0 the doctor traps poison and reports to machines** (wave №9, beat 1): the secrets gate hunts exposed keys (GitHub/AWS/Slack/Google/PEM shapes) in the statics and in the blood (runs/) — every catch is masked in the report, the trapper does not multiply what it traps; `--json` makes every run machine-readable for colleague agents (wiring the trace into the gates themselves is beat 2, waiting for a key with the `workflow` scope).
 
+Since **0.24.0 beat 2 is delivered** (a key with the `workflow` scope): the doctor's table in the summary and a doctor-report.json artifact on every ci.yml and fleas.yml run, plus `timeout-minutes` on all jobs and `concurrency` — the gates do not hang.
+
 | Artifact | Purpose |
 |---|---|
 | `specs/` | Genome: canonical agent loop, MCP synapse contract, blood envelope contract, living organism (PID 1), memory, license immunity |

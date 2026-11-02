@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -550,3 +551,17 @@ def test_doctor_report_renders_summary_table() -> None:
 
     assert "| counts | 3 | 0 |" in table
     assert "Итог: 3 ok, 0 failed" in table
+
+
+def test_workflows_carry_memory_and_hardening() -> None:
+    # Волна №9 такт 2: каждый прогон ворот оставляет след (json → артефакт
+    # + summary) и не висит вечно (timeout); пин upload-artifact по SHA.
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    fleas_wf = (REPO_ROOT / ".github" / "workflows" / "fleas.yml").read_text(encoding="utf-8")
+
+    for wf, name in ((ci, "ci.yml"), (fleas_wf, "fleas.yml")):
+        assert "doctor-report.json" in wf, f"{name}: машиночитаемого следа нет"
+        assert "GITHUB_STEP_SUMMARY" in wf, f"{name}: память воротов не в summary"
+        assert "timeout-minutes" in wf, f"{name}: ворота без срока — висят вечно"
+    assert "concurrency" in ci, "ci не отменяет устаревшие прогоны"
+    assert re.search(r"upload-artifact@[0-9a-f]{40}", ci + fleas_wf), "upload-artifact не запинен по SHA"

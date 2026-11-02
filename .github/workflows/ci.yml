@@ -9,9 +9,16 @@ on:
 permissions:
   contents: read
 
+# Волна-9 (0.23.0, W-0018): устаревшие прогоны PR отменяются сами —
+# время бегунов и Человека не горит на висящих хвостах.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       # Пин по SHA (Scorecard Pinned-Dependencies); v7.0.1 (верифицировано живым API 2026-11-02)
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -73,16 +80,30 @@ jobs:
   hygiene:
     # Гигиена дома (0.16.0): docs-drift ловится на автомате — протухающие числа,
     # расползшиеся версии, битые/оторванные ссылки, пути и SPEC/ADR-ссылки,
-    # точки входа; блоха = красный PR (scripts/doctor.py). Автопортреты —
-    # под гейтом свежести: обещание ROADMAP M2 «--check в CI» исполнено машиной.
+    # точки входа, секреты (0.23.0); блоха = красный PR (scripts/doctor.py).
+    # Волна-9: каждый прогон оставляет память — json-отчёт артефактом и
+    # таблица в summary (W-0017). Автопортреты — под гейтом свежести.
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Доктор дома (гигиена документации)
-        run: python3 scripts/doctor.py
+      - name: Доктор дома (машиночитаемый отчёт)
+        run: python3 scripts/doctor.py --json > doctor-report.json
+
+      - name: Память воротов — таблица в summary
+        if: always()
+        run: python3 scripts/doctor_report.py doctor-report.json >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Память воротов — артефакт прогона
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4 (верифицировано живым API 2026-11-02)
+        with:
+          name: doctor-report-${{ github.run_id }}
+          path: doctor-report.json
+          if-no-files-found: error
 
       - name: Автопортреты свежи (гейт --check + регенерация)
         run: |
@@ -93,6 +114,7 @@ jobs:
   reuse:
     # Иммунитет: пофайловое лицензирование REUSE 3.3 (SPDX) — PROVENANCE.md машинно-проверяем
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -105,6 +127,7 @@ jobs:
     # Иммунитет: лицензионный барьер тела (SPEC-0006, ADR-0008) —
     # AGPL/fair-code/NOASSERTION не встраиваются; fail-closed на неизвестное
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -117,6 +140,7 @@ jobs:
     # Конвейер: n8n как внешний узел (SPEC-0007, ADR-0009) — артефакты-данные,
     # белый список команд, fail-closed на произвольный shell
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -130,6 +154,7 @@ jobs:
     # кровь уходит в upstream только по рукопожатию (DCO) и тому, кто дарит;
     # CLA-ошейник не подписывается — патч живёт внутри организма
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -142,6 +167,7 @@ jobs:
     # Эффектор: openclaw как внешние руки (SPEC-0008, ADR-0010) — CLI-мост,
     # белый список методов, данные-политика fail-closed (CVE-2026-25253, ClawHub)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -153,6 +179,7 @@ jobs:
   core:
     # Исполнимое ядро 0.2: приёмки спек SPEC-0001..0003 как pytest (ADR-0004)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -173,6 +200,7 @@ jobs:
     # без сети (ADR-0008); патогены приходят с пищей (зависимостями), поэтому
     # ищутся там, где тело кормится, — в установленном окружении целиком.
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:

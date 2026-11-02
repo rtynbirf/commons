@@ -327,6 +327,61 @@ def test_missing_en_readme_is_caught_by_version_sync(tmp_path: Path) -> None:
     assert "README.en.md" in fleas[0]
 
 
+# --- гейты 0.20.0: реестр хотёлок ---
+
+
+def test_want_orphan_is_caught(tmp_path: Path) -> None:
+    # Волна-7: хотёлка, упомянутая вне реестра, — сирота; реестра нет — тоже блоха.
+    _touch(tmp_path, "docs/note.md", "Служим хотёлке W-7777.\n")
+
+    ok, fleas = doctor.check_want_refs(tmp_path)
+
+    assert ok == 0
+    assert len(fleas) == 2, fleas
+    assert any("W-7777" in f for f in fleas)
+    assert any("реестра нет" in f for f in fleas)
+
+
+def test_want_without_status_is_caught(tmp_path: Path) -> None:
+    # Хотёлка определена, но без «Статус:» — вердикта нет, значит обман.
+    _touch(tmp_path, "docs/personas.md", "### W-0001 — рулить одной командой\nХочу: одна команда.\n")
+    _touch(tmp_path, "ROADMAP.md", "служим W-0001\n")
+
+    ok, fleas = doctor.check_want_refs(tmp_path)
+
+    assert ok == 1  # ROADMAP чист — ссылка на определённую хотёлку
+    assert len(fleas) == 1, fleas
+    assert "W-0001" in fleas[0] and "Статус" in fleas[0]
+
+
+def test_want_linked_and_stated_is_clean(tmp_path: Path) -> None:
+    # Связанная хотёлка с вердиктом — дом чист: реестр + ссылающийся файл.
+    _touch(
+        tmp_path,
+        "docs/personas.md",
+        "### W-0001 — рулить одной командой\nХочу: одна команда.\nСтатус: СЛУЖЕНО — SPEC-0010.\n",
+    )
+    _touch(tmp_path, "ROADMAP.md", "служим W-0001 по SPEC-0010\n")
+
+    ok, fleas = doctor.check_want_refs(tmp_path)
+
+    assert (ok, fleas) == (2, [])
+
+
+def test_want_backlog_block_without_headings_is_clean(tmp_path: Path) -> None:
+    # Бэклог-блок реестра (хотёлки без ###-заголовков) не роняет гейт статусов:
+    # вердикт обязателен для хозяина хотёлки, бэклог честен без формальностей.
+    _touch(
+        tmp_path,
+        "docs/personas.md",
+        "### W-0001 — дело\nХочу: дело.\nСтатус: СЛУЖЕНО — артефакт.\n\n## Честный бэклог\n\n- W-0002 — второе дело: ждёт хозяина.\n",
+    )
+
+    ok, fleas = doctor.check_want_refs(tmp_path)
+
+    assert (ok, fleas) == (1, [])
+
+
 # --- обещание «гейт в CI» приговорено проверками ---
 
 

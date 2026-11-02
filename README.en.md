@@ -46,6 +46,8 @@ Since **0.18.0 the house cleans itself on schedule**: the sweep ([`.github/workf
 
 Since **0.19.0 the gates have no blind spots**: ROADMAP is under the stale-counter gate (historical acceptance counters swept out — the live number lives in `python -m pytest -q`), and the version is verified in both READMEs — ru and en no longer drift silently; this very file caught up three releases (0.16.0–0.18.0), the blind spot made visible.
 
+Since **0.20.0 the machine imagines the people itself** ([docs/personas.md](docs/personas.md)): a registry of personas × wants × status × links — from the Human (PID 1) to the upstream maintainer, the passer-by, the external reviewer and the future contributor; an orphaned want or one without a verdict is a flea (the doctor's `wants` gate), and the honest backlog holds the A/B and the live red-run until a host appears.
+
 | Artifact | Purpose |
 |---|---|
 | `specs/` | Genome: canonical agent loop, MCP synapse contract, blood envelope contract, living organism (PID 1), memory, license immunity |

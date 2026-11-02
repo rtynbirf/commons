@@ -35,6 +35,13 @@ ROADMAP жили три живых счётчика приёмок («29 при�
 только ru. Оба дефекта того же класса, что лечили, — но в слепой зоне.
 Граница жанров зафиксирована приёмкой: CHANGELOG вне зоны counts — это
 журнал, исторические числа там — суть жанра (Keep a Changelog).
+
+Волна-7 (0.20.0) — реестр хотёлок, директива Человека «МЫ ДЕЛАЕМ НЕ ДЛЯ
+ЛЮДЕЙ!! МЫ ДЕЛАЕМ ДЛЯ ЧЕЛОВЕКА; САМ ИЗОБРАЖАЙ ЛЮДЕЙ С ИХ ХОТЕЛКАМИ»:
+docs/personas.md — машина сама изображает людей, которым служит дом
+(JTBD × персоны × continuous discovery), каждая хотёлка W-NNNN несёт
+хозяина, статус и связи. Гейт wants: хотёлка-сирота (упомянута вне
+реестра) и хотёлка без «Статус:» — блоха, fail-closed.
 """
 
 from __future__ import annotations
@@ -65,6 +72,10 @@ BACKTICK_PATH = re.compile(
 )
 SPEC_REF = re.compile(r"\bSPEC-(\d{4})\b")
 ADR_REF = re.compile(r"\bADR-(\d{4})\b")
+WANT_REF = re.compile(r"\bW-(\d{4})\b")
+WANT_DEF_RE = re.compile(r"^#{2,3} W-(\d{4})\b", re.M)
+WANT_STATUS_RE = re.compile(r"^\s*(?:[-*]\s*)?\**Статус\**\s*:", re.IGNORECASE | re.M)
+PERSONAS = "docs/personas.md"
 
 # --- гейты: каждый возвращает (сколько файлов/пунктов чисто, список блох) ---
 
@@ -251,6 +262,46 @@ def check_spec_adr_refs(root: Path) -> tuple[int, list[str]]:
     return ok, fleas
 
 
+def check_want_refs(root: Path) -> tuple[int, list[str]]:
+    """Каждая хотёлка имеет хозяина и статус (реестр docs/personas.md):
+    любая W-NNNN в md дома обязана быть определена в реестре, каждая
+    определённая хотёлка обязана нести «Статус:» — сирота и хотёлка без
+    вердикта = блоха (fail-closed). Директива Человека 2026-11-02: машина
+    сама изображает людей с их хотёлками (JTBD × персоны × continuous
+    discovery) и держит их связанными с артефактами дома."""
+    fleas: list[str] = []
+    persona = root / PERSONAS
+    defined: set[str] = set()
+    if persona.exists():
+        text = persona.read_text(encoding="utf-8")
+        defined = set(WANT_REF.findall(text))
+        if not defined:
+            fleas.append(f"{PERSONAS}: реестр пуст — ни одной хотёлки W-NNNN")
+        for m in WANT_DEF_RE.finditer(text):
+            wid = m.group(1)
+            nxt = WANT_DEF_RE.search(text, m.end())
+            block = text[m.start() : nxt.start() if nxt else len(text)]
+            if not WANT_STATUS_RE.search(block):
+                fleas.append(f"{PERSONAS}: W-{wid} без «Статус:» — хотёлка без вердикта = обман")
+    else:
+        fleas.append(f"{PERSONAS}: реестра нет — хотёлкам негде жить")
+
+    ok = 0
+    for path in _markdown_files(root):
+        rel = path.relative_to(root).as_posix()
+        if rel == PERSONAS:
+            continue
+        text = path.read_text(encoding="utf-8")
+        orphans = [f"W-{wid}" for wid in sorted(set(WANT_REF.findall(text))) if wid not in defined]
+        if orphans:
+            fleas.append(f"{rel}: хотёлки-сироты без хозяина в {PERSONAS}: {', '.join(orphans)}")
+        else:
+            ok += 1
+    if not any(f.startswith(PERSONAS) for f in fleas):
+        ok += 1  # сам реестр проверен чисто
+    return ok, fleas
+
+
 def check_cli_sync(root: Path) -> tuple[int, list[str]]:
     """Точки входа pyproject существуют как файлы и упомянуты в README."""
     fleas: list[str] = []
@@ -329,6 +380,7 @@ GATES = (
     ("orphan-links", check_orphan_links),
     ("backtick-paths", check_backtick_paths),
     ("spec-adr-refs", check_spec_adr_refs),
+    ("wants", check_want_refs),
     ("cli-sync", check_cli_sync),
     ("changelog", check_changelog_discipline),
     ("conflict-markers", check_conflict_markers),

@@ -1,6 +1,6 @@
 # Чек-лист практик open-source 2025–2026 и их статус здесь
 
-Дата: 2026-11-02 · Волна 3 · Версия: 0.4.0
+Дата: 2026-11-02 · Волна 7 · Версия: 0.5.0
 
 Консолидация актуальных практик (GitHub Community Standards, REUSE 3.3, OpenSSF Scorecard, ADR/MADR,
 DCO, SemVer, docs-as-code, spec-driven development, MCP, SBOM) с вердиктом: MUST / SHOULD / LATER
@@ -27,6 +27,7 @@ DCO, SemVer, docs-as-code, spec-driven development, MCP, SBOM) с вердикт
 | 17 | Доступность: текст как универсальный канал (alt у изображений, словесные итоги гейтов, без аудио-only, без безымянных ссылок) | SHOULD (CI) | ✅ 0.15.0: SPEC-0010 + ADR-0012 — инвариант каналов исполняется машиной (`tests/test_persona.py`), а не декларируется |
 | 18 | Docs-drift гигиена: версии, ссылки, пути и точки входа документации проверяются машиной (link-check, version-sync, changelog-lint — референсы: lychee, release-please, Keep a Changelog) | MUST (CI) | ✅ 0.16.0: `scripts/doctor.py` + job `hygiene` — блоха красит PR; автопортреты под гейтом свежести `--check` |
 | 19 | Свип по расписанию: docs-drift и внешние ссылки перепроверяются машиной без пушей — cron-свип (референсы: lychee scheduled sweeps, docs nightlies) | MUST (CI) | ✅ 0.18.0: workflow `fleas.yml` — доктор + внешние ссылки (lychee, запинена по SHA) еженедельно, cron вне общего часа |
+| 20 | Персоны × хотёлки (JTBD, continuous discovery, working backwards): хотёлка формулируется работой, держит хозяина, статус и связи с артефактами | SHOULD | ✅ 0.20.0: [docs/personas.md](personas.md) — машина сама изображает людей; гейт `wants` доктора: сирота или хотёлка без «Статус:» — блоха |
 
 ## Что изменилось против практик 2020-х
 
@@ -46,5 +47,6 @@ DCO, SemVer, docs-as-code, spec-driven development, MCP, SBOM) с вердикт
 - SemVer: semver.org. Docs-as-code: writethedocs.org/guide/docs-as-code.
 - SDD: github/spec-kit. MCP: modelcontextprotocol.io. SBOM: spdx.dev, cyclonedx.org (ECMA-424).
 - Docs-drift гигиена (волна 3): lychee (lychee.cli.rs), release-please (github.com/googleapis/release-please), Keep a Changelog (keepachangelog.com).
+- Хотёлки/персоны (волна 7): strategyn.com/jobs-to-be-done, medium.com/@jboogie/reconciling-jobs-to-be-done-personas-8aa96b94315b, userinterviews.com/ux-research-field-guide-chapter/jobs-to-be-done-jtbd-framework.
 
 Живое изучение структур десяти эталонов: [repo-structure-study.md](repo-structure-study.md).

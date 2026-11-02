@@ -13,6 +13,11 @@
 или того же `idempotency_key` не создаёт второе событие — возвращается
 записанный конверт, строка в кровь не пишется. Тот же `id` с другим
 содержанием — не dedupe, а конфликт: fail-closed (EnvelopeError).
+
+С 0.6.0 (п.9, волна №17) журнал владеет моментом записи: при append он сам
+ставит конверту `stored_at` — изготовитель конверта момент записи не выдумывает.
+`stored_at` (как и `prev_id`) — метаданные файла, не часть эффекта: дедуп
+(A01) их конфликтом не считает.
 """
 
 from __future__ import annotations
@@ -21,7 +26,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterator
 
-from blood.envelope import Cost, EnvelopeError, validate
+from blood.envelope import Cost, EnvelopeError, now_utc, validate
 
 
 class Journal:
@@ -120,8 +125,11 @@ class Journal:
         не пишется, цепочка и цена не дублируются. Тот же `id` с другим
         содержанием — конфликт, fail-closed (EnvelopeError).
 
-        Возвращает записанный конверт (уже с prev_id) — память помнит
-        уже записанное (SPEC-0005 п.1).
+        При записи журнал ставит `stored_at` (п.9) — момент записи знает
+        журнал, не изготовитель конверта.
+
+        Возвращает записанный конверт (уже с prev_id и stored_at) — память
+        помнит уже записанное (SPEC-0005 п.1).
         """
         envelope = dict(envelope)
         env_id = envelope.get("id")
@@ -136,6 +144,9 @@ class Journal:
         if isinstance(key, str) and key in self._key_to_id:
             return dict(self._by_id[self._key_to_id[key]])
         validate(envelope)
+        # Момент записи — факт журнала (п.9): ставится сам, после валидации
+        # содержания, до цепочки; изготовитель конверта его не выдумывает.
+        envelope["stored_at"] = now_utc()
         if self._last_id is not None:
             envelope["prev_id"] = self._last_id
         self._events.append(envelope)
@@ -150,9 +161,12 @@ class Journal:
 
     @staticmethod
     def _content(envelope: dict[str, Any]) -> dict[str, Any]:
-        """Содержание конверта без цепочки prev_id — то, что сравнивается
-        при повторном append: тот же id обязан нести тот же эффект."""
-        return {k: v for k, v in envelope.items() if k != "prev_id"}
+        """Содержание конверта без метаданных файла — то, что сравнивается
+        при повторном append: тот же id обязан нести тот же эффект.
+        `prev_id` — цепочка файла; `stored_at` — момент записи (п.9), ставит
+        его журнал; оба — метаданные, эффект не повторяют и конфликтом не служат.
+        """
+        return {k: v for k, v in envelope.items() if k not in ("prev_id", "stored_at")}
 
     def all(self) -> tuple[dict[str, Any], ...]:
         return tuple(self._events)

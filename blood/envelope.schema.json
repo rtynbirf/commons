@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/rtynbirf/commons/blob/main/blood/envelope.schema.json",
   "title": "COMMONS Blood Envelope",
-  "description": "Конверт события крови организма (SPEC-0003). Событие без цены недействительно.",
+  "description": "Конверт события крови организма (SPEC-0003). Событие без цены недействительно. С 0.6.0 конверт может нести честное происхождение: тройное время, причинность, классы доверия и приватности — все поля аддитивны, старая кровь валидна навсегда.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -35,7 +35,37 @@
     "ts": {
       "type": "string",
       "format": "date-time",
-      "description": "Момент события, UTC"
+      "description": "Момент события, UTC. Для конвертов старого контура (v0.4.0–v0.5.0) ts = момент записи; с 0.6.0 момент записи ставит журнал в stored_at"
+    },
+    "stored_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Когда записано (SPEC-0003 п.9): журнал ставит сам в момент append — изготовитель конверта момент записи не выдумывает"
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Когда тело увидело (SPEC-0003 п.9); отсутствует — момент наблюдения не заявлен"
+    },
+    "occurred_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Когда случилось в мире (SPEC-0003 п.9); null или отсутствие = UNKNOWN — честное незнание, не выдумка"
+    },
+    "causation_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Семантический родитель события (SPEC-0003 п.9) — не файловая цепочка prev_id, а ответ на вопрос «какое событие стало причиной этого»"
+    },
+    "trust": {
+      "type": "string",
+      "enum": ["unverified", "verified", "derived", "unknown"],
+      "description": "Класс доверия (SPEC-0003 п.9): unverified — весть от чужих, verified — тело видело само, derived — выведено из крови, unknown — не заявлено; отсутствие поля = unknown. Неизвестный класс — fail-closed при записи"
+    },
+    "privacy": {
+      "type": "string",
+      "enum": ["public", "internal", "personal", "sensitive"],
+      "description": "Класс приватности (SPEC-0003 п.9): public/internal/personal/sensitive; отсутствие поля = не классифицировано — контур наружу обязан считать такое sensitive (fail-closed наружу). Неизвестный класс — fail-closed при записи"
     },
     "type": {
       "type": "string",

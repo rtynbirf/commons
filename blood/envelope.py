@@ -17,6 +17,11 @@ import jsonschema
 
 SCHEMA_PATH = Path(__file__).resolve().parent / "envelope.schema.json"
 
+# Страж «параметр не передан» для полей честного происхождения (SPEC-0003 п.9):
+# None в параметре — честное значение (например occurred_at=None = «случилось,
+# момент неизвестен»), отсутствие параметра — поле не пишется.
+_UNSET: Any = object()
+
 
 class EnvelopeError(ValueError):
     """Конверт не соответствует схеме крови."""
@@ -90,11 +95,31 @@ def make(
     payload: dict[str, Any],
     cost: Cost | None = None,
     idempotency_key: str | None = None,
+    *,
+    occurred_at: Any = _UNSET,
+    observed_at: Any = _UNSET,
+    causation_id: Any = _UNSET,
+    trust: Any = _UNSET,
+    privacy: Any = _UNSET,
 ) -> dict[str, Any]:
     """Собирает и валидирует конверт. Невалидный конверт наружу не выходит.
 
     `idempotency_key` (A01, SPEC-0003) — ключ идемпотентности отправителя:
     повторная доставка с тем же ключом не создаёт второе событие.
+
+    Честное происхождение (SPEC-0003 п.9, W-0022) — все параметры необязательны,
+    старая кровь валидна навсегда:
+
+    - `occurred_at` — когда случилось в мире; None = честный UNKNOWN (null);
+    - `observed_at` — когда тело увидело;
+    - `causation_id` — id семантического родителя (не файловая цепочка `prev_id`);
+    - `trust` — unverified / verified / derived / unknown (неизвестный класс —
+      fail-closed при записи, как неизвестный тип — ADR-0014);
+    - `privacy` — public / internal / personal / sensitive (тоже fail-closed;
+      отсутствие поля = не классифицировано, наружу такое считается sensitive).
+
+    Момент записи (`stored_at`) журнал ставит сам при append — изготовитель
+    конверта его не выдумывает.
     """
     envelope = {
         "id": new_event_id(),
@@ -108,5 +133,15 @@ def make(
     }
     if idempotency_key is not None:
         envelope["idempotency_key"] = idempotency_key
+    if occurred_at is not _UNSET:
+        envelope["occurred_at"] = occurred_at
+    if observed_at is not _UNSET:
+        envelope["observed_at"] = observed_at
+    if causation_id is not _UNSET:
+        envelope["causation_id"] = causation_id
+    if trust is not _UNSET:
+        envelope["trust"] = trust
+    if privacy is not _UNSET:
+        envelope["privacy"] = privacy
     validate(envelope)
     return envelope

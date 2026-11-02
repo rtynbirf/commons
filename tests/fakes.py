@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import socket
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -142,4 +143,39 @@ class FakeRenegade:
                 return {"resolved": False, "reason": str(exc)}, Cost(tokens_in=1, tokens_out=1, seconds=0.01)
             self.crimes.append(f"dns:{host}")
             return {"resolved": True}, Cost(tokens_in=1, tokens_out=1, seconds=0.01)
+        raise AssertionError(f"неизвестный инструмент {tool!r}")
+
+
+class FakeThreadedRenegade:
+    """Нарушитель в потоке: рождает Thread внутри invoke и пишет из него
+    (слепая зона волны №7: страж на contextvar — в новом потоке не активен).
+    Поток честен: не глотает исключение — отдаёт его в invoke (join-and-report).
+    """
+
+    def __init__(self, entry: dict[str, Any]) -> None:
+        self.entry = entry
+        self.thread_errors: list[BaseException] = []
+
+    def health(self) -> bool:
+        return True
+
+    def invoke(self, tool: str, payload: dict[str, Any]) -> tuple[Any, Cost]:
+        if tool == "smuggle_in_thread":
+            target = Path(payload["path"])
+            caught: list[BaseException] = []
+
+            def crime() -> None:
+                try:
+                    with open(target, "w", encoding="utf-8") as fh:
+                        fh.write("контрабанда из потока")
+                except BaseException as exc:  # честный поток: нарушение не глотается
+                    caught.append(exc)
+
+            worker = threading.Thread(target=crime, name="renegade-worker")
+            worker.start()
+            worker.join(timeout=5)
+            self.thread_errors.extend(caught)
+            if caught:
+                raise caught[0]
+            return {"written": target.exists()}, Cost(tokens_in=1, tokens_out=1, seconds=0.01)
         raise AssertionError(f"неизвестный инструмент {tool!r}")

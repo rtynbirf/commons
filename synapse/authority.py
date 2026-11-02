@@ -5,7 +5,9 @@
 adapter.invoke. Грамматика исполнима (normalize), ось без значения = самая строгая
 (fail-closed), непарсабельное охраняемое событие — запрет (fail-closed). Скоупы (v0.5.0):
 fs знает пути ({mode, paths}, realpath — симлинк-побег закрыт), network знает порты
-({hosts, ports}, точное совпадение).
+({hosts, ports}, точное совпадение). Потоки (v0.6.0): поток, рождённый под стражем,
+наследует его (обёртка Thread.start — полномочия связывают код органа, а не поток;
+запись `__pycache__` ленивым импортом прерывается с предписанием прогреть импорты).
 """
 
 from __future__ import annotations
@@ -27,6 +29,7 @@ _FS_MUTATIONS = frozenset({"os.remove", "os.rename", "os.mkdir", "os.rmdir", "os
 _GUARDED = frozenset({"open", "socket.connect", "socket.bind", "socket.getaddrinfo", "subprocess.Popen"}) | _FS_MUTATIONS
 _WRITE_MODE_CHARS = frozenset("wax+")
 _WRITE_FLAGS = os.O_WRONLY | os.O_RDWR | os.O_APPEND | os.O_CREAT
+_PYCACHE_PRESCRIPTION = "ленивый импорт внутри invoke пишет __pycache__ — прогрейте импорты до вызова (SPEC-0002 п.8)"
 
 
 class AuthorityViolation(RuntimeError):
@@ -45,6 +48,7 @@ class Guard(NamedTuple):
 _ACTIVE: ContextVar[Guard | None] = ContextVar("commons-authority-guard", default=None)
 _local = threading.local()  # флаг «уже внутри решения» — защита от рекурсии
 _hook_lock, _hook_installed, _runtime_roots = threading.Lock(), False, None
+_thread_wrap_installed = False
 
 
 def normalize(authority: Any, organ: str | None = None) -> dict[str, Any]:
@@ -118,15 +122,49 @@ def _normalize_network(value: Any, organ: str | None) -> Any:
 
 
 def _install_hook() -> None:
-    """Один audit hook на процесс: лениво при первом enforce, идемпотентно, потокобезопасно."""
-    global _hook_installed
-    if _hook_installed:
+    """Один audit hook на процесс + наследование стража потоками: лениво при первом
+    enforce, идемпотентно, потокобезопасно (SPEC-0002 п.8, v0.6.0)."""
+    global _hook_installed, _thread_wrap_installed
+    if _hook_installed and _thread_wrap_installed:
         return
     with _hook_lock:
-        if _hook_installed:
-            return
-        sys.addaudithook(_hook)
-        _hook_installed = True
+        if not _hook_installed:
+            sys.addaudithook(_hook)
+            _hook_installed = True
+        if not _thread_wrap_installed:
+            _install_thread_inheritance()
+
+
+def _install_thread_inheritance() -> None:
+    """Поток, рождённый под стражем, наследует его (v0.6.0): обёртка Thread.start — один
+    раз на процесс, идемпотентно. Полномочия связывают код органа, а не поток: без
+    обёртки contextvar в новом потоке пуст, страж не активен — ренегат выносит
+    нарушение за границу полномочий молча (слепая зона волны №7). На Python 3.14+
+    появилось родное audit-событие `threading.start` — обёртка может быть снята
+    (SPEC-0002 п.8 v0.6.0). Граница действия: поток, рождённый вне стража, и поток,
+    переиспользованный чужим контекстом, стража не имеют — это граница, не дыра.
+    """
+    global _thread_wrap_installed
+    original_start = threading.Thread.start
+
+    def guarded_start(self: threading.Thread) -> None:
+        guard = _ACTIVE.get()
+        if guard is not None and getattr(self, "_commons_original_run", None) is None:
+            original_run = self.run
+
+            def inherited_run() -> None:
+                token = _ACTIVE.set(guard)
+                try:
+                    original_run()
+                finally:
+                    _ACTIVE.reset(token)
+
+            self._commons_original_run = original_run  # маркер: не оборачиваем дважды
+            self.run = inherited_run  # атрибут экземпляра затеняет метод класса
+        original_start(self)
+
+    threading.Thread.start = guarded_start  # type: ignore[method-assign]
+    _thread_wrap_installed = True
 
 
 def _hook(event: str, args: tuple) -> None:
@@ -162,6 +200,19 @@ def _text(guard: Guard, event: str, rule: str, detail: str) -> str:
     return f"орган {guard.organ!r}: {event} {detail} — нарушено заявленное правило ({rule})"
 
 
+def _pycache_hint(path: Any) -> str:
+    """Предписание к записи байткода (v0.6.0): диагностика, не послабление — запись прервана."""
+    if not isinstance(path, (str, bytes)) or not path:
+        return ""
+    try:
+        clean = os.path.abspath(os.fsdecode(path))
+    except (OSError, ValueError):
+        return ""
+    if "__pycache__" in clean.split(os.sep) or clean.endswith(".pyc"):
+        return f" ({_PYCACHE_PRESCRIPTION})"
+    return ""
+
+
 def _check_open(guard: Guard, args: tuple) -> None:
     path = args[0] if args else None
     mode = args[1] if len(args) > 1 else None
@@ -171,9 +222,9 @@ def _check_open(guard: Guard, args: tuple) -> None:
     if writing:
         if isinstance(fs, dict):
             if fs.get("mode") != "read-write" or not _inside_roots(fs.get("paths") or [], path):
-                raise AuthorityViolation(_text(guard, "open", f"fs: {fs.get('mode')} скоуп {fs.get('paths')}", f"запись вне заявленных корней: {path!r}"))
+                raise AuthorityViolation(_text(guard, "open", f"fs: {fs.get('mode')} скоуп {fs.get('paths')}", f"запись вне заявленных корней: {path!r} {_pycache_hint(path)}".rstrip()))
         elif fs != "read-write":
-            raise AuthorityViolation(_text(guard, "open", f"fs: {fs}", f"запись запрещена: {path!r} (режим {mode!r})"))
+            raise AuthorityViolation(_text(guard, "open", f"fs: {fs}", f"запись запрещена: {path!r} (режим {mode!r}){_pycache_hint(path)}"))
     elif not _under_python_runtime(path):
         if isinstance(fs, dict):
             if not _inside_roots(fs.get("paths") or [], path):

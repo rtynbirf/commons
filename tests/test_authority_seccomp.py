@@ -1,19 +1,18 @@
 # SPDX-FileCopyrightText: 2026 COMMONS contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Приёмка SPEC-0002 v0.9.0 «защита в глубину и граница R1» (волна №13 такт 2).
+"""Приёмка SPEC-0002 v0.9.0→v0.10.0 «защита в глубину и граница R1» (волны №13–№14).
 
-Слой поверх их ядерной песочницы (0.31.0, SPEC-0002 v0.8.0 п.11): находки волны №13
+Слой поверх их ядерной песочницы (0.31.0, SPEC-0002 v0.8.0 п.11): находки волн №13–№14
 фиксируются приёмками —
 - U1: UDP sendto — не audit-событие Python (страж слеп), ронято их фильтром (socket inet → EPERM)
   ДО кода детёныша — язык не важен;
 - C13: ctypes libc.socket — raw-syscall вне audit-грамматики, ронято тем же фильтром —
   защита в глубину: audit hook не единственная граница;
-- R1 (приёмка-предписание): детёныш соединяется по УНАСЛЕДОВАННОМУ дескриптору
-  (создан до стража, передан pass_fds) raw-connect'ом — их фильтр не роняет connect,
-  страж слеп к raw-syscall: соединение проходит, в крови обычный act. Граница названа,
-  не закрыта: приёмка ПОКРАСНЕЕТ, когда ядерная граница научится ронять connect по
-  унаследованному fd (deny connect сломает unix-connect — граница; или гигиена pass_fds
-  под стражем) — как приёмка волны №10 покраснела волной №12 по предписанию.
+- R1: детёныш соединяется по УНАСЛЕДОВАННОМУ дескриптору (создан до стража, передан pass_fds)
+  raw-connect'ом — их фильтр не роняет connect, страж слеп к raw-syscall. ПРЕДПИСАНО волной №13,
+  ЗАКРЫТО волной №14 (SPEC-0002 v0.10.0, гигиена дескрипторов): приёмка-предписание покраснела
+  на коде с закрытой R1 и перевёрнута честно — как волна №12 перевернула С3 (см.
+  tests/test_authority_fdhygiene.py — полная сюита гигиены).
 
 Свидетель — живой TCP/UDP-сервер на loopback.
 """
@@ -152,16 +151,17 @@ def test_ctypes_raw_socket_denied() -> None:
     assert "SOCKET-EPERM" in proc.stdout or "CONNECT-EPERM" in proc.stdout, proc.stdout
 
 
-# --- d) находка R1: унаследованный дескриптор — приёмка-предписание ---------------------
+# --- d) находка R1: унаследованный дескриптор — ЗАКРЫТА волной №14 --------------------
 
 
-def test_inherited_fd_boundary_prescription() -> None:
-    """R1: детёныш соединяется по унаследованному fd raw-connect'ом — и фильтр, и страж слепы.
-    СЕГОДНЯ соединение проходит (дыра жива) — приёмка зелёная как предписание; ПОКРАСНЕЕТ,
-    когда граница R1 закрыта (гигиена pass_fds под стражем или deny connect — с честным
-    названием unix-границы), тогда перевернуть, как волна №12 перевернула С3 (v0.9.0)."""
+def test_inherited_fd_boundary_closed() -> None:
+    """R1 закрыта (SPEC-0002 v0.10.0, волна №14): сокет-дескриптор в pass_fds при network: none —
+    рождение детёныша прервано ДО создания процесса (гигиена дескрипторов, S_ISSOCK).
+    Предписание волны №13 перевёрнуто: волна №13 зафиксировала «соединение проходит»
+    (факт живого прогона, свидетель видел 1), волна №14 закрыла канал — свидетель видит 0,
+    как волна №12 перевернула С3 (v0.10.0)."""
     with witness("tcp") as (port, hits):
-        leak_fd = socket.socket()  # создан ДО стража: родитель под network: none его не открывал
+        leak_fd = socket.socket()  # создан ДО стража — тот же сценарий волны №13
         fd = leak_fd.fileno()
         code = (
             "import ctypes, os, socket, struct\n"
@@ -170,17 +170,16 @@ def test_inherited_fd_boundary_prescription() -> None:
             "rc = libc.connect(int(os.environ['LEAK_FD']), sa, len(sa))\n"
             "print('FD-LEAKED' if rc == 0 else 'FD-BLOCKED')\n"
         )
-        with enforce(_sandbox_scope(), organ="w13b-inherited"):
-            proc = subprocess.run(
-                [sys.executable, "-c", code], capture_output=True, text=True, timeout=20,
-                pass_fds=(fd,), env=dict(os.environ, LEAK_FD=str(fd)),
-            )
+        with enforce(_sandbox_scope(), organ="w14-r1-closed"):
+            with pytest.raises(AuthorityViolation) as exc_info:
+                subprocess.run(
+                    [sys.executable, "-c", code], capture_output=True, text=True, timeout=20,
+                    pass_fds=(fd,), env=dict(os.environ, LEAK_FD=str(fd)),
+                )
         leak_fd.close()
-    assert "FD-LEAKED" in proc.stdout, (
-        "соединение по унаследованному fd перестало проходить — граница R1 закрыта: "
-        "переверни эту приёмку и честно назови новое поведение (v0.9.0)"
-    )
-    assert len(hits) == 1, f"свидетель обязан видеть ровно одно (унаследованное) соединение: {len(hits)}"
+    text = str(exc_info.value)
+    assert "дескриптор" in text and "сокет" in text, f"текст не называет границу: {text!r}"
+    assert hits == [], f"свидетель видел соединений: {len(hits)} — R1 не закрыта"
 
 
 # --- e) граница действия: без sandbox сеть детёныша — дело хоста (их приёмка, контроль) --

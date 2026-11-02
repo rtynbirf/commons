@@ -15,6 +15,13 @@ execve ставится seccomp-BPF (socket(AF_INET/6) → EPERM) — inet за�
 конверт COMMONS_AUTHORITY и живёт под полномочиями органа (sitecustomize), скоуп
 {mode: spawn, programs, max_children} декларирует рождение; execve роняет hook —
 чужой бинарник конверта не читает, его syscalls не видны (честная граница).
+Гигиена дескрипторов и рождения мимо обёртки (v0.10.0, волна №14): граница R1
+(«socket()», но не connect по унаследованному fd) закрыта — сокет-дескриптор в
+pass_fds/stdio/close_fds=False при network ≠ any — нарушение ДО рождения (S_ISSOCK);
+детёныш с просочившимся fd не живёт — сам-скан на старте (exit 90); находка R2:
+os.posix_spawn/os.system — audit-события без охраны (рождение мимо обёртки, конверт
+не передаётся) — под охраной: os.system — всегда нарушение (shell-строка не разбираем),
+posix_spawn — декларация исполняется, при network ≠ any — прервано.
 """
 
 from __future__ import annotations
@@ -35,7 +42,8 @@ PROCESS_VALUES = ("none", "spawn")
 _STRICT: dict[str, Any] = {"fs": "none", "network": "none", "process": "none"}
 _AXIS_VALUES = {"process": PROCESS_VALUES}  # fs обрабатывается целиком в _normalize_fs (ярлык или скоуп)
 _FS_MUTATIONS = frozenset({"os.remove", "os.rename", "os.mkdir", "os.rmdir", "os.chmod", "os.chown"})
-_GUARDED = frozenset({"open", "socket.connect", "socket.bind", "socket.getaddrinfo", "subprocess.Popen"}) | _FS_MUTATIONS
+_GUARDED = frozenset({"open", "socket.connect", "socket.bind", "socket.getaddrinfo", "subprocess.Popen",
+                      "os.posix_spawn", "os.system"}) | _FS_MUTATIONS
 _WRITE_MODE_CHARS = frozenset("wax+")
 _WRITE_FLAGS = os.O_WRONLY | os.O_RDWR | os.O_APPEND | os.O_CREAT
 _PYCACHE_PRESCRIPTION = "ленивый импорт внутри invoke пишет __pycache__ — прогрейте импорты до вызова (SPEC-0002 п.8)"
@@ -264,6 +272,7 @@ def _popen_scope(guard: Guard, args: tuple, kwargs: dict) -> tuple[tuple, dict]:
             if "preexec_fn" in kwargs:
                 raise AuthorityViolation(_text(guard, "subprocess.Popen", "process: sandbox", "preexec_fn занят стражем: песочница ставится в этот слот (v0.8.0)"))
             kwargs["preexec_fn"] = apply_child_sandbox
+    _assert_fd_hygiene(guard, kwargs)  # закрытие R1 (v0.10.0): все рождения под стражем, ярлык и скоуп
     env = kwargs.get("env")
     child_env = dict(env) if isinstance(env, dict) else os.environ.copy()  # окружение вызывающего не мутируем
     child_env[ACTIVE_ENV] = json.dumps({"organ": guard.organ, "authority": guard.authority}, ensure_ascii=False)
@@ -335,6 +344,112 @@ def apply_child_sandbox() -> None:
         os._exit(89)
 
 
+# --- гигиена дескрипторов и рождения мимо обёртки (v0.10.0, волна №14) --------------
+
+_FD_HYGIENE_RULE = "fd-гигиена (unix-граница: дескриптор = capability мимо грамматики, S_ISSOCK)"
+
+
+def _fd_is_socket(fd: int) -> bool:
+    """S_ISSOCK по os.fstat. Исчезнувший fd (EBADF — например, номер каталога самого
+    listdir, закрытый до возврата) — не сокет: несуществующий дескриптор ничего
+    не несёт и унаследован быть не может."""
+    import stat
+
+    try:
+        return stat.S_ISSOCK(os.fstat(fd).st_mode)
+    except OSError:
+        return False
+
+
+def _redirect_fds(kwargs: dict) -> list[int]:
+    """Числовые дескрипторы stdio-перенаправлений: int >= 0 или объект с fileno();
+    PIPE/DEVNULL (-1) и не-descriptors не считаются."""
+    out: list[int] = []
+    for key in ("stdin", "stdout", "stderr"):
+        value = kwargs.get(key)
+        fd: int | None = None
+        if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+            fd = value
+        elif value is not None and hasattr(value, "fileno"):
+            try:
+                got = value.fileno()
+            except (OSError, ValueError, AttributeError):
+                got = -1
+            if isinstance(got, int) and got >= 0:
+                fd = got
+        if fd is not None:
+            out.append(fd)
+    return out
+
+
+def _scan_socket_fds(skip: set[int]) -> list[int]:
+    """Живой скан /proc/self/fd: все сокет-дескрипторы кроме skip. Нет /proc (не-Linux) —
+    слой неприменим, пустой список (граница честно названа в спеке, не скрыта)."""
+    try:
+        names = os.listdir("/proc/self/fd")
+    except OSError:
+        return []
+    out: list[int] = []
+    for name in names:
+        try:
+            fd = int(name)
+        except ValueError:
+            continue
+        if fd not in skip and _fd_is_socket(fd):
+            out.append(fd)
+    return sorted(out)
+
+
+def _assert_fd_hygiene(guard: Guard, kwargs: dict) -> None:
+    """Закрытие R1 (v0.10.0, SPEC-0002 п.11): унаследованный дескриптор — capability мимо
+    грамматики (connect по существующему fd не ронят ни seccomp-фильтр socket(), ни страж).
+    При network ≠ any сокет-дескриптор в pass_fds, в stdio-перенаправлениях или при
+    close_fds=False (наследует весь стол) — нарушение ДО создания процесса. При
+    network: any — жива: capability заявлена, дескриптор не добавляет полномочий."""
+    net = guard.authority.get("network", "none")
+    if net == "any":
+        return
+    for fd in list(kwargs.get("pass_fds") or ()) + _redirect_fds(kwargs):
+        if isinstance(fd, int) and not isinstance(fd, bool) and fd >= 0 and _fd_is_socket(fd):
+            raise AuthorityViolation(_text(guard, "subprocess.Popen", _FD_HYGIENE_RULE,
+                f"сокет-дескриптор {fd} передан детёнышу (pass_fds/stdio) при network: {net} — "
+                "connect по унаследованному fd не ронят ни фильтром, ни стражем (R1): рождение прервано до execve"))
+    if kwargs.get("close_fds") is False:
+        leaked = _scan_socket_fds(skip={0, 1, 2})
+        if leaked:
+            raise AuthorityViolation(_text(guard, "subprocess.Popen", _FD_HYGIENE_RULE,
+                f"close_fds=False наследует весь стол дескрипторов, среди них сокеты {leaked} (network: {net}) — рождение прервано"))
+
+
+def _check_posix_spawn(guard: Guard, args: tuple) -> None:
+    """Находка R2 (v0.10.0): os.posix_spawn — audit-событие, но конверт не передаётся
+    (args неизменяемы) — детёныш без стража. Декларация исполняется (программа из
+    заявленных, max_children — тот же счётчик, что у обёртки), при network ≠ any
+    рождение прервано: питоновский детёныш был бы С3-ренегатом."""
+    process = guard.authority.get("process", "none")
+    if not _spawn_allowed(process):
+        raise AuthorityViolation(_text(guard, "os.posix_spawn", f"process: {process}", "создание процессов запрещено"))
+    path = args[0] if args else None
+    program = os.path.basename(os.fsdecode(path)) if isinstance(path, (str, bytes)) and path else None
+    if isinstance(process, dict):
+        declared = {os.path.basename(os.fsdecode(p)) for p in process["programs"]}
+        if program is None or program not in declared:
+            raise AuthorityViolation(_text(guard, "os.posix_spawn", f"process: programs {process['programs']}",
+                f"программа детёныша вне заявленных программ: {path!r}"))
+        limit = process.get("max_children")
+        if limit is not None:
+            spawned = getattr(_local, "spawned", 0)
+            if spawned >= limit:
+                raise AuthorityViolation(_text(guard, "os.posix_spawn", f"process: max_children {limit}",
+                    f"лимит детёнышей исчерпан (рождено {spawned})"))
+            _local.spawned = spawned + 1
+    net = guard.authority.get("network", "none")
+    if net != "any":
+        raise AuthorityViolation(_text(guard, "os.posix_spawn", _FD_HYGIENE_RULE,
+            f"рождение мимо обёртки (R2): конверт не передаётся (args неизменяемы), программа {program!r} "
+            f"жила бы без стража при network: {net} — рождение прервано"))
+
+
 def boot_child(raw: str) -> None:
     """Загрузка стража в детёныше (v0.7.0): конверт COMMONS_AUTHORITY -> пожизненный страж
     процесса (contextvar держится до смерти). Битый конверт — AuthorityConfigError:
@@ -346,6 +461,15 @@ def boot_child(raw: str) -> None:
         authority = normalize(data["authority"], organ=str(data.get("organ") or "-"))
     except Exception as exc:
         raise AuthorityConfigError(f"детёныш: {ACTIVE_ENV} не разобран ({type(exc).__name__}: {exc})") from None
+    # Сам-скан дескрипторов (v0.10.0, защита в глубину): детёныш с просочившимся
+    # сокет-дескриптором (мимо гигиены обёртки) не живёт — exit 90 до первого оператора.
+    if authority.get("network", "none") != "any":
+        leaked = _scan_socket_fds(skip={0, 1, 2})
+        if leaked:
+            print(f"детёныш {data.get('organ')!r}: унаследованные сокет-дескрипторы {leaked} "
+                  f"при network: {authority.get('network')} — capability мимо грамматики (R1, SPEC-0002 v0.10.0): детёныш не живёт",
+                  file=sys.stderr)
+            os._exit(90)
     _ACTIVE.set(Guard(str(data.get("organ") or "-"), authority))
     _install_hook()
 
@@ -371,6 +495,11 @@ def _check(guard: Guard, event: str, args: tuple) -> None:
             _check_mutation(guard, event, args)
         elif event.startswith("socket."):
             _check_socket(guard, event, args)
+        elif event == "os.posix_spawn":
+            _check_posix_spawn(guard, args)
+        elif event == "os.system":
+            raise AuthorityViolation(_text(guard, event, f"process: {guard.authority.get('process', 'none')}",
+                "строка shell не разбираем (fail-closed, как shell: True со скоупом) — рождение прервано (R2, v0.10.0)"))
         elif not _spawn_allowed(guard.authority.get("process", "none")):
             raise AuthorityViolation(_text(guard, "subprocess.Popen", f"process: {guard.authority.get('process', 'none')}", "создание процессов запрещено"))
     except AuthorityViolation:

@@ -70,6 +70,26 @@ jobs:
           print('схема крови согласована со SPEC-0003')
           PY
 
+  hygiene:
+    # Гигиена дома (0.16.0): docs-drift ловится на автомате — протухающие числа,
+    # расползшиеся версии, битые/оторванные ссылки, пути и SPEC/ADR-ссылки,
+    # точки входа; блоха = красный PR (scripts/doctor.py). Автопортреты —
+    # под гейтом свежести: обещание ROADMAP M2 «--check в CI» исполнено машиной.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Доктор дома (гигиена документации)
+        run: python3 scripts/doctor.py
+
+      - name: Автопортреты свежи (гейт --check + регенерация)
+        run: |
+          python3 scripts/organ_map.py --check
+          python3 scripts/selfmap.py
+          git diff --exit-code -- docs/selfmap.md
+
   reuse:
     # Иммунитет: пофайловое лицензирование REUSE 3.3 (SPDX) — PROVENANCE.md машинно-проверяем
     runs-on: ubuntu-latest

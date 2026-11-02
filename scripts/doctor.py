@@ -1,0 +1,269 @@
+#!/usr/bin/env python3
+"""Doctor: гигиена дома — docs-drift ловится на автомате (0.16.0).
+
+Блохи, пойманные живьём 2026-11-02 (внешняя рецензия коллеги-LLM + свой свип):
+README протухал (294 и 253 приёмки при живых 302), ROADMAP M3 отставал от
+жизни (#2808/#2810 уже открыты — «PR не создаётся»), CITATION.cff нёс счётчик
+«302 приёмочных теста» в цитируемых метаданных, а обещанный в ROADMAP гейт
+свежести автопортретов так и не стоял в CI. Правило дома: блоха — красный
+PR, а не стыд в комментариях.
+
+Урок при постройке: «оторванная ссылка» в llms.txt оказалась фантомом
+рендера (пару символов `[m` съел дамп — урок волны-1 сработал второй раз);
+машина прочитала файл — скобки на месте. Дефект верифицируется чтением
+файла, не рендером: каждый гейт ниже читает файл, а не дамп.
+
+Синтез мировых практик: link-check в CI (lychee/linkchecker), version-sync
+релизных линтеров (release-please), changelog-дисциплина Keep a Changelog,
+docs-tests (документация проверяется как код). Всё офлайн и детерминированно,
+fail-closed: неизвестное — красное (закон иммунитета, SPEC-0006).
+
+Запуск: python3 scripts/doctor.py   →   DOCTOR: N ok, M failed; exit 1 при M>0
+"""
+
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+# Документы, за свежестью которых доктор следит (runs/ — пролитая кровь,
+# не переписывается задним числом, поэтому вне зоны гейтов на ссылки).
+README_FILES = ("README.md", "README.en.md")
+LINK_FILES = ("README.md", "README.en.md", "ROADMAP.md", "CHANGELOG.md", "llms.txt")
+PATH_SCOPE_FILES = ("README.md", "ROADMAP.md")
+CITATION = "CITATION.cff"
+
+COUNT_RE = re.compile(r"\b\d{2,4}\s+приём", re.IGNORECASE)
+MD_LINK = re.compile(r"\[([^\]]*)\]\(([^)\s]+)\)")
+MD_LINK_RIGHT = re.compile(r"\]\([^)\s]+\)")
+BACKTICK_PATH = re.compile(
+    r"`((?:runs|specs|docs|tests|scripts|organs|pipeline|synapse|memory"
+    r"|brainstem|blood|immune|openclaw|spikes)/[A-Za-z0-9_\-./]+)`"
+)
+SPEC_REF = re.compile(r"\bSPEC-(\d{4})\b")
+ADR_REF = re.compile(r"\bADR-(\d{4})\b")
+
+# --- гейты: каждый возвращает (сколько файлов/пунктов чисто, список блох) ---
+
+
+def _rel_lines(rel: Path) -> list[str]:
+    return rel.read_text(encoding="utf-8").splitlines()
+
+
+def check_no_stale_counts(root: Path) -> tuple[int, list[str]]:
+    """Число приёмок живёт в pytest, не в статике: README/CITATION без счётчиков."""
+    fleas: list[str] = []
+    ok = 0
+    for name in (*README_FILES, CITATION):
+        rel = root / name
+        found = False
+        for i, line in enumerate(_rel_lines(rel), 1):
+            m = COUNT_RE.search(line)
+            if m:
+                found = True
+                fleas.append(f"{name}:{i}: протухающее число приёмок {m.group(0)!r} — счётчик живёт в `python -m pytest -q`, не в статике")
+        if not found:
+            ok += 1
+    return ok, fleas
+
+
+def check_version_sync(root: Path) -> tuple[int, list[str]]:
+    """Версия одна: pyproject == CITATION.cff == голова CHANGELOG == README."""
+    fleas: list[str] = []
+    py = (root / "pyproject.toml").read_text(encoding="utf-8")
+    m = re.search(r'^version = "([^"]+)"', py, re.M)
+    if not m:
+        return 0, ["pyproject.toml: не найдена строка version = \"…\""]
+    version = m.group(1)
+
+    cite = (root / CITATION).read_text(encoding="utf-8")
+    m = re.search(r"^version:\s*(\S+)", cite, re.M)
+    cite_version = m.group(1) if m else None
+    if cite_version != version:
+        fleas.append(f"{CITATION}: version {cite_version} != pyproject {version}")
+
+    changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+    m = re.search(r"^## \[(v?[\d.]+)\]", changelog, re.M)
+    head = m.group(1).lstrip("v") if m else None
+    if head != version:
+        fleas.append(f"CHANGELOG.md: головная секция [{head}] != pyproject {version}")
+
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    if version not in readme:
+        fleas.append(f"README.md: текущая версия {version} не упомянута (история отстала)")
+
+    return 4 - len(fleas), fleas
+
+
+def _link_scope(root: Path) -> list[Path]:
+    files = [root / name for name in LINK_FILES]
+    files += sorted((root / "docs").glob("*.md"))
+    files += sorted((root / "specs").glob("*.md"))
+    return [p for p in files if p.exists()]
+
+
+def _skip_target(target: str) -> bool:
+    return (
+        target.startswith(("http://", "https://", "mailto:", "#"))
+        or target.endswith((".png", ".svg"))
+    )
+
+
+def check_relative_links(root: Path) -> tuple[int, list[str]]:
+    """Каждая относительная markdown-ссылка ведёт на существующий файл (link-check)."""
+    fleas: list[str] = []
+    ok = 0
+    for path in _link_scope(root):
+        bad = False
+        for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            for m in MD_LINK.finditer(line):
+                target = m.group(2).split("#", 1)[0]
+                if not target or _skip_target(m.group(2)):
+                    continue
+                if not (path.parent / target).exists():
+                    bad = True
+                    fleas.append(f"{path.relative_to(root)}:{i}: битая ссылка -> {m.group(2)}")
+        if not bad:
+            ok += 1
+    return ok, fleas
+
+
+def check_orphan_links(root: Path) -> tuple[int, list[str]]:
+    """Каждому `](target)` отвечает `[текст]` — оторванные скобки ловим отдельно;
+    картинки-бейджи `[![alt](img)](target)` скобками не считаются — сначала
+    снимаем `![…]`-узлы. Фантомный урок: дамп рендера может съесть пару
+    символов `[m` — гейт читает файл, не дамп."""
+    fleas: list[str] = []
+    ok = 0
+    for path in _link_scope(root):
+        bad = False
+        for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            stripped = re.sub(r"!\[[^\]]*\]\([^)\s]+\)", "", line)
+            if len(MD_LINK_RIGHT.findall(stripped)) > len(MD_LINK.findall(stripped)):
+                bad = True
+                fleas.append(f"{path.relative_to(root)}:{i}: оторванная ссылка без `[текста]` -> {line.strip()[:80]!r}")
+        if not bad:
+            ok += 1
+    return ok, fleas
+
+
+def check_backtick_paths(root: Path) -> tuple[int, list[str]]:
+    """Путь в кавычках-бэктиках из README/ROADMAP существует в доме.
+    Имена веток (`ветка docs/…`) — не пути, пропускаются."""
+    fleas: list[str] = []
+    ok = 0
+    for name in PATH_SCOPE_FILES:
+        path = root / name
+        bad = False
+        for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            for m in BACKTICK_PATH.finditer(line):
+                if line[: m.start()].rstrip().endswith(("ветка", "branch")):
+                    continue
+                candidate = m.group(1).rstrip("./")
+                if not (root / candidate).exists():
+                    bad = True
+                    fleas.append(f"{name}:{i}: путь не существует -> {candidate}")
+        if not bad:
+            ok += 1
+    return ok, fleas
+
+
+def _markdown_files(root: Path):
+    for path in sorted(root.rglob("*.md")):
+        if ".git" in path.parts or "runs" in path.parts:
+            continue
+        yield path
+
+
+def check_spec_adr_refs(root: Path) -> tuple[int, list[str]]:
+    """Каждый упомянутый SPEC-NNNN/ADR-NNNN имеет файл генома/журнала
+    (файлы носят суффикс-имя: SPEC-0003-blood-envelope.md)."""
+    fleas: list[str] = []
+    ok = 0
+    specs = root / "specs"
+    adrs = root / "docs" / "adr"
+    for path in _markdown_files(root):
+        text = path.read_text(encoding="utf-8")
+        bad = False
+        for num in SPEC_REF.findall(text):
+            if not any(specs.glob(f"SPEC-{num}*.md")):
+                bad = True
+                fleas.append(f"{path.relative_to(root)}: SPEC-{num} не имеет файла в specs/")
+        for num in ADR_REF.findall(text):
+            if not any(adrs.glob(f"ADR-{num}*.md")):
+                bad = True
+                fleas.append(f"{path.relative_to(root)}: ADR-{num} не имеет файла в docs/adr/")
+        if not bad:
+            ok += 1
+    return ok, fleas
+
+
+def check_cli_sync(root: Path) -> tuple[int, list[str]]:
+    """Точки входа pyproject существуют как файлы и упомянуты в README."""
+    fleas: list[str] = []
+    py = (root / "pyproject.toml").read_text(encoding="utf-8")
+    section = re.search(r"\[project\.scripts\]\n(.*?)(?:\n\[|\Z)", py, re.S)
+    if not section:
+        return 0, ["pyproject.toml: нет секции [project.scripts]"]
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    ok = 0
+    for line in section.group(1).strip().splitlines():
+        m = re.match(r'^(\S+)\s*=\s*"([\w.]+):(\w+)"$', line.strip())
+        if not m:
+            continue
+        name, module, _fn = m.groups()
+        mod_path = root.joinpath(*module.split(".")).with_suffix(".py")
+        if not mod_path.exists():
+            fleas.append(f"pyproject.toml: {name} -> {module} не существует ({mod_path.relative_to(root)})")
+        elif name not in readme:
+            fleas.append(f"pyproject.toml: точка входа `{name}` не упомянута в README.md")
+        else:
+            ok += 1
+    return ok, fleas
+
+
+def check_changelog_discipline(root: Path) -> tuple[int, list[str]]:
+    """Keep a Changelog: без секции [Unreleased], головная секция датирована.
+    Болезнь — секция-заголовок `## [Unreleased]`, а не упоминание слова."""
+    text = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+    fleas: list[str] = []
+    if re.search(r"^## \[Unreleased\]", text, re.M):
+        fleas.append("CHANGELOG.md: есть секция [Unreleased] — в доме версии дописываются в релиз, а не копятся")
+    m = re.search(r"^## \[[\d.]+\]\s*$", text, re.M)
+    if m:
+        fleas.append(f"CHANGELOG.md: секция версии без даты: {m.group(0)!r}")
+    return 2 - len(fleas), fleas
+
+
+GATES = (
+    ("counts", check_no_stale_counts),
+    ("versions", check_version_sync),
+    ("links", check_relative_links),
+    ("orphan-links", check_orphan_links),
+    ("backtick-paths", check_backtick_paths),
+    ("spec-adr-refs", check_spec_adr_refs),
+    ("cli-sync", check_cli_sync),
+    ("changelog", check_changelog_discipline),
+)
+
+
+def main(argv: list[str] | None = None) -> int:
+    root = ROOT if argv is None else Path(argv[0]).resolve()
+    total_ok = 0
+    total_fleas: list[str] = []
+    for name, gate in GATES:
+        ok, fleas = gate(root)
+        total_ok += ok
+        total_fleas.extend(fleas)
+        print(f"doctor/{name}: {ok} ok, {len(fleas)} failed")
+        for flea in fleas:
+            print(f"  BLOHA: {flea}")
+    print(f"DOCTOR: {total_ok} ok, {len(total_fleas)} failed")
+    return 1 if total_fleas else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

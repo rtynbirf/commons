@@ -1,6 +1,6 @@
 # Чек-лист практик open-source 2025–2026 и их статус здесь
 
-Дата: 2026-11-02 · Волна 3 · Версия: 0.3.0
+Дата: 2026-11-02 · Волна 3 · Версия: 0.4.0
 
 Консолидация актуальных практик (GitHub Community Standards, REUSE 3.3, OpenSSF Scorecard, ADR/MADR,
 DCO, SemVer, docs-as-code, spec-driven development, MCP, SBOM) с вердиктом: MUST / SHOULD / LATER
@@ -25,6 +25,7 @@ DCO, SemVer, docs-as-code, spec-driven development, MCP, SBOM) с вердикт
 | 15 | SBOM (SPDX/CycloneDX) и supply-chain гигиена | SHOULD (CI) / LATER (SBOM) | CI-гигиена ✅; 0.12.0: OSV-скан зависимостей (pip-audit, job `pathogens`) + dependabot (pip/actions); SBOM — при первом генерируемом артефакте |
 | 16 | MCP как стандарт интеграции + `llms.txt` для агент-клиентов | SHOULD | ✅ MCP — ядро синапсов (ADR-0002); `llms.txt` 0.1.1 |
 | 17 | Доступность: текст как универсальный канал (alt у изображений, словесные итоги гейтов, без аудио-only, без безымянных ссылок) | SHOULD (CI) | ✅ 0.15.0: SPEC-0010 + ADR-0012 — инвариант каналов исполняется машиной (`tests/test_persona.py`), а не декларируется |
+| 18 | Docs-drift гигиена: версии, ссылки, пути и точки входа документации проверяются машиной (link-check, version-sync, changelog-lint — референсы: lychee, release-please, Keep a Changelog) | MUST (CI) | ✅ 0.16.0: `scripts/doctor.py` + job `hygiene` — блоха красит PR; автопортреты под гейтом свежести `--check` |
 
 ## Что изменилось против практик 2020-х
 
@@ -43,5 +44,6 @@ DCO, SemVer, docs-as-code, spec-driven development, MCP, SBOM) с вердикт
 - DCO 1.1: developercertificate.org.
 - SemVer: semver.org. Docs-as-code: writethedocs.org/guide/docs-as-code.
 - SDD: github/spec-kit. MCP: modelcontextprotocol.io. SBOM: spdx.dev, cyclonedx.org (ECMA-424).
+- Docs-drift гигиена (волна 3): lychee (lychee.cli.rs), release-please (github.com/googleapis/release-please), Keep a Changelog (keepachangelog.com).
 
 Живое изучение структур десяти эталонов: [repo-structure-study.md](repo-structure-study.md).

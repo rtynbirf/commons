@@ -359,6 +359,6 @@ def test_manifest_effector_entry() -> None:
     for tool, method in mapping.items():
         assert method in ALLOWED_METHODS, f"инструмент {tool!r} ведёт к методу вне белого списка: {method!r}"
     authority = entry["authority"]
-    assert authority["network"] == "localhost-only"
+    assert authority["network"] == "localhost"
     assert authority["fs"] == "none"
     assert entry["adapter"] == "openclaw.adapter:OpenClawAdapter"

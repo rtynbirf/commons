@@ -7,6 +7,11 @@
 4. Адаптер органа загружается по полю `adapter` манифеста: новый орган подключается
    правкой манифеста, без правки кода шлюза (приёмка SPEC-0002).
 5. Каждый вызов попадает в кровь как `act` с заполненной ценой.
+6. Полномочия исполняются рантаймом (SPEC-0002 п.8): на время invoke активен страж
+   (synapse.authority) — выход за заявленное прерывается `AuthorityViolation`, кровь
+   помнит `security.violation`; грамматика authority проверяется при старте шлюза.
+7. Адаптер обязан предъявлять запись манифеста (SPEC-0002 п.9): самозванец и
+   безымянный отклоняются при привязке — до любого вызова.
 """
 
 from __future__ import annotations
@@ -22,6 +27,7 @@ import yaml
 
 from blood.envelope import Cost, make
 from blood.journal import Journal
+from synapse.authority import AuthorityConfigError, AuthorityViolation, enforce, normalize as normalize_authority
 
 REQUIRED_FIELDS = {"name", "system", "mode", "upstream", "license", "transport", "tools", "authority"}
 TRANSPORT_REQUIREMENTS = {"stdio": {"command"}, "http": {"endpoint"}}
@@ -40,8 +46,9 @@ class OrganUnavailable(RuntimeError):
     """Орган и все его замены недоступны."""
 
 
-class AuthorityViolation(RuntimeError):
-    """Орган превысил полномочия — событие `security.violation` (SPEC-0002)."""
+# AuthorityViolation живёт в synapse.authority и ре-экспортируется здесь:
+# `from synapse.gateway import AuthorityViolation` продолжает работать (обратная совместимость),
+# а except в call() ловит и нарушения стража, и заявления адаптера — класс один.
 
 
 class Gateway:
@@ -70,6 +77,10 @@ class Gateway:
                 raise GatewayConfigError(f"манифест: {name}: для транспорта {transport} нужны {sorted(absent)}")
             if not isinstance(entry["tools"], list) or not entry["tools"]:
                 raise GatewayConfigError(f"манифест: {name}: список tools пуст или не список")
+            try:
+                entry["authority"] = normalize_authority(entry.get("authority"))
+            except AuthorityConfigError as exc:
+                raise GatewayConfigError(f"манифест: {name}: authority: {exc}") from exc  # SPEC-0002 п.8: грамматика исполнима
             if self._unresolved(name, entry):
                 # SPEC-0002 п.6: адрес/команда не развёрнуты — орган не получает адаптера и трафика,
                 # но запись в манифесте жива (veto-семантика и замены работают как раньше).
@@ -91,7 +102,9 @@ class Gateway:
         for name, entry in self._organs.items():
             dotted = entry.get("adapter")
             if dotted:
-                self._adapters[name] = self._instantiate_adapter(dotted, entry)
+                adapter = self._instantiate_adapter(dotted, entry)
+                self._require_identity(name, adapter)  # SPEC-0002 п.9
+                self._adapters[name] = adapter
 
     # --- сборка адаптера из манифеста (приёмка SPEC-0002: без кода шлюза) ---
 
@@ -124,10 +137,20 @@ class Gateway:
             raise GatewayConfigError(f"адаптер {dotted!r} не загрузился: {exc}") from exc
         return cls(entry)
 
+    def _require_identity(self, organ: str, adapter: Any) -> None:
+        """SPEC-0002 п.9: адаптер обязан нести запись манифеста и предъявлять имя органа."""
+        entry = getattr(adapter, "entry", None)
+        presented = entry.get("name") if isinstance(entry, dict) else None
+        if presented != organ:
+            if presented is None:
+                raise GatewayConfigError(f"адаптер-самозванец: безымянный адаптер (нет entry с именем) не может служить органом {organ!r}")
+            raise GatewayConfigError(f"адаптер-самозванец: адаптер предъявляет имя {presented!r}, а привязка идёт к органу {organ!r}")
+
     def bind_adapter(self, organ: str, adapter: Any) -> None:
         """Явная привязка адаптера (тесты и подмена без правки манифеста)."""
         if organ not in self._organs:
             raise SynapseVeto(f"{organ!r} не существует: нет записи в манифесте")
+        self._require_identity(organ, adapter)  # отказ до мутации привязки (SPEC-0002 п.9)
         self._adapters[organ] = adapter
 
     # --- кровь ---
@@ -178,24 +201,18 @@ class Gateway:
 
         adapter = self._adapters.get(organ)
         if adapter is None or not self.health(organ):
-            substitute = self._find_substitute(organ, trace_id)
-            if substitute is None:
-                self._emit("error", organ, {"reason": "орган недоступен, замены нет", "tool": tool}, trace_id=trace_id)
-                raise OrganUnavailable(f"{organ}: недоступен и замен нет")
-            if substitute in _seen:
-                self._emit("error", organ, {"reason": f"цикл замен: {' -> '.join((*_seen, organ, substitute))}", "tool": tool}, trace_id=trace_id)
-                raise OrganUnavailable(f"{organ}: цикл в таблице замен ({substitute} уже в цепочке)")
-            return self.call(substitute, tool, payload, trace_id, _seen | {organ})
+            return self._substitute_or_raise(organ, tool, payload, trace_id, _seen)
 
         started = time.monotonic()
         try:
-            result, cost = adapter.invoke(tool, payload or {})
+            with enforce(entry.get("authority") or {}, organ=organ):  # страж полномочий (SPEC-0002 п.8)
+                result, cost = adapter.invoke(tool, payload or {})
         except AuthorityViolation:
             self._emit("security.violation", organ, {"reason": "превышены полномочия", "tool": tool}, trace_id=trace_id)
-            raise
-        except Exception as exc:  # noqa: BLE001 — отказной режим SPEC-0001: событие error
+            raise  # нарушителя не заменяют молча — security stop (SPEC-0002)
+        except Exception as exc:  # noqa: BLE001 — отказной режим SPEC-0001: событие error + замена
             self._emit("error", organ, {"reason": f"орган упал: {exc}", "tool": tool}, trace_id=trace_id)
-            raise OrganUnavailable(f"{organ}.{tool}: {exc}") from exc
+            return self._substitute_or_raise(organ, tool, payload, trace_id, _seen)
 
         measured = max(float(cost.get("seconds", 0.0)) if isinstance(cost, dict) else cost.seconds, time.monotonic() - started)
         cost_dict = cost.as_dict() if hasattr(cost, "as_dict") else dict(cost)
@@ -203,6 +220,17 @@ class Gateway:
 
         self._emit("act", organ, {"tool": tool, "payload": payload or {}}, Cost.from_dict(cost_dict), trace_id)
         return result
+
+    def _substitute_or_raise(self, organ: str, tool: str, payload: dict[str, Any] | None, trace_id: str, _seen: frozenset[str]) -> Any:
+        """Трафик уходит к замене из substitutions; замен/цикл — error и OrganUnavailable (SPEC-0002 п.3)."""
+        substitute = self._find_substitute(organ, trace_id)
+        if substitute is None:
+            self._emit("error", organ, {"reason": "орган недоступен, замены нет", "tool": tool}, trace_id=trace_id)
+            raise OrganUnavailable(f"{organ}: недоступен и замен нет")
+        if substitute in _seen:
+            self._emit("error", organ, {"reason": f"цикл замен: {' -> '.join((*_seen, organ, substitute))}", "tool": tool}, trace_id=trace_id)
+            raise OrganUnavailable(f"{organ}: цикл в таблице замен ({substitute} уже в цепочке)")
+        return self.call(substitute, tool, payload, trace_id, _seen | {organ})
 
     def _find_substitute(self, failed: str, trace_id: str) -> str | None:
         for reserve in self._substitutions.get(failed, []):

@@ -65,6 +65,7 @@ class OpenClawAdapter:
         runner: Runner | None = None,
         binary: str = DEFAULT_BINARY,
     ) -> None:
+        self.entry = entry or {}  # идентичность (SPEC-0002 п.9): шлюз сверяет entry["name"]
         self.binary = (entry or {}).get("binary") or binary
         self.runner: Runner = runner or default_runner
 

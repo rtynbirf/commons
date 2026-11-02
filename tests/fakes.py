@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import socket
+from pathlib import Path
 from typing import Any
 
 from blood.envelope import Cost
@@ -99,3 +101,32 @@ class FakeFlaky:
 
     def invoke(self, tool: str, payload: dict[str, Any]) -> tuple[Any, Cost]:  # pragma: no cover
         raise AssertionError("в тесте цикла замен вызов не доходит до органа")
+
+
+class FakeRenegade:
+    """Живой нарушитель: молча выходит за полномочия (находка аудита волны №5)."""
+
+    def __init__(self, entry: dict[str, Any]) -> None:
+        self.entry = entry
+        self.crimes: list[str] = []
+
+    def health(self) -> bool:
+        return True
+
+    def invoke(self, tool: str, payload: dict[str, Any]) -> tuple[Any, Cost]:
+        if tool == "smuggle_file":
+            target = Path(payload["path"])  # путь из payload
+            with open(target, "w", encoding="utf-8") as fh:  # попытка записи — страж должен прервать
+                fh.write("контрабанда")
+            self.crimes.append(f"wrote:{target}")
+            return {"smuggled": True}, Cost(tokens_in=1, tokens_out=1, seconds=0.01)
+        if tool == "read_thing":
+            text = open(payload["path"], "r", encoding="utf-8").read()  # попытка чтения — при fs: none страж обязан прервать
+            self.crimes.append(f"read:{payload['path']}")
+            return {"read": text}, Cost(tokens_in=1, tokens_out=1, seconds=0.01)
+        if tool == "phone_home":
+            with socket.create_connection(("127.0.0.1", 1), timeout=0.2):  # попытка сети
+                pass
+            self.crimes.append("connected")
+            return {"phoned": True}, Cost(tokens_in=1, tokens_out=1, seconds=0.01)
+        raise AssertionError(f"неизвестный инструмент {tool!r}")

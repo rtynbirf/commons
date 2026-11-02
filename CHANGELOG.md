@@ -2,6 +2,19 @@
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/); версии — SemVer.
 
+## [0.22.0] — 2026-11-02
+
+### Added
+
+- **Исполнение полномочий** (M3, волна №7, хотёлка W-0016 — ответ на директиву Человека «не ждать людей — делать для Человека» и главную красную находку аудита волны №5): SPEC-0002 v0.4.0 пп.8–9, `synapse/authority.py` — страж на audit hook (один на процесс, contextvar, активен только на время `invoke`): события `open`, `os.remove/rename/mkdir/rmdir/chmod/chown`, `socket.connect/bind/getaddrinfo`, `subprocess.Popen` — вызов органа прерывается `AuthorityViolation` ДО факта нарушения, `security.violation` в крови; ренегат, который молчал (находка волны №5: все stock-адаптеры не бросают нарушений), больше не проходит. Грамматика `authority` исполнимая и fail-closed: `fs: none|read-only|read-write`, `network: none|localhost|{hosts}|any`, `process: none|spawn`; ось без значения = самый строгий вариант; неизвестный ярлык (`read-only-input-dir`, `walrus`, пустой `hosts`) — шлюз не стартует. Идентичность адаптера (п.9): привязка и загрузка по манифесту сверяют `entry["name"]` — самозванец и безымянный отклонены до вызова. Живой прогон — [`runs/2026-11-02-wave7-authority/`](runs/2026-11-02-wave7-authority/report.md): пять красных находок волны №5 перевернуты, 10 зелёных вердиктов, 0 красных; кровь 12 конвертов валидна схемой, гематология зелёная.
+
+### Changed
+
+- Цикл (SPEC-0001 G1): `AuthorityViolation` не покидает `Loop.run` — тело пишет reflect (намерение не удовлетворено, reason «security: …») и halt; любой отказной выход (`veto`, недоступный орган, пустой результат) завершается событием `halt` — кровь всегда полна для реконструкции трейса.
+- Замена при invoke-падении: орган, упавший при вызове (healthcheck был зелёный), обслуживается резервом с событием `organ.replace` — как и неотвечающий healthcheck'ом; нарушителя полномочий не заменяют молча — security stop.
+- Манифест дома v0.3.0: миграция на исполнимую грамматику (`localhost-only` → `localhost`; `read-only-input-dir` → `read-only`; `allowlist`/`downloads-dir` → честно широкие `any`/`read-write` с пометкой бэклога v0.5 — скоуп путей; stdio-органам markitdown/browser-use — `process: spawn`: их транспорт и есть процесс органа).
+- Книги: llms.txt — инвариант 14; ROADMAP — волна №7; personas — W-0016 СЛУЖЕНО; версии синхронно 0.22.0 (pyproject, CITATION, оба README).
+
 ## [0.21.0] — 2026-11-02
 
 ### Added

@@ -16,9 +16,10 @@ from blood.envelope import Cost
 
 
 class OllamaAdapter:
-    """Орган ollama/ollama (MIT). Полномочия: network: localhost-only."""
+    """Орган ollama/ollama (MIT). Полномочия: network: localhost (SPEC-0002 п.8)."""
 
     def __init__(self, entry: dict[str, Any]) -> None:
+        self.entry = entry  # идентичность (SPEC-0002 п.9): шлюз сверяет entry["name"]
         self.endpoint = (entry.get("endpoint") or "http://127.0.0.1:11434").rstrip("/")
         self.authority = entry.get("authority") or {}
         self.timeout = 120.0

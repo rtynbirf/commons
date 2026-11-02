@@ -15,9 +15,10 @@ from blood.envelope import Cost
 
 
 class LlamaCppAdapter:
-    """Орган ggml-org/llama.cpp (MIT). Полномочия: network: localhost-only."""
+    """Орган ggml-org/llama.cpp (MIT). Полномочия: network: localhost (SPEC-0002 п.8)."""
 
     def __init__(self, entry: dict[str, Any]) -> None:
+        self.entry = entry  # идентичность (SPEC-0002 п.9): шлюз сверяет entry["name"]
         self.endpoint = (entry.get("endpoint") or "http://127.0.0.1:8080").rstrip("/")
         self.authority = entry.get("authority") or {}
         self.timeout = 120.0

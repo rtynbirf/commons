@@ -96,7 +96,7 @@ def _manifest(path: Path, *, substitutions: dict[str, list[str]] | None = None) 
             "transport": "stdio",
             "command": ["python3", "-c", "pass"],
             "tools": ["summarize"],
-            "authority": {"fs": "none", "net": "none"},
+            "authority": {"fs": "none", "network": "none"},
         },
         {
             "name": "effector",
@@ -107,7 +107,7 @@ def _manifest(path: Path, *, substitutions: dict[str, list[str]] | None = None) 
             "transport": "stdio",
             "command": ["python3", "-c", "pass"],
             "tools": ["send"],
-            "authority": {"fs": "none", "net": "none"},
+            "authority": {"fs": "none", "network": "none"},
         },
     ]
     doc: dict[str, Any] = {

@@ -206,6 +206,7 @@ class FlipFalse:
     """Healthcheck: первый вызов False (для начала цикла с x)."""
 
     def __init__(self, entry: dict) -> None:
+        self.entry = entry  # идентичность (SPEC-0002 п.9)
         self.healthy = True
 
     def health(self) -> bool:
@@ -217,6 +218,7 @@ class FlipTrue:
     """Healthcheck: первый вызов True (для ответа y в цикле)."""
 
     def __init__(self, entry: dict) -> None:
+        self.entry = entry  # идентичность (SPEC-0002 п.9)
         self.healthy = False
 
     def health(self) -> bool:

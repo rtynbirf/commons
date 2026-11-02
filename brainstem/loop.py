@@ -19,7 +19,7 @@ from typing import Any
 from blood.envelope import Cost, make, new_trace_id
 from blood.journal import Journal
 from memory import Memory
-from synapse.gateway import Gateway, OrganUnavailable, SynapseVeto
+from synapse.gateway import AuthorityViolation, Gateway, OrganUnavailable, SynapseVeto
 
 
 @dataclass(frozen=True)
@@ -91,6 +91,9 @@ class Loop:
     Память (SPEC-0005) — необязательный кэш-советник: PLAN читает её read-only
     перед планом, индексация — только после REFLECT. Отказ памяти — degrade:
     событие error в кровь, цикл продолжает без неё; кровь остаётся истиной.
+
+    Инвариант halt (SPEC-0001 G1): любой отказной выход цикла завершён
+    событием halt — G1-реконструкция трейса всегда полна.
     """
 
     def __init__(
@@ -158,7 +161,10 @@ class Loop:
     # --- цикл ---
 
     def run(self, plan: list[Step], trace_id: str | None = None, budget: Budget | None = None) -> bool:
-        """Выполняет план. True — все намерения удовлетворены; False — HALT.
+        """Выполняет план.
+
+        True — все намерения удовлетворены; False — HALT (событие halt в крови,
+        причина в payload.reason).
 
         Пустой план — ошибка: цикл без намерения не запускается (SPEC-0001 PLAN).
         """
@@ -191,9 +197,16 @@ class Loop:
                 result = self.gateway.call(step.organ, step.tool, step.payload, trace_id)
             except SynapseVeto as veto:
                 self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": f"veto: {veto}"}, trace_id))
+                self._emit("halt", "self", {"reason": f"veto: {veto}", "at_step": index}, trace_id)
                 return False
             except OrganUnavailable as failure:
                 self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": f"organ: {failure}"}, trace_id))
+                self._emit("halt", "self", {"reason": f"орган недоступен: {failure}", "at_step": index}, trace_id)
+                return False
+            except AuthorityViolation as violation:
+                # SPEC-0002 п.8: нарушителя не заменяют молча — reflect + halt, трейс полон.
+                self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": f"security: {violation}"}, trace_id))
+                self._emit("halt", "self", {"reason": f"полномочия превышены: {violation}", "at_step": index}, trace_id)
                 return False
 
             # Per-call лимит (M3 SPEC-0001 G3): вызов оплачен — превышение фиксируем алертом.
@@ -207,6 +220,7 @@ class Loop:
             satisfied = result is not None  # рефлексия M1: намерение = вызов вернул результат
             self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": satisfied}, trace_id))
             if not satisfied:
+                self._emit("halt", "self", {"reason": "намерение не удовлетворено: орган вернул пустой результат", "at_step": index}, trace_id)
                 return False
         return True
 

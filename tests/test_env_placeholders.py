@@ -28,7 +28,7 @@ def write_manifest(tmp_path: Path, endpoint: str) -> Path:
             endpoint: {endpoint}
             healthcheck: GET /health
             tools: [completion]
-            authority: {{network: localhost-only, fs: none}}
+            authority: {{network: localhost, fs: none}}
           - name: local-organ
             system: senses
             mode: dependency

@@ -28,6 +28,7 @@ class MCPStdioAdapter:
     """
 
     def __init__(self, entry: dict[str, Any]) -> None:
+        self.entry = entry  # идентичность (SPEC-0002 п.9): шлюз сверяет entry["name"]
         self.command: list[str] = entry["command"] if isinstance(entry["command"], list) else [entry["command"]]
         self.authority = entry.get("authority") or {}
         timeouts = entry.get("timeouts") or {}

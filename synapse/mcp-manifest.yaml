@@ -2,11 +2,14 @@
 # Источник истины для шлюза: орган без записи здесь для тела не существует (veto).
 # Поле `adapter` — класс адаптера, загружаемый шлюзом динамически:
 # новый орган подключается правкой манифеста, без правки кода шлюза (приёмка SPEC-0002).
-# authority — исполнимая грамматика (SPEC-0002 п.8, v0.5.0): fs: none|read-only|read-write|{mode, paths},
-# network: none|localhost|{hosts, ports}|any, process: none|spawn — страж прерывает вызов при выходе за полномочия;
-# скоупы исполняются рантаймом (волна №9): пути — realpath (симлинк-побег закрыт), порты — точное совпадение.
-version: 0.4.0
-updated: 2026-11-02
+# authority — исполнимая грамматика (SPEC-0002 п.8, v0.7.0): fs: none|read-only|read-write|{mode, paths},
+# network: none|localhost|{hosts, ports}|any, process: none|spawn|{mode: spawn, programs: [...], max_children: N} —
+# страж прерывает вызов при выходе за полномочия; скоупы исполняются рантаймом (волна №9): пути — realpath
+# (симлинк-побег закрыт), порты — точное совпадение; детёныши под стражем наследованием (волна №12):
+# питоновский детёныш грузит страж sitecustomize'ом, битый конверт — exit 88; дом сужает: детёныши stdio-органов
+# декларированы поимённо ({mode: spawn, programs: [...]}) — «рожаешь — назови по имени» (SPEC-0002 п.8 v0.7.0).
+version: 0.5.0
+updated: 2026-11-03
 transport_default: stdio
 
 organs:
@@ -46,8 +49,9 @@ organs:
     tools: [convert_to_markdown]
     # v0.5.0: fs read-only — весь диск на чтение (работа органа — читать файлы пользователя),
     # запись и сеть страж прерывает (SPEC-0002 п.8)
-    # process: spawn — stdio-транспорт и есть процесс органа, порождаемый адаптером при invoke
-    authority: {fs: read-only, network: none, process: spawn}
+    # process: {mode: spawn, programs: [...]} — stdio-транспорт и есть процесс органа, порождаемый
+    # адаптером при invoke; детёныш декларирован поимённо (дом-сужение поверх v0.7.0, такт 2)
+    authority: {fs: read-only, network: none, process: {mode: spawn, programs: [markitdown-mcp]}}
     adapter: synapse.adapters.mcp_stdio:MCPStdioAdapter
     note: 'подключён 2026-11-01 — первый живой пульс организма (runs/2026-11-01-first-pulse); вход — только file-URI'
 
@@ -62,8 +66,9 @@ organs:
     tools: [navigate, click, extract, screenshot]
     # v0.5.0: честный скоуп вместо широкого ярлыка — запись только в ${DOWNLOADS_DIR} (незадан — орган не
     # развёрнут, п.6); сеть any — работа органа и есть весь веб (SPEC-0002 п.8)
-    # process: spawn — stdio-транспорт и есть процесс органа, порождаемый адаптером при invoke
-    authority: {network: any, fs: {mode: read-write, paths: ["${DOWNLOADS_DIR}"]}, process: spawn}
+    # process: {mode: spawn, programs: [...]} — stdio-транспорт и есть процесс органа, порождаемый
+    # адаптером при invoke; детёныш декларирован поимённо (дом-сужение поверх v0.7.0, такт 2)
+    authority: {network: any, fs: {mode: read-write, paths: ["${DOWNLOADS_DIR}"]}, process: {mode: spawn, programs: [browser-use-mcp]}}
     adapter: synapse.adapters.mcp_stdio:MCPStdioAdapter
 
   - name: openclaw

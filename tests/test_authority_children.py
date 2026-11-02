@@ -260,3 +260,20 @@ def test_spawn_outside_guard_untouched() -> None:
     """Граница действия (п.8 v0.7.0): детёныш, рождённый вне стража, конверта не получает — обычный код жив."""
     proc = subprocess.run([sys.executable, "-c", "print('FREE')"], capture_output=True, text=True, timeout=20)
     assert proc.returncode == 0 and "FREE" in proc.stdout
+
+
+# --- б) манифест дома: детёныши stdio-органов поимённы (волна №12, такт 2) ----
+
+
+def test_house_manifest_declares_children(tmp_path: Path, journal: Journal, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Манифест дома v0.5.0: markitdown и browser-use декларируют детёнышей поимённо в
+    скоупе процессной оси ({mode: spawn, programs: [...]}) — «рожаешь — назови по имени»;
+    http-органы — process: none. Шлюз стартует: грамматика исполнима (SPEC-0002 п.8)."""
+    monkeypatch.setenv("DOWNLOADS_DIR", str(tmp_path))  # п.6: без VAR орган не развёрнут — адаптера нет
+    gateway = Gateway(REPO_ROOT / "synapse" / "mcp-manifest.yaml", journal)
+    by_name = {a.entry.get("name"): a.entry for a in gateway.adapters}
+    assert by_name["markitdown"]["authority"]["process"] == {"mode": "spawn", "programs": ["markitdown-mcp"]}
+    assert by_name["browser-use"]["authority"]["process"] == {"mode": "spawn", "programs": ["browser-use-mcp"]}
+    assert by_name["ollama"]["authority"]["process"] == "none", "http-органу детёныши не нужны"
+    assert by_name["llama.cpp"]["authority"]["process"] == "none", "http-резерву детёныши не нужны"
+    assert by_name["openclaw"]["authority"]["process"] == "none", "эффектор ходит HTTP, не spawn"

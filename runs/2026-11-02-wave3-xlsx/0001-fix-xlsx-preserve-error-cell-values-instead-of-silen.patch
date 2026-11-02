@@ -1,0 +1,175 @@
+From 5aeea96754c97b077965bde2334b3300055b62f7 Mon Sep 17 00:00:00 2001
+From: rtynbirf <119601232+rtynbirf@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 10:20:32 +0000
+Subject: [PATCH] fix(xlsx): preserve error cell values instead of silent NaN
+
+pandas (pd.read_excel) collapses XLSX error cells (data type "e") into
+NaN, so cells carrying #DIV/0!, #REF!, #NAME? or #VALUE! lost their
+value on conversion: the Markdown table showed a literal "NaN" and the
+error was silently gone (microsoft/markitdown#2728). openpyxl reads
+these cells intact.
+
+Restore the values with a second openpyxl pass: after pd.read_excel,
+walk every sheet of the same workbook, and for each cell with data type
+"e" whose position in the parsed DataFrame still holds NaN, cast the
+column to object when the dtype cannot hold strings and write the error
+string back. Formulas without cached results are out of scope and stay
+untouched, and non-error cells keep their current rendering, including
+the showZeroes repair path.
+
+Add regression tests that generate the workbooks with openpyxl: one per
+error code (#DIV/0!, #REF!, #NAME?, #VALUE!) and one mixed table. The
+tests fail against the unpatched converter (silent NaN) and pass with
+the restoration pass.
+
+Signed-off-by: rtynbirf <119601232+rtynbirf@users.noreply.github.com>
+---
+ .../markitdown/converters/_xlsx_converter.py  | 44 ++++++++++++-
+ packages/markitdown/tests/test_xlsx.py        | 63 +++++++++++++++++++
+ 2 files changed, 105 insertions(+), 2 deletions(-)
+
+diff --git a/packages/markitdown/src/markitdown/converters/_xlsx_converter.py b/packages/markitdown/src/markitdown/converters/_xlsx_converter.py
+index 9f794a3..b974545 100644
+--- a/packages/markitdown/src/markitdown/converters/_xlsx_converter.py
++++ b/packages/markitdown/src/markitdown/converters/_xlsx_converter.py
+@@ -14,7 +14,7 @@ from .._stream_info import StreamInfo
+ _xlsx_dependency_exc_info = None
+ try:
+     import pandas as pd
+-    import openpyxl  # noqa: F401
++    import openpyxl
+ except ImportError:
+     _xlsx_dependency_exc_info = sys.exc_info()
+ 
+@@ -58,7 +58,11 @@ def _read_xlsx_sheets(
+                 raise
+             repaired_stream = _repair_sheetview_show_zeroes(file_stream, start_pos)
+             sheets = pd.read_excel(repaired_stream, sheet_name=None, engine="openpyxl")
+-        yield sheets, repaired_stream if repaired_stream is not None else file_stream
++        workbook_stream = (
++            repaired_stream if repaired_stream is not None else file_stream
++        )
++        _restore_error_values(workbook_stream, sheets)
++        yield sheets, workbook_stream
+     finally:
+         if repaired_stream is not None:
+             repaired_stream.close()
+@@ -93,6 +97,42 @@ def _repair_sheetview_show_zeroes(
+     return repaired_stream
+ 
+ 
++def _restore_error_values(file_stream: BinaryIO, sheets: dict[str, Any]) -> None:
++    """
++    pandas collapses XLSX error cells (data type "e", e.g. #DIV/0!, #REF!) into
++    NaN, silently losing their values. openpyxl reads them intact, so a second
++    pass restores every error cell into its position in the parsed sheets.
++    """
++    workbook = openpyxl.load_workbook(file_stream, read_only=True, data_only=True)
++    try:
++        for name in workbook.sheetnames:
++            frame = sheets.get(name)
++            if frame is None or frame.empty:
++                continue
++            worksheet = workbook[name]
++            worksheet.reset_dimensions()
++            for row in worksheet.iter_rows():
++                for cell in row:
++                    if cell.data_type != "e" or cell.value is None:
++                        continue
++                    # pandas consumed the first row of the sheet as the header
++                    row_index = cell.row - 2
++                    column_index = cell.column - 1
++                    if not (
++                        0 <= row_index < len(frame)
++                        and 0 <= column_index < len(frame.columns)
++                    ):
++                        continue
++                    if not pd.isna(frame.iat[row_index, column_index]):
++                        continue
++                    column = frame.columns[column_index]
++                    if not pd.api.types.is_string_dtype(frame[column].dtype):
++                        frame[column] = frame[column].astype(object)
++                    frame.iat[row_index, column_index] = cell.value
++    finally:
++        workbook.close()
++
++
+ class XlsxConverter(DocumentConverter):
+     """
+     Converts XLSX files to Markdown, with each sheet presented as a separate Markdown table.
+diff --git a/packages/markitdown/tests/test_xlsx.py b/packages/markitdown/tests/test_xlsx.py
+index 9282622..0d4385e 100644
+--- a/packages/markitdown/tests/test_xlsx.py
++++ b/packages/markitdown/tests/test_xlsx.py
+@@ -540,5 +540,68 @@ def test_xlsx_show_zeroes_rename_is_scoped_to_sheet_view_tags() -> None:
+     assert b'<customSheetView showZeroes="0"/>' in repaired
+ 
+ 
++# Error cells (t="e") must keep their values instead of degrading into NaN
++# (microsoft/markitdown#2728).
++
++
++@pytest.mark.parametrize(
++    "code",
++    ["#DIV/0!", "#REF!", "#NAME?", "#VALUE!"],
++)
++def test_xlsx_error_cell_values_are_preserved(code: str) -> None:
++    workbook = openpyxl.Workbook()
++    sheet = workbook.active
++    sheet.title = "Data"
++    sheet.append(["value", "text"])
++    sheet["A2"] = code
++    sheet["A2"].data_type = "e"  # an error cell, not a literal string
++    sheet["A3"] = 7
++    sheet["B2"] = "kept"
++    sheet["B3"] = "also kept"  # no genuinely empty cell: NaN below is error-specific
++    stream = io.BytesIO()
++    workbook.save(stream)
++
++    markdown = _convert(XlsxConverter(), stream.getvalue())
++
++    assert f"| {code} |" in markdown
++    assert "NaN" not in markdown
++    # The non-error cells sharing the column survive the restoration untouched.
++    assert "| kept |" in markdown and "| also kept |" in markdown
++    assert "| 7.0 |" in markdown
++
++
++def test_xlsx_mixed_table_error_cell_values_are_preserved() -> None:
++    workbook = openpyxl.Workbook()
++    sheet = workbook.active
++    sheet.title = "Mix"
++    sheet.append(["text", "number", "mixed"])
++    sheet.append(["alpha", 1, 10])
++    sheet["A3"] = "beta"
++    sheet["B3"] = "#REF!"
++    sheet["B3"].data_type = "e"
++    sheet["C3"] = "gamma"
++    sheet["A4"] = "delta"
++    sheet["B4"] = 4
++    sheet["C4"] = "#DIV/0!"
++    sheet["C4"].data_type = "e"
++    sheet.append(["plain", 5, 50])
++    stream = io.BytesIO()
++    workbook.save(stream)
++
++    markdown = _convert(XlsxConverter(), stream.getvalue())
++
++    # The numeric column is restored via object casting, the mixed column keeps
++    # its dtype, and neither loses a value nor picks up a NaN.
++    assert markdown.strip() == (
++        "## Mix\n"
++        "| text | number | mixed |\n"
++        "| --- | --- | --- |\n"
++        "| alpha | 1.0 | 10 |\n"
++        "| beta | #REF! | gamma |\n"
++        "| delta | 4.0 | #DIV/0! |\n"
++        "| plain | 5.0 | 50 |"
++    )
++
++
+ if __name__ == "__main__":
+     raise SystemExit(pytest.main([__file__]))
+-- 
+2.47.3
+

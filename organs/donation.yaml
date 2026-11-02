@@ -74,6 +74,9 @@ cards:
       - date: 2026-11-02
         url: "https://raw.githubusercontent.com/browser-use/browser-use/main/LICENSE"
         fact: "лицензия MIT, копирайт частного лица (Gregor Zunic), не корпорации"
+      - date: 2026-11-02
+        url: "https://github.com/browser-use/browser-use/tree/main/.github"
+        fact: "PR-шаблона нет: ни .github/PULL_REQUEST_TEMPLATE.md, ни директории PULL_REQUEST_TEMPLATE/"
 
   # --- ЭФФЕКТОРЫ: автономное действие. Ошейников нет; вход — по правилам органа. ---
   - repo: openclaw/openclaw
@@ -117,6 +120,9 @@ cards:
       - date: 2026-11-02
         url: "https://raw.githubusercontent.com/ollama/ollama/main/LICENSE"
         fact: "лицензия MIT"
+      - date: 2026-11-02
+        url: "https://github.com/ollama/ollama/tree/main/.github"
+        fact: "PR-шаблона нет; копирайт лицензии корпоративный («Copyright (c) Ollama»)"
 
   # --- МЕТАБОЛИЗМ: инференс C/C++. Типирован: ошейников нет, AI-код — с пониманием. ---
   - repo: ggml-org/llama.cpp

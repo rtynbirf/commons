@@ -21,6 +21,11 @@
       "format": "uuid",
       "description": "UUID события"
     },
+    "prev_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "id предыдущего конверта того же журнала — цепочка целостности (SPEC-0003 п.7); первый конверт файла цепочку не несёт"
+    },
     "ts": {
       "type": "string",
       "format": "date-time",

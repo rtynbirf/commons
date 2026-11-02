@@ -82,6 +82,25 @@ def test_event_ids_are_unique_across_the_body() -> None:
     assert len(ids) == len(set(ids)), "кровь сращена: один id встречается дважды"
 
 
+# --- цепочка prev_id (SPEC-0003 п.7, v0.5.0) ----------------------------------
+
+
+@pytest.mark.parametrize("journal", JOURNALS, ids=lambda p: p.parent.name)
+def test_journal_chain_has_no_gaps(journal: Path) -> None:
+    """Разрыв журнала обнаруживается при чтении: пролитая кровь без гэпов.
+
+    Кровь без цепочки (v0.4.0 и старше) валидна навсегда — verify не заявляет
+    гэпов там, где цепочка не начата; кровь с цепочкой обязана быть целой.
+    """
+    from blood.journal import verify
+
+    report = verify(journal)
+    assert report["gaps"] == [], (
+        f"{journal.name}: разрыв цепочки prev_id — append-only нарушен: "
+        f"{report['gaps'][:3]}"
+    )
+
+
 # --- спека сдаёт свою кровь (приёмка SPEC-0003, п.1 и п.3) -------------------
 
 

@@ -272,7 +272,7 @@ def test_house_manifest_declares_children(tmp_path: Path, journal: Journal, monk
     monkeypatch.setenv("DOWNLOADS_DIR", str(tmp_path))  # п.6: без VAR орган не развёрнут — адаптера нет
     gateway = Gateway(REPO_ROOT / "synapse" / "mcp-manifest.yaml", journal)
     by_name = {a.entry.get("name"): a.entry for a in gateway.adapters}
-    assert by_name["markitdown"]["authority"]["process"] == {"mode": "spawn", "programs": ["markitdown-mcp"]}
+    assert by_name["markitdown"]["authority"]["process"] == {"mode": "spawn", "programs": ["markitdown-mcp"], "sandbox": {"network": "none"}}
     assert by_name["browser-use"]["authority"]["process"] == {"mode": "spawn", "programs": ["browser-use-mcp"]}
     assert by_name["ollama"]["authority"]["process"] == "none", "http-органу детёныши не нужны"
     assert by_name["llama.cpp"]["authority"]["process"] == "none", "http-резерву детёныши не нужны"

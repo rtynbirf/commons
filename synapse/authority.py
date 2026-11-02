@@ -8,6 +8,9 @@ fs знает пути ({mode, paths}, realpath — симлинк-побег з
 ({hosts, ports}, точное совпадение). Потоки (v0.6.0): поток, рождённый под стражем,
 наследует его (обёртка Thread.start — полномочия связывают код органа, а не поток;
 запись `__pycache__` ленивым импортом прерывается с предписанием прогреть импорты).
+Ядерная песочница (v0.8.0, п.11): `sandbox: {network: none}` в скоупе — детёнышу до
+execve ставится seccomp-BPF (socket(AF_INET/6) → EPERM) — inet закрыт ядром для
+любого детёныша, включая не-python (граница волны №12 «чужой бинарник» перевернута).
 Детёныши (v0.7.0): страж оборачивает subprocess.Popen — питоновский детёныш получает
 конверт COMMONS_AUTHORITY и живёт под полномочиями органа (sitecustomize), скоуп
 {mode: spawn, programs, max_children} декларирует рождение; execve роняет hook —
@@ -90,9 +93,9 @@ def _normalize_process(value: Any, organ: str | None) -> Any:
     if isinstance(value, dict) and "mode" in value and "programs" in value:
         if value["mode"] != "spawn":
             raise AuthorityConfigError(_where(organ, "process: скоуп допустим только с mode: spawn (mode: none — ярлык без программ)"))
-        extra = set(value) - {"mode", "programs", "max_children"}
+        extra = set(value) - {"mode", "programs", "max_children", "sandbox"}
         if extra:
-            raise AuthorityConfigError(_where(organ, f"process: неизвестные ключи {sorted(extra)} (допустимо: mode, programs, max_children)"))
+            raise AuthorityConfigError(_where(organ, f"process: неизвестные ключи {sorted(extra)} (допустимо: mode, programs, max_children, sandbox)"))
         programs = value["programs"]
         if (not isinstance(programs, list) or not programs
                 or not all(isinstance(p, str) and p.strip() and p.strip() == p
@@ -104,6 +107,11 @@ def _normalize_process(value: Any, organ: str | None) -> Any:
             if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
                 raise AuthorityConfigError(_where(organ, "process: max_children — целое >= 1"))
             out["max_children"] = limit
+        if "sandbox" in value:
+            sandbox = value["sandbox"]
+            if not (isinstance(sandbox, dict) and set(sandbox) == {"network"} and sandbox["network"] == "none"):
+                raise AuthorityConfigError(_where(organ, 'process: sandbox — единственная исполнимая форма {network: none} (частичная сеть честно не исполнена, SPEC-0002 п.11)'))
+            out["sandbox"] = {"network": "none"}
         return out
     raise AuthorityConfigError(_where(organ, f"process: неизвестное значение {value!r} (допустимо: none, spawn или {{mode: spawn, programs: [...], max_children: N}})"))
 
@@ -250,6 +258,12 @@ def _popen_scope(guard: Guard, args: tuple, kwargs: dict) -> tuple[tuple, dict]:
             if spawned >= limit:
                 raise AuthorityViolation(_text(guard, "subprocess.Popen", f"process: max_children {limit}", f"лимит детёнышей исчерпан (рождено {spawned})"))
             _local.spawned = spawned + 1
+        if process.get("sandbox"):
+            # Ядерная песочница детёныша (v0.8.0, п.11): preexec_fn ставит seccomp-BPF до execve —
+            # фильтр наследуется execve и всеми потомками независимо от языка.
+            if "preexec_fn" in kwargs:
+                raise AuthorityViolation(_text(guard, "subprocess.Popen", "process: sandbox", "preexec_fn занят стражем: песочница ставится в этот слот (v0.8.0)"))
+            kwargs["preexec_fn"] = apply_child_sandbox
     env = kwargs.get("env")
     child_env = dict(env) if isinstance(env, dict) else os.environ.copy()  # окружение вызывающего не мутируем
     child_env[ACTIVE_ENV] = json.dumps({"organ": guard.organ, "authority": guard.authority}, ensure_ascii=False)
@@ -259,6 +273,66 @@ def _popen_scope(guard: Guard, args: tuple, kwargs: dict) -> tuple[tuple, dict]:
         child_env["PYTHONPATH"] = os.pathsep.join([root, *parts])
     kwargs["env"] = child_env
     return args, kwargs
+
+
+# --- ядерная песочница детёнышей (v0.8.0, п.11) ------------------------------------
+
+_SANDBOX_PROG: Any = None  # собранный фильтр (кэш на процесс)
+
+
+def _sandbox_bpf() -> Any:
+    """seccomp-BPF: socket(AF_INET/AF_INET6) → EPERM, остальное — ALLOW, чужая архитектура —
+    EPERM (fail-closed). Прыжки выверены живой пробой (inet рвётся, unix жив). Только x86_64:
+    на другом ядре/архитектуре фильтр не соберётся — детёныш не живёт (fail-closed, exit 89)."""
+    global _SANDBOX_PROG
+    if _SANDBOX_PROG is None:
+        import ctypes
+        import struct
+
+        if sys.platform != "linux" or os.uname().machine != "x86_64":
+            raise RuntimeError("seccomp-песочница собрана только для linux/x86_64")
+
+        class _SockFilter(ctypes.Structure):
+            _fields_ = [("code", ctypes.c_uint16), ("jt", ctypes.c_uint8),
+                        ("jf", ctypes.c_uint8), ("k", ctypes.c_uint32)]
+
+        class _SockFprog(ctypes.Structure):
+            _fields_ = [("len", ctypes.c_uint16), ("filter", ctypes.POINTER(_SockFilter))]
+
+        LD_ABS, JEQ, RET = 0x20, 0x15, 0x06
+        ALLOW, EPERM = 0x7FFF0000, 0x00050000 | 1
+        prog = [
+            _SockFilter(LD_ABS, 0, 0, 4),        # 0: arch
+            _SockFilter(JEQ, 0, 7, 0xC000003E),  # 1: ≠x86_64 → idx9 EPERM (fail-closed)
+            _SockFilter(LD_ABS, 0, 0, 0),        # 2: nr
+            _SockFilter(JEQ, 0, 4, 41),          # 3: ≠socket → idx8 ALLOW
+            _SockFilter(LD_ABS, 0, 0, 16),       # 4: args[0] = domain
+            _SockFilter(JEQ, 1, 0, 2),           # 5: =AF_INET → idx7 EPERM
+            _SockFilter(JEQ, 1, 1, 10),          # 6: =AF_INET6 → idx7 EPERM; иначе → idx8 ALLOW
+            _SockFilter(RET, 0, 0, EPERM),       # 7
+            _SockFilter(RET, 0, 0, ALLOW),       # 8
+            _SockFilter(RET, 0, 0, EPERM),       # 9
+        ]
+        _SANDBOX_PROG = (_SockFprog(len(prog), (_SockFilter * len(prog))(*prog)), struct, ctypes)
+    return _SANDBOX_PROG[0]
+
+
+def apply_child_sandbox() -> None:
+    """Ядерная песочница детёныша (v0.8.0, п.11): preexec_fn детёныша — до execve ставит
+    seccomp-BPF (socket(AF_INET/AF_INET6) → EPERM). NO_NEW_PRIVS не даёт фильтр снять,
+    фильтры только стекаются, наследуются execve и всеми потомками независимо от языка.
+    Песочница не поставилась — детёныш не живёт (os._exit(89), fail-closed)."""
+    try:
+        import ctypes
+
+        libc = ctypes.CDLL(None, use_errno=True)
+        if libc.prctl(38, 1, 0, 0, 0) != 0:  # PR_SET_NO_NEW_PRIVS
+            os._exit(89)
+        prog = _sandbox_bpf()
+        if libc.prctl(22, 2, ctypes.byref(prog), 0, 0) != 0:  # PR_SET_SECCOMP, SECCOMP_MODE_FILTER
+            os._exit(89)
+    except BaseException:  # noqa: BLE001 — детёныш без песочницы не живёт
+        os._exit(89)
 
 
 def boot_child(raw: str) -> None:

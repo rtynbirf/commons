@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "scenes": [
+    {
+      "name": "1"
+    },
+    {
+      "name": "2",
+      "out": "INET-DENIED 1\nUNIX-LIVE"
+    },
+    {
+      "name": "3",
+      "out": "INET-DENIED 1\nUNIX-LIVE"
+    },
+    {
+      "name": "4",
+      "out": "INET-DENIED 1\nUNIX-LIVE"
+    }
+  ],
+  "findings": [],
+  "blood_envelopes": 13
+}

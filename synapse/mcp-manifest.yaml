@@ -49,9 +49,10 @@ organs:
     tools: [convert_to_markdown]
     # v0.5.0: fs read-only — весь диск на чтение (работа органа — читать файлы пользователя),
     # запись и сеть страж прерывает (SPEC-0002 п.8)
-    # process: {mode: spawn, programs: [...]} — stdio-транспорт и есть процесс органа, порождаемый
-    # адаптером при invoke; детёныш декларирован поимённо (дом-сужение поверх v0.7.0, такт 2)
-    authority: {fs: read-only, network: none, process: {mode: spawn, programs: [markitdown-mcp]}}
+    # process: {mode: spawn, programs: [...], sandbox: {network: none}} — stdio-транспорт и есть
+    # процесс органа, порождаемый адаптером при invoke; детёныш декларирован поимённо (v0.7.0)
+    # и под ядерной песочницей: inet-сеть детёныша рвёт ядро (волна №13, SPEC-0002 п.11)
+    authority: {fs: read-only, network: none, process: {mode: spawn, programs: [markitdown-mcp], sandbox: {network: none}}}
     adapter: synapse.adapters.mcp_stdio:MCPStdioAdapter
     note: 'подключён 2026-11-01 — первый живой пульс организма (runs/2026-11-01-first-pulse); вход — только file-URI'
 

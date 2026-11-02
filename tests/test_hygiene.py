@@ -76,10 +76,11 @@ def test_version_drift_is_caught(tmp_path: Path) -> None:
 
     ok, fleas = doctor.check_version_sync(tmp_path)
 
-    assert len(fleas) == 3, fleas
+    assert len(fleas) == 4, fleas  # + README.en.md отсутствует (волна-6: fail-closed)
     assert any("CITATION.cff" in f for f in fleas)
     assert any("CHANGELOG.md" in f for f in fleas)
     assert any("README.md" in f for f in fleas)
+    assert any("README.en.md" in f and "отсутствует" in f for f in fleas)
     assert ok == 1  # чист только pyproject
 
 
@@ -88,10 +89,11 @@ def test_version_sync_green(tmp_path: Path) -> None:
     _touch(tmp_path, "CITATION.cff", "version: 0.16.0\n")
     _touch(tmp_path, "CHANGELOG.md", "## [0.16.0] — 2026-11-02\n")
     _touch(tmp_path, "README.md", "С 0.16.0 у организма есть гигиена дома.\n")
+    _touch(tmp_path, "README.en.md", "Since 0.16.0 the house has hygiene.\n")
 
     ok, fleas = doctor.check_version_sync(tmp_path)
 
-    assert (ok, fleas) == (4, [])
+    assert (ok, fleas) == (5, [])
 
 
 def test_broken_relative_link_is_caught(tmp_path: Path) -> None:
@@ -277,6 +279,54 @@ def test_headless_changelog_section_is_caught(tmp_path: Path) -> None:
     assert "без даты" in fleas[0]
 
 
+# --- гейты 0.19.0: слепые зоны закрыты ---
+
+
+def test_roadmap_stale_counter_is_caught(tmp_path: Path) -> None:
+    # Волна-6: ROADMAP претендует на текущий статус — счётчики «N приёмок,
+    # всего M» болеют там так же, как в README («29 приёмок, всего 215»
+    # жили в ROADMAP при живых 350, потому что ROADMAP не стоял в зоне).
+    _touch(tmp_path, "README.md")
+    _touch(tmp_path, "README.en.md")
+    _touch(tmp_path, "CITATION.cff")
+    _touch(tmp_path, "ROADMAP.md", "- [x] дело (0.8.0): сделано; 29 приёмок, всего 215.\n")
+
+    ok, fleas = doctor.check_no_stale_counts(tmp_path)
+
+    assert ok == 3  # чисты README, README.en и CITATION — блоха одна, в ROADMAP
+    assert len(fleas) == 1, fleas
+    assert "ROADMAP.md" in fleas[0]
+    assert "приёмок" in fleas[0]
+
+
+def test_changelog_historical_numbers_are_not_fleas(tmp_path: Path) -> None:
+    # Дизайн-граница жанров: CHANGELOG — журнал (Keep a Changelog),
+    # исторические числа — его суть; гейт counts его не сканирует.
+    _touch(tmp_path, "README.md")
+    _touch(tmp_path, "README.en.md")
+    _touch(tmp_path, "CITATION.cff")
+    _touch(tmp_path, "CHANGELOG.md", "## [0.8.0] — 2026-11-01\n\n- бюджет; 29 приёмок, всего 215.\n")
+
+    ok, fleas = doctor.check_no_stale_counts(tmp_path)
+
+    assert (ok, fleas) == (3, [])
+
+
+def test_missing_en_readme_is_caught_by_version_sync(tmp_path: Path) -> None:
+    # Волна-6: en-история молча отстала на три релиза — теперь отсутствие
+    # файла или непроговорённая версия в en — блоха, ru/en не расползаются.
+    _touch(tmp_path, "pyproject.toml", 'version = "0.19.0"\n')
+    _touch(tmp_path, "CITATION.cff", "version: 0.19.0\n")
+    _touch(tmp_path, "CHANGELOG.md", "## [0.19.0] — 2026-11-02\n")
+    _touch(tmp_path, "README.md", "С 0.19.0 гейты без слепых зон.\n")
+
+    ok, fleas = doctor.check_version_sync(tmp_path)
+
+    assert ok == 4  # чисты все, кроме en
+    assert len(fleas) == 1, fleas
+    assert "README.en.md" in fleas[0]
+
+
 # --- обещание «гейт в CI» приговорено проверками ---
 
 
@@ -300,6 +350,27 @@ def test_doctor_fails_closed_on_flea_house(tmp_path: Path) -> None:
     _touch(tmp_path, "CHANGELOG.md", "## [0.16.0] — 2026-11-02\n")
 
     assert doctor.main([str(tmp_path)]) == 1
+
+
+def test_doctor_cli_reads_given_root(tmp_path: Path) -> None:
+    # Волна-6: CLI обязан читать указанную карту, а не молча родной дом —
+    # инъекция блохи в копию дома через `doctor.py /путь` обязана краснеть.
+    import subprocess
+
+    _touch(tmp_path, "README.md", "Всего 294 приёмок.\n")
+    _touch(tmp_path, "README.en.md")
+    _touch(tmp_path, "CITATION.cff")
+
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT), str(tmp_path)],
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+
+    assert proc.returncode == 1, proc.stdout
+    assert "BLOHA" in proc.stdout
+    assert "294 приём" in proc.stdout
 
 
 def test_weekly_sweep_is_scheduled() -> None:

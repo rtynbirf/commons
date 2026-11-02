@@ -38,6 +38,14 @@ Since **0.14.0 the whole registry is visible**: 18 donation cards — every patc
 
 Since **0.15.0 the body requires no channel** ([SPEC-0010](specs/SPEC-0010-persona.md), [ADR-0012](docs/adr/ADR-0012-persona-channels.md)): the mandate — «I am blind, I am deaf, I am mute, I have no hands». Text is the universal nerve in both directions: everything the organism says is text (markdown, JSONL blood, worded gate summaries like `IMMUNE: 41 ok, 0 failed` plus exit codes), everything it hears is text (commands, YAML data, environment variables). Pictures never speak alone — the excalidraw organ map has a text twin ([docs/organ-map.md](docs/organ-map.md)) generated from the same live registry; control is one command, no combos or timings. The persona-proof is Helen Keller: 578 days of sight and hearing across 32,115 days of life — and 12 books ([runs/2026-11-02-persona/](runs/2026-11-02-persona/report.md)).
 
+Since **0.16.0 the house has hygiene**: the doctor ([`scripts/doctor.py`](scripts/doctor.py)) catches docs-drift on the machine — stale counters, versions, broken and orphan links, paths, SPEC/ADR refs, entry points — a flea paints the PR red; self-portraits are under a freshness gate (`--check` in CI).
+
+Since **0.17.0 the organism passed the red run** ([runs/2026-11-02-red-run/](runs/2026-11-02-red-run/report.md)): organ swap without touching the brainstem, simultaneous failure without a crash, restoration from blood, 10/10 whitelist attacks repelled — the external-review audit matrix is closed frame-wise; the honest A/B usefulness still belongs to the live host.
+
+Since **0.18.0 the house cleans itself on schedule**: the sweep ([`.github/workflows/fleas.yml`](.github/workflows/fleas.yml)) — the doctor and external links (lychee) weekly, no pushes required: links die on their own, not only from pushes; conflict markers and stale counters (acceptance/practice counts, badge versions) are under the doctor's gates.
+
+Since **0.19.0 the gates have no blind spots**: ROADMAP is under the stale-counter gate (historical acceptance counters swept out — the live number lives in `python -m pytest -q`), and the version is verified in both READMEs — ru and en no longer drift silently; this very file caught up three releases (0.16.0–0.18.0), the blind spot made visible.
+
 | Artifact | Purpose |
 |---|---|
 | `specs/` | Genome: canonical agent loop, MCP synapse contract, blood envelope contract, living organism (PID 1), memory, license immunity |

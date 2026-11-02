@@ -26,6 +26,15 @@ fail-closed: неизвестное — красное (закон иммуни�
 числа-протухатели — счётчик «N практик» (урок llms.txt: «17 практик» при
 живых 18) и версия в stage-бейдже (урок README: бейдж на 0.15.0 при живых
 0.17). Статика не счётчик: живое число берётся из источника.
+
+Волна-6 (0.19.0) — гейты без слепых зон, ревизия самой блохоловки: в
+ROADMAP жили три живых счётчика приёмок («29 приёмок, всего 215» в 0.8.0,
+«19 приёмок, всего 272» в 0.12.0, «11 приёмок» в SPEC-0009 п.9 — при живых
+350), потому что ROADMAP не стоял в зоне гейта counts; README.en.md молча
+отстал на три релиза (0.16.0–0.18.0), потому что version_sync смотрел
+только ru. Оба дефекта того же класса, что лечили, — но в слепой зоне.
+Граница жанров зафиксирована приёмкой: CHANGELOG вне зоны counts — это
+журнал, исторические числа там — суть жанра (Keep a Changelog).
 """
 
 from __future__ import annotations
@@ -67,7 +76,12 @@ def _rel_lines(rel: Path) -> list[str]:
 def check_no_stale_counts(root: Path) -> tuple[int, list[str]]:
     """Числа-протухатели не живут в статике: счётчик приёмок — в pytest,
     счётчик практик — в чеклисте, стадия — в бейдже без версии.
-    llms.txt — в зоне: урок «17 практик» пойман живьём 2026-11-02."""
+    llms.txt — в зоне: урок «17 практик» пойман живьём 2026-11-02.
+    ROADMAP — в зоне с волны-6: он претендует на текущий статус, поэтому
+    «N приёмок, всего M» болеет там так же, как в README (поймано живьём:
+    29/215, 19/272, 11 — при живых 350). CHANGELOG сознательно вне зоны:
+    это журнал, исторические числа — суть жанра; граница — приёмкой
+    (test_changelog_historical_numbers_are_not_fleas)."""
     fleas: list[str] = []
     ok = 0
     rules = (
@@ -75,7 +89,7 @@ def check_no_stale_counts(root: Path) -> tuple[int, list[str]]:
         (PRACTICES_RE, "протухающий счётчик практик {claim!r} — живое число в docs/practices-checklist.md"),
         (BADGE_RE, "версия в stage-бейдже протухает ({claim}) — стадия в бейдже, версия в CHANGELOG"),
     )
-    for name in (*README_FILES, CITATION, "llms.txt"):
+    for name in (*README_FILES, "ROADMAP.md", CITATION, "llms.txt"):
         rel = root / name
         if not rel.exists():
             continue
@@ -92,7 +106,10 @@ def check_no_stale_counts(root: Path) -> tuple[int, list[str]]:
 
 
 def check_version_sync(root: Path) -> tuple[int, list[str]]:
-    """Версия одна: pyproject == CITATION.cff == голова CHANGELOG == README."""
+    """Версия одна: pyproject == CITATION.cff == голова CHANGELOG == оба README.
+    README.en.md в зоне с волны-6: en-история версий молча отстала на три
+    релиза (0.16.0–0.18.0), а гейт смотрел только ru — ru/en расползлись.
+    Файл отсутствует — блоха (fail-closed: в доме оба языка обязаны жить)."""
     fleas: list[str] = []
     py = (root / "pyproject.toml").read_text(encoding="utf-8")
     m = re.search(r'^version = "([^"]+)"', py, re.M)
@@ -100,23 +117,35 @@ def check_version_sync(root: Path) -> tuple[int, list[str]]:
         return 0, ["pyproject.toml: не найдена строка version = \"…\""]
     version = m.group(1)
 
+    ok = 1  # pyproject — источник правды, посчитан чистым
+
     cite = (root / CITATION).read_text(encoding="utf-8")
     m = re.search(r"^version:\s*(\S+)", cite, re.M)
     cite_version = m.group(1) if m else None
     if cite_version != version:
         fleas.append(f"{CITATION}: version {cite_version} != pyproject {version}")
+    else:
+        ok += 1
 
     changelog = (root / "CHANGELOG.md").read_text(encoding="utf-8")
     m = re.search(r"^## \[(v?[\d.]+)\]", changelog, re.M)
     head = m.group(1).lstrip("v") if m else None
     if head != version:
         fleas.append(f"CHANGELOG.md: головная секция [{head}] != pyproject {version}")
+    else:
+        ok += 1
 
-    readme = (root / "README.md").read_text(encoding="utf-8")
-    if version not in readme:
-        fleas.append(f"README.md: текущая версия {version} не упомянута (история отстала)")
+    for name in README_FILES:
+        path = root / name
+        if not path.exists():
+            fleas.append(f"{name}: файл отсутствует — версии нечем жить в этом языке")
+            continue
+        if version not in path.read_text(encoding="utf-8"):
+            fleas.append(f"{name}: текущая версия {version} не упомянута (история отстала)")
+        else:
+            ok += 1
 
-    return 4 - len(fleas), fleas
+    return ok, fleas
 
 
 def _link_scope(root: Path) -> list[Path]:
@@ -307,7 +336,10 @@ GATES = (
 
 
 def main(argv: list[str] | None = None) -> int:
-    root = ROOT if argv is None else Path(argv[0]).resolve()
+    # Волна-6: CLI обязан передавать аргументы — раньше `doctor.py /путь`
+    # молча проверял родной дом (argv дохло на границе __main__):
+    # инъекция в копию дома возвращала ложное «чисто».
+    root = ROOT if not argv else Path(argv[0]).resolve()
     total_ok = 0
     total_fleas: list[str] = []
     for name, gate in GATES:
@@ -322,4 +354,4 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))

@@ -10,8 +10,8 @@ type: software
 authors:
   - name: "rtynbirf"
     website: "https://github.com/rtynbirf"
-version: 0.26.0
-date-released: "2026-11-02"
+version: 0.27.0
+date-released: "2026-11-03"
 license: Apache-2.0
 repository-code: "https://github.com/rtynbirf/commons"
 url: "https://github.com/rtynbirf/commons"

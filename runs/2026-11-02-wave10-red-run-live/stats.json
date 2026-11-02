@@ -1,0 +1,60 @@
+{
+  "scenes": [
+    {
+      "name": "C1",
+      "trace": "w10r-sc1-fs",
+      "control_crime": true
+    },
+    {
+      "name": "C2",
+      "trace": "w10r-sc2-net",
+      "control_leak_hits": 1
+    },
+    {
+      "name": "C3",
+      "trace": "w10r-sc3-children",
+      "child_hits": 1
+    },
+    {
+      "name": "C4",
+      "trace": "w10r-sc4-replace"
+    },
+    {
+      "name": "C5",
+      "trace": "w10r-sc5-outage",
+      "beats": 2,
+      "exit_code": 0
+    },
+    {
+      "name": "C6",
+      "trace": "w10r-sc6-child",
+      "envelopes": 8
+    },
+    {
+      "name": "C7",
+      "trace": "w10r-sc7-budget"
+    },
+    {
+      "name": "C8",
+      "refused": 3
+    },
+    {
+      "name": "C9",
+      "traces": [
+        "w10r-sc9-ghost",
+        "w10r-sc9-tool"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "scene": "С3",
+      "trace": "w10r-sc3-children",
+      "what": "детёныш процесса вывел сеть из-под стража: network: none заявлен, соединение состоялось, контент получен",
+      "hits": 1,
+      "candidate": "SPEC-0002 v0.5: грамматика — process: spawn обязан нести честную декларацию сети детёнышей; в-process стражу детей не видно (это не баг хука, а граница процесса) — спека обязана это назвать"
+    }
+  ],
+  "blood_envelopes": 34,
+  "ok": true
+}

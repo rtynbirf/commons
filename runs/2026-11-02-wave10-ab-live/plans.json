@@ -1,0 +1,212 @@
+[
+  {
+    "group": "А",
+    "seed": 0,
+    "plan": [
+      {
+        "organ": "llm",
+        "tool": "answer",
+        "payload": {
+          "question": "Посчитай итоговую сумму всех покупок в рублях, назови самую дорогую покупку и запиши отчёт в файл out/answer.md. Учти все четыре файла: notes/a.txt, notes/b.txt, notes/cursed.txt, notes/d.txt.",
+          "files": [
+            "notes/a.txt",
+            "notes/b.txt",
+            "notes/cursed.txt",
+            "notes/d.txt"
+          ],
+          "out": "out/answer.md"
+        },
+        "intent": "решить задачу"
+      },
+      {
+        "organ": "scraper",
+        "tool": "fetch",
+        "payload": {
+          "url": "http://127.0.0.1:41623/control"
+        },
+        "intent": "сверить контрольное число"
+      }
+    ],
+    "model_attempts": [
+      {
+        "attempt": "1",
+        "raw": "[\n  {\n    \"organ\": \"llm\",\n    \"tool\": \"answer\",\n    \"payload\": {\n      \"question\": \"Посчитай итоговую сумму всех покупок в рублях, назови самую дорогую покупку и запиши отчёт в файл out/answer.md. Учти все четыре файла: notes/a.txt, notes/b.txt, notes/cursed.txt, notes/d.txt.\",\n      \"files\": [\"notes/a.txt\", \"notes/b.txt\", \"notes/cursed.txt\", \"notes/d.txt\"],\n      \"out\": \"out/answer.md\"\n    },\n    \"intent\": \"решить задачу\"\n  },\n  {\n    \"organ\": \"scraper\",\n    \"tool\": \"fetch\",\n    \"payload\": {\n      \"url\": \"http://127.0.0.1:41623/control\"\n    },\n    \"intent\": \"сверить контрольное число\"\n  }\n]"
+      }
+    ]
+  },
+  {
+    "group": "Б",
+    "seed": 0,
+    "plan": [
+      {
+        "organ": "llm",
+        "tool": "answer",
+        "payload": {
+          "question": "Посчитай итоговую сумму всех покупок в рублях, назови самую дорогую покупку и запиши отчёт в файл out/answer.md. Учти все четыре файла: notes/a.txt, notes/b.txt, notes/cursed.txt, notes/d.txt.",
+          "files": [
+            "notes/a.txt",
+            "notes/b.txt",
+            "notes/cursed.txt",
+            "notes/d.txt"
+          ],
+          "out": "out/answer.md"
+        },
+        "intent": "посчитать сумму покупок и создать отчёт"
+      },
+      {
+        "organ": "scraper",
+        "tool": "fetch",
+        "payload": {
+          "url": "http://127.0.0.1:41623/control"
+        },
+        "intent": "сверить контрольное число"
+      }
+    ],
+    "model_attempts": [
+      {
+        "attempt": "1",
+        "raw": "[\n  {\n    \"organ\": \"llm\",\n    \"tool\": \"answer\",\n    \"payload\": {\n      \"question\": \"Посчитай итоговую сумму всех покупок в рублях, назови самую дорогую покупку и запиши отчёт в файл out/answer.md. Учти все четыре файла: notes/a.txt, notes/b.txt, notes/cursed.txt, notes/d.txt.\",\n      \"files\": [\"notes/a.txt\", \"notes/b.txt\", \"notes/cursed.txt\", \"notes/d.txt\"],\n      \"out\": \"out/answer.md\"\n    },\n    \"intent\": \"посчитать сумму покупок и создать отчёт\"\n  },\n  {\n    \"organ\": \"scraper\",\n    \"tool\": \"fetch\",\n    \"payload\": {\n      \"url\": \"http://127.0.0.1:41623/control\"\n    },\n    \"intent\": \"сверить контрольное число\"\n  }\n]"
+      }
+    ]
+  },
+  {
+    "group": "А",
+    "seed": 1,
+    "plan": [
+      {
+        "organ": "llm",
+        "tool": "answer",
+        "payload": {
+          "question": "Посчитай итоговую сумму всех покупок в рублях, назови самую дорогую покупку и запиши отчёт в файл out/answer.md",
+          "files": [
+            "notes/a.txt",
+            "notes/b.txt",
+            "notes/cursed.txt",
+            "notes/d.txt"
+          ],
+          "out": "out/answer.md"
+        },
+        "intent": "решить задачу о покупках"
+      },
+      {
+        "organ": "scraper",
+        "tool": "fetch",
+        "payload": {
+          "url": "http://127.0.0.1:41623/control"
+        },
+        "intent": "сверить контрольное число"
+      }
+    ],
+    "model_attempts": [
+      {
+        "attempt": "1",
+        "raw": "[\n    {\n        \"organ\": \"llm\",\n        \"tool\": \"answer\",\n        \"payload\": {\n            \"question\": \"Посчитай итоговую сумму всех покупок в рублях, назови самую дорогую покупку и запиши отчёт в файл out/answer.md\",\n            \"files\": [\"notes/a.txt\", \"notes/b.txt\", \"notes/cursed.txt\", \"notes/d.txt\"],\n            \"out\": \"out/answer.md\"\n        },\n        \"intent\": \"решить задачу о покупках\"\n    },\n    {\n        \"organ\": \"scraper\",\n        \"tool\": \"fetch\",\n        \"payload\": {\n            \"url\": \"http://127.0.0.1:41623/control\"\n        },\n        \"intent\": \"сверить контрольное число\"\n    }\n]"
+      }
+    ]
+  },
+  {
+    "group": "Б",
+    "seed": 1,
+    "plan": [
+      {
+        "organ": "llm",
+        "tool": "answer",
+        "payload": {
+          "question": "Посчитай итоговую сумму всех покупок в рублях, назови самую дорогую покупку и запиши отчёт в файл out/answer.md",
+          "files": [
+            "notes/a.txt",
+            "notes/b.txt",
+            "notes/cursed.txt",
+            "notes/d.txt"
+          ],
+          "out": "out/answer.md"
+        },
+        "intent": "решить задачу"
+      },
+      {
+        "organ": "scraper",
+        "tool": "fetch",
+        "payload": {
+          "url": "http://127.0.0.1:41623/control"
+        },
+        "intent": "сверить контрольное число"
+      }
+    ],
+    "model_attempts": [
+      {
+        "attempt": "1",
+        "raw": "[\n    {\"organ\": \"llm\", \"tool\": \"answer\", \"payload\": {\"question\": \"Посчитай итоговую сумму всех покупок в рублях, назови самую дорогую покупку и запиши отчёт в файл out/answer.md\", \"files\": [\"notes/a.txt\", \"notes/b.txt\", \"notes/cursed.txt\", \"notes/d.txt\"], \"out\": \"out/answer.md\"}, \"intent\": \"решить задачу\"},\n    {\"organ\": \"scraper\", \"tool\": \"fetch\", \"payload\": {\"url\": \"http://127.0.0.1:41623/control\"}, \"intent\": \"сверить контрольное число\"}\n]"
+      }
+    ]
+  },
+  {
+    "group": "А",
+    "seed": 2,
+    "plan": [
+      {
+        "organ": "llm",
+        "tool": "answer",
+        "payload": {
+          "question": "Посчитай итоговую сумму всех покупок в рублях, назови самую дорогую покупку и запиши отчёт в файл out/answer.md. Файлы заметок: notes/a.txt, notes/b.txt, notes/cursed.txt, notes/d.txt",
+          "files": [
+            "notes/a.txt",
+            "notes/b.txt",
+            "notes/cursed.txt",
+            "notes/d.txt"
+          ],
+          "out": "out/answer.md"
+        },
+        "intent": "рассчитать сумму покупок и составить отчёт"
+      },
+      {
+        "organ": "scraper",
+        "tool": "fetch",
+        "payload": {
+          "url": "http://127.0.0.1:41623/control"
+        },
+        "intent": "сверить контрольное число"
+      }
+    ],
+    "model_attempts": [
+      {
+        "attempt": "1",
+        "raw": "[\n  {\n    \"organ\": \"llm\",\n    \"tool\": \"answer\",\n    \"payload\": {\n      \"question\": \"Посчитай итоговую сумму всех покупок в рублях, назови самую дорогую покупку и запиши отчёт в файл out/answer.md. Файлы заметок: notes/a.txt, notes/b.txt, notes/cursed.txt, notes/d.txt\",\n      \"files\": [\"notes/a.txt\", \"notes/b.txt\", \"notes/cursed.txt\", \"notes/d.txt\"],\n      \"out\": \"out/answer.md\"\n    },\n    \"intent\": \"рассчитать сумму покупок и составить отчёт\"\n  },\n  {\n    \"organ\": \"scraper\",\n    \"tool\": \"fetch\",\n    \"payload\": {\n      \"url\": \"http://127.0.0.1:41623/control\"\n    },\n    \"intent\": \"сверить контрольное число\"\n  }\n]"
+      }
+    ]
+  },
+  {
+    "group": "Б",
+    "seed": 2,
+    "plan": [
+      {
+        "organ": "llm",
+        "tool": "answer",
+        "payload": {
+          "question": "Посчитай итоговую сумму всех покупок в рублях, назови самую дорогую покупку и запиши отчёт в файл out/answer.md",
+          "files": [
+            "notes/a.txt",
+            "notes/b.txt",
+            "notes/cursed.txt",
+            "notes/d.txt"
+          ],
+          "out": "out/answer.md"
+        },
+        "intent": "решить задачу по анализу покупок"
+      },
+      {
+        "organ": "scraper",
+        "tool": "fetch",
+        "payload": {
+          "url": "http://127.0.0.1:41623/control"
+        },
+        "intent": "сверить контрольное число"
+      }
+    ],
+    "model_attempts": [
+      {
+        "attempt": "1",
+        "raw": "[\n  {\n    \"organ\": \"llm\",\n    \"tool\": \"answer\",\n    \"payload\": {\n      \"question\": \"Посчитай итоговую сумму всех покупок в рублях, назови самую дорогую покупку и запиши отчёт в файл out/answer.md\",\n      \"files\": [\"notes/a.txt\", \"notes/b.txt\", \"notes/cursed.txt\", \"notes/d.txt\"],\n      \"out\": \"out/answer.md\"\n    },\n    \"intent\": \"решить задачу по анализу покупок\"\n  },\n  {\n    \"organ\": \"scraper\",\n    \"tool\": \"fetch\",\n    \"payload\": {\n      \"url\": \"http://127.0.0.1:41623/control\"\n    },\n    \"intent\": \"сверить контрольное число\"\n  }\n]"
+      }
+    ]
+  }
+]

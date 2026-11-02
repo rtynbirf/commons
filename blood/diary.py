@@ -23,6 +23,7 @@ SPEC-0003 п.12 (Ф-1.2, волна №18): реконструкция сесс�
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Union
 
@@ -206,3 +207,28 @@ def render(source: Union[Journal, str, Path], trace_id: str | None = None) -> st
     lines.append("- отмена действий не обещается: компенсатор не построен (W-0024)")
     lines.append("")
     return "\n".join(lines)
+
+
+def to_jsonl(source: Union[Journal, str, Path], out: str | Path) -> Path:
+    """Машиночитаемый экспорт дневника (такт 2 волны №18, стык): одна строка JSONL на трейс.
+
+    Те же факты, что читает человек в render(), — машине: entries(source,
+    trace_id) по каждому трейсу в порядке первого появления. Дневник по-прежнему
+    ничего не пишет в кровь: экспорт — новый файл.
+    """
+    if isinstance(source, Journal):
+        events = list(source.all())
+    else:
+        events = list(Journal.from_jsonl(Path(source)).all())
+    trace_ids: list[str] = []
+    for e in events:
+        tid = e["trace_id"]
+        if tid not in trace_ids:
+            trace_ids.append(tid)
+    rows = [entries(source, tid) for tid in trace_ids]
+    out_path = Path(out)
+    out_path.write_text(
+        "\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n",
+        encoding="utf-8",
+    )
+    return out_path

@@ -150,20 +150,33 @@ def bench_chroma(
 def bench_lancedb(
     tmp: Path, n: int = N_VECTORS, dim: int = DIM, queries: int = N_QUERIES, top_k: int = TOP_K,
 ) -> tuple[float, float]:
-    """Честный мини-бенч lancedb: create_table во временном каталоге; search → to_list."""
+    """Честный мини-бенч lancedb: create_table во временном каталоге; search → to_list.
+
+    Урок волны-8 (2026-11-02): столбец из list[float] lancedb не считает векторным —
+    нужна схема fixed_size_list (pyarrow — зависимость lancedb, не новый импорт),
+    иначе ValueError «no vector column». Движок упал — факт; харнесс починен,
+    цифры остаются цифрами замера.
+    """
     import lancedb  # локальный импорт: движок может быть не установлен
+    import pyarrow as pa  # зависимость lancedb (участвует в её публичном API)
 
     vectors = make_vectors(n, dim, seed=SEED)
     db = lancedb.connect(str(tmp / "lancedb"))
+    flat = pa.array([x for v in vectors for x in v], type=pa.float32())
+    vec_col = pa.FixedSizeListArray.from_arrays(flat, dim)
+    data = pa.Table.from_arrays(
+        [pa.array(range(n), type=pa.int64()), vec_col],
+        schema=pa.schema([("id", pa.int64()), ("vec", pa.list_(pa.float32(), dim))]),
+    )
     started = time.perf_counter()
-    db.create_table("s6_bench", data=[{"id": i, "vec": v} for i, v in enumerate(vectors)])
+    db.create_table("s6_bench", data=data)
     insert_ms = (time.perf_counter() - started) * 1000.0
 
     table = db.open_table("s6_bench")
     query_vectors = make_vectors(queries, dim, seed=SEED + 1)
     started = time.perf_counter()
     for q in query_vectors:
-        table.search(q).limit(top_k).to_list()
+        table.search(q, vector_column_name="vec").limit(top_k).to_list()
     query_ms = (time.perf_counter() - started) * 1000.0
     return insert_ms, query_ms
 

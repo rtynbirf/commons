@@ -2,6 +2,18 @@
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/); версии — SemVer.
 
+## [0.21.0] — 2026-11-02
+
+### Added
+
+- **Спайк S6 замерен живым** (M2, волна-8): bench всех трёх движков памяти на хосте машины (Linux-песочница, Python 3.12.16; chromadb 1.5.9, lancedb 0.41.0, sqlite-vec 0.1.9): sqlite-vec 4.0/6.5 мс, lancedb 5.0/72.7 мс, chroma 23.4/22.4 мс против базовой линии sqlite3 41.4/224.5 мс — быстрее по запросу ≈34× и по вставке ≈10×; встроенное расширение без сервера и процессов закрывает все четыре критерия ADR-0007. Вердикт — в `spikes/s6-memory/README.md` (как ADR-0007 и предписал: результат живёт в README спайка); вписывание в манифест как орган памяти (SPEC-0005, G2) — отдельная волна по ритуалу ADR-0005.
+- **Спайк S5 замерен живым** (M3, волна-8): полный цикл `--spec-kit` живым specify 1.2.6.dev0 (`uv tool install --from git+https://github.com/github/spec-kit.git specify-cli`): 23 файла `.specify/`, секции шаблона спеки, маппинг с геномом — «Гарантии» без пары у обеих сторон (у spec-kit эту роль играют Success Criteria/Measurable Outcomes); разделы шаблона без пары в геноме: Key Entities, Success Criteria, Measurable Outcomes, Assumptions — кандидат на обогащение `docs/templates/SPEC-TEMPLATE.md`, односторонне не принимается. Итерации `/implement` — честно за живым LLM-хостом.
+
+### Fixed
+
+- **Харнесс S6 (lancedb)**: столбец из `list[float]` lancedb не считает векторным — ValueError «no vector column»; схема `fixed_size_list` через pyarrow (зависимость lancedb) — таблица замера полная, цифры — цифры замера (урок волны-8 — в docstring `bench_lancedb`).
+- **llms.txt**: битая ссылка на `memory/` — открывающая скобка ссылки съедена, текст-якорь потерян; починено волной-8. Гейт `orphan-links` ловит такие блохи — доказано живьём: первый черновик этой записи держал сырой пример блохи, и доктор покрасил сам CHANGELOG. Урок волны-8: сырой пример блохи в статике — сам блоха; пример живёт в приёмке (`test_orphan_link_is_caught`), не в журнале.
+
 ## [0.20.0] — 2026-11-02
 
 ### Added

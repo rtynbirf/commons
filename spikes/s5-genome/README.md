@@ -1,6 +1,6 @@
 # Спайк S5: геном — фича через полный цикл spec-kit
 
-Статус: харнесс готов (2026-11-02), selfcheck идёт в CI; полный цикл — на живой машине ·
+Статус: полный цикл замерен живым specify 1.2.6.dev0 (2026-11-02): init-структура и маппинг секций — ниже; итерации /implement — за живым LLM ·
 Ограничение: ≤3 дня · Родитель: `docs/spikes.md` (S5) · Связь: ROADMAP M3
 
 ## Гипотеза
@@ -41,20 +41,31 @@
 только у SPEC-0001 и все упомянуты в tests/ → дрейф 0/3 (эвристика); раздел
 «Гарантии» есть только у SPEC-0001 → маппинг «Гарантии→Acceptance» частичный (1/3).
 
+Живой прогон (`--spec-kit`, 2026-11-02, specify 1.2.6.dev0): `specify init` поднял
+23 файла `.specify/` (шаблоны spec/plan/tasks/checklist, скрипты bash, memory/
+constitution); секции шаблона спеки — User Story 1–3, Edge Cases, Requirements,
+Functional Requirements, Key Entities, Success Criteria, Measurable Outcomes,
+Assumptions. Сверка с геномом: Назначение↔User Story, Контракт↔Requirements,
+Отказные режимы↔Edge Cases — частичные пары; «Гарантии» без пары с обеих сторон —
+у spec-kit эту роль играют Success Criteria/Measurable Outcomes. Разделы шаблона
+без пары в геноме: Key Entities, Success Criteria, Measurable Outcomes, Assumptions —
+кандидат на обогащение `docs/templates/SPEC-TEMPLATE.md` (отдельное решение,
+односторонне не принимается).
+
 ## Лицензия
 
 spec-kit: `github/spec-kit` — SPDX MIT, файл LICENSE (верифицировано GitHub API
 2026-11-02). Спайк не копирует код spec-kit (ADR-0001, `PROVENANCE.md`) — только
 сравнивает структуру сгенерированных шаблонов со структурой нашего генома.
 
-## Вердикт (заполняется по прогону)
+## Вердикт (живой прогон 2026-11-02)
 
 | метрика | значение |
 | --- | --- |
-| итераций до сходимости | _ожидает живого прогона_ |
-| доля задач с правкой спеки | — |
-| дрейф спеки от кода | — |
-| вердикт | — |
+| итераций до сходимости | ожидает живого `/implement` (LLM-хост) — не фантазируем |
+| доля задач с правкой спеки | ожидает живого `/implement` |
+| дрейф спеки от кода | selfcheck: 0/3 гарантий без теста (эвристика); живой — после `/implement` |
+| вердикт | структура сверена живым specify 1.2.6.dev0; пробел генома назван: «Гарантии» ↔ Success Criteria/Measurable Outcomes; обогащение SPEC-TEMPLATE.md — кандидат |
 
 Критерий выхода (docs/spikes.md S5): процесс принят как стандарт репродукции клеток
 (M3), шаблоны — в `docs/templates/`.
@@ -65,8 +76,8 @@ spec-kit: `github/spec-kit` — SPDX MIT, файл LICENSE (верифициро
 # офлайн-самопроверка (входит в CI, spec-kit не нужен)
 python3 spikes/s5-genome/measure.py --selfcheck
 
-# полный цикл — на живой машине
-uvx --from git+https://github.com/github/spec-kit.git specify --version
+# полный цикл: пакет называется specify-cli, команда — specify
+uv tool install --from git+https://github.com/github/spec-kit.git specify-cli
 python3 spikes/s5-genome/measure.py --spec-kit
 ```
 

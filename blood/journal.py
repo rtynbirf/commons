@@ -8,6 +8,11 @@
 чтении — `verify` отчитывается гэпами, гематология красит файл. Пролитая кровь
 без цепочки (v0.4.0 и старше) валидна навсегда: файл, в котором ни один конверт
 не несёт `prev_id`, цепочку не заявляет.
+
+С A01 (Ф-0, волна №16) журнал помнит эффекты: повторный append того же `id`
+или того же `idempotency_key` не создаёт второе событие — возвращается
+записанный конверт, строка в кровь не пишется. Тот же `id` с другим
+содержанием — не dedupe, а конфликт: fail-closed (EnvelopeError).
 """
 
 from __future__ import annotations
@@ -30,6 +35,11 @@ class Journal:
         self._last_id: str | None = None
         # Честный счётчик битых строк при чтении (from_jsonl, п.8).
         self.skipped: int = 0
+        # Память dedupe (A01, SPEC-0003): id → записанный конверт;
+        # idempotency_key → id первого эффекта. Пополняется при записи,
+        # attach() и from_jsonl() — повторный append не повторяет эффект.
+        self._by_id: dict[str, dict[str, Any]] = {}
+        self._key_to_id: dict[str, str] = {}
 
     def attach(self, path: str | Path) -> None:
         """Пишет кровь в файл в момент события (append-only, SPEC-0004 п.5).
@@ -41,6 +51,36 @@ class Journal:
         """
         self._fh = open(path, "a", encoding="utf-8")
         self._last_id = self._last_valid_id(Path(path))
+        self._remember_file(Path(path))
+
+    def _remember_file(self, path: Path) -> None:
+        """Восстанавливает память dedupe из файла (A01): сессия, открывшая
+        журнал заново, помнит эффекты пролитой крови — повторный append
+        того же id/ключа не создаст вторую строку. Битая строка якорем
+        не служит; помнится всё разобранное с id — честно для retries."""
+        if not path.exists() or path.stat().st_size == 0:
+            return
+        with path.open("rb") as fh:
+            for raw in fh:
+                line = raw.strip()
+                if not line:
+                    continue
+                try:
+                    envelope = json.loads(line)
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    continue
+                if not isinstance(envelope, dict):
+                    continue
+                env_id = envelope.get("id")
+                if isinstance(env_id, str) and env_id not in self._by_id:
+                    self._by_id[env_id] = envelope
+                key = envelope.get("idempotency_key")
+                if (
+                    isinstance(key, str)
+                    and key not in self._key_to_id
+                    and isinstance(env_id, str)
+                ):
+                    self._key_to_id[key] = env_id
 
     def close(self) -> None:
         if self._fh is not None:
@@ -75,19 +115,44 @@ class Journal:
     def append(self, envelope: dict[str, Any]) -> dict[str, Any]:
         """Записывает конверт, проставляя prev_id цепочки (SPEC-0003 п.7).
 
+        Повторный append (A01) не повторяет эффект: тот же `id` или тот же
+        `idempotency_key` возвращают уже записанный конверт — строка в кровь
+        не пишется, цепочка и цена не дублируются. Тот же `id` с другим
+        содержанием — конфликт, fail-closed (EnvelopeError).
+
         Возвращает записанный конверт (уже с prev_id) — память помнит
         уже записанное (SPEC-0005 п.1).
         """
         envelope = dict(envelope)
+        env_id = envelope.get("id")
+        if isinstance(env_id, str) and env_id in self._by_id:
+            stored = self._by_id[env_id]
+            if self._content(envelope) != self._content(stored):
+                raise EnvelopeError(
+                    f"повторный id {env_id} с другим содержанием — конфликт, не dedupe"
+                )
+            return dict(stored)
+        key = envelope.get("idempotency_key")
+        if isinstance(key, str) and key in self._key_to_id:
+            return dict(self._by_id[self._key_to_id[key]])
+        validate(envelope)
         if self._last_id is not None:
             envelope["prev_id"] = self._last_id
-        validate(envelope)
         self._events.append(envelope)
         if self._fh is not None:
             self._fh.write(json.dumps(envelope, ensure_ascii=False) + "\n")
             self._fh.flush()
         self._last_id = envelope["id"]
+        self._by_id[envelope["id"]] = envelope
+        if isinstance(envelope.get("idempotency_key"), str):
+            self._key_to_id[envelope["idempotency_key"]] = envelope["id"]
         return envelope
+
+    @staticmethod
+    def _content(envelope: dict[str, Any]) -> dict[str, Any]:
+        """Содержание конверта без цепочки prev_id — то, что сравнивается
+        при повторном append: тот же id обязан нести тот же эффект."""
+        return {k: v for k, v in envelope.items() if k != "prev_id"}
 
     def all(self) -> tuple[dict[str, Any], ...]:
         return tuple(self._events)
@@ -145,6 +210,12 @@ class Journal:
                     journal.skipped += 1
                     continue
                 journal._events.append(envelope)
+                env_id = envelope["id"]
+                if env_id not in journal._by_id:
+                    journal._by_id[env_id] = envelope
+                key = envelope.get("idempotency_key")
+                if isinstance(key, str) and key not in journal._key_to_id:
+                    journal._key_to_id[key] = env_id
         if journal._events:
             journal._last_id = journal._events[-1]["id"]
         return journal

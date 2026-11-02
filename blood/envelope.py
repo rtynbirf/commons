@@ -89,8 +89,13 @@ def make(
     trace_id: str,
     payload: dict[str, Any],
     cost: Cost | None = None,
+    idempotency_key: str | None = None,
 ) -> dict[str, Any]:
-    """Собирает и валидирует конверт. Невалидный конверт наружу не выходит."""
+    """Собирает и валидирует конверт. Невалидный конверт наружу не выходит.
+
+    `idempotency_key` (A01, SPEC-0003) — ключ идемпотентности отправителя:
+    повторная доставка с тем же ключом не создаёт второе событие.
+    """
     envelope = {
         "id": new_event_id(),
         "ts": now_utc(),
@@ -101,5 +106,7 @@ def make(
         "payload": payload or {},
         "cost": (cost or Cost()).as_dict(),
     }
+    if idempotency_key is not None:
+        envelope["idempotency_key"] = idempotency_key
     validate(envelope)
     return envelope

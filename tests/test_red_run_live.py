@@ -1,12 +1,13 @@
 # SPDX-FileCopyrightText: 2026 COMMONS contributors
 # SPDX-License-Identifier: Apache-2.0
 """Приёмка живого red-run (волна №10, W-0012): харнесс повторяем, кровь валидна,
-атаки отбиты живьём, находка о детёнышах процессов зафиксирована как ожидаемая.
+атаки отбиты живьём.
 
 Харнесс гоняется в tmp целиком (без LLM: настоящий fs, настоящий сокет, настоящий
 детёныш) и коммиченная кровь валидируется по схеме. Если страж однажды увидит
-детёнышей (кандидат SPEC-0002 v0.6.0 исполнен) — приёмка честно покраснет и
-потребует обновить саму себя.
+детёнышей — приёмка честно покраснет и потребует обновить саму себя.
+Исполнено волной №12 (SPEC-0002 v0.7.0): приёмка покраснела и обновила себя —
+находка С3 перевёрнута, детёныш живёт под стражем (наследование COMMONS_AUTHORITY).
 """
 
 from __future__ import annotations
@@ -34,18 +35,16 @@ def _read_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def test_live_red_run_is_green_with_children_finding(tmp_path: Path) -> None:
+def test_live_red_run_is_green_children_guarded(tmp_path: Path) -> None:
     stats = w10_red.run(tmp_path)
 
     assert stats["ok"], stats
     assert [s["name"] for s in stats["scenes"]] == [f"C{i}" for i in range(1, 10)], "девять живых сцен"
-    assert len(stats["findings"]) == 1, "ровно одна ожидаемая находка"
-
-    finding = stats["findings"][0]
-    assert finding["scene"] == "С3" and finding["hits"] >= 1, "детёныш соединился по-настоящему"
-    assert "v0.5" in finding["candidate"], "находка обязана вести в SPEC-0002 v0.6.0"
+    assert len(stats["findings"]) == 0, "находка С3 перевёрнута волной №12 (SPEC-0002 v0.7.0) — ожидаемых красных нет"
 
     by_name = {s["name"]: s for s in stats["scenes"]}
+    assert by_name["C3"]["child_blocked"] is True and by_name["C3"]["child_hits"] == 0, \
+        "детёныш живёт под стражем: соединение прервано, свидетель чист"
     assert by_name["C1"]["control_crime"] is True, "контроль: голый диспетчер создал файл живьём"
     assert by_name["C2"]["control_leak_hits"] == 1, "контроль: утечка состоялась живьём"
     assert by_name["C5"]["exit_code"] == 0, "PID 1 умер по-записанному"
@@ -70,11 +69,11 @@ def test_committed_live_red_blood_is_valid_and_complete() -> None:
     assert {"w10r-sc1-fs", "w10r-sc2-net", "w10r-sc3-children", "w10r-sc4-replace", "w10r-sc4-bind",
             "w10r-sc5-outage", "w10r-sc7-budget", "w10r-sc9-ghost", "w10r-sc9-tool"} <= traces
 
-    # С1+С2: страж прервал два живых греха ДО факта; С3: ни одного security.violation — находка в крови
+    # С1+С2: страж прервал два живых греха ДО факта; С3: страж увидел детёныша — находка перевёрнута (v0.7.0)
     violations = [e for e in events if e["type"] == "security.violation"]
-    assert {e["trace_id"] for e in violations} == {"w10r-sc1-fs", "w10r-sc2-net"}
+    assert {e["trace_id"] for e in violations} == {"w10r-sc1-fs", "w10r-sc2-net", "w10r-sc3-children"}
     sc3 = [e["type"] for e in events if e["trace_id"] == "w10r-sc3-children"]
-    assert "act" in sc3 and "security.violation" not in sc3, "находка С3 обязана жить в крови как обычный act"
+    assert "security.violation" in sc3 and "act" not in sc3, "честный родитель отдал нарушение детёныша в кровь"
 
     sc7 = [e for e in events if e["trace_id"] == "w10r-sc7-budget"]
     assert sum(1 for e in sc7 if e["type"] == "alert" and e["organ"] == "greedy") == 2, "per-call перерасход пойман дважды"

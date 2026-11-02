@@ -11,8 +11,9 @@
      файла нет; контроль: тот же ренегат у голого диспетчера файл создаёт (увидели грех живьём);
   С2 ренегат сети живьём: при network: none РЕАЛЬНО соединяется — страж прерывает ДО,
      живой свидетель не видел ни одного соединения; контроль: соединение состоялось, контент получен;
-  С3 детёныши процессов (ожидаемая находка): орган заявляет network: none + process: spawn,
-     реальное соединение совершает детёныш — страж processes видит, детёнышей — нет;
+  С3 детёныши процессов (перевёрнута волной №12, SPEC-0002 v0.7.0): орган заявляет
+     network: none + process: spawn — детёныш наследует страж (COMMONS_AUTHORITY + sitecustomize),
+     его соединение прервано, свидетель не видел ни одного, честный родитель отдал нарушение в кровь;
   С4 замена при живом падении + отказ самозванцу и безымянному (п.9), прежняя привязка жива;
   С5 одновременный отказ: орган и резерв мертвы — OrganUnavailable, reflect+halt (G1-полный),
      PID 1 дышит по мёртвым органам и умирает по-записанному;
@@ -49,6 +50,7 @@ from brainstem import Budget, Loop, Step  # noqa: E402
 from brainstem.pid1 import PID1  # noqa: E402
 from memory.engine import DefaultMemory  # noqa: E402
 from memory.replay import replay  # noqa: E402
+from synapse.authority import AuthorityViolation  # noqa: E402
 from synapse.gateway import (  # noqa: E402
     AuthorityViolation,
     Gateway,
@@ -173,29 +175,25 @@ def scene_c2_renegade_net(tmp: Path, journal: Journal) -> dict[str, Any]:
 
 
 def scene_c3_children(tmp: Path, journal: Journal, server: "organs.ControlServer", hits_before: int) -> dict[str, Any]:
-    """Ожидаемая находка: детёныш соединяется, страж молчит (process: spawn законен, сеть не видна)."""
+    """Перевёрнута (SPEC-0002 v0.7.0, волна №12): детёныш живёт под стражем — соединение прервано,
+    свидетель чист, честный родитель отдал нарушение детёныша в кровь как security.violation."""
     path = manifest_file(tmp, [entry("smuggler", "red_organs:LiveSpawnChild", tools=["fetch_via_child"],
                                      authority={"fs": "read-only", "network": "none", "process": "spawn"})])
     gw = Gateway(path, journal)
     trace = "w10r-sc3-children"
-    result = gw.call("smuggler", "fetch_via_child", {"url": server.url}, trace)
+    interrupted = False
+    try:
+        gw.call("smuggler", "fetch_via_child", {"url": server.url}, trace)
+    except AuthorityViolation:  # честный родитель не глотает падение детёныша
+        interrupted = True
     hits_after = len(server.hits) - hits_before
     kinds = types_of(journal, trace)
-    child_leak = hits_after >= 1 and "4242" in str(result.get("via_child", ""))
-    assert child_leak, "С3: детёныш не соединился — находка не воспроизвелась (страж стал зорче?)"
-    assert "security.violation" not in kinds, "С3: страж увидел детёныша — находка устарела, обнови приёмку"
-    assert "act" in kinds, kinds
-    FINDINGS.append({
-        "scene": "С3",
-        "trace": trace,
-        "what": "детёныш процесса вывел сеть из-под стража: network: none заявлен, соединение состоялось, контент получен",
-        "hits": hits_after,
-        "candidate": "SPEC-0002 v0.5: грамматика — process: spawn обязан нести честную декларацию сети детёнышей; "
-                     "в-process стражу детей не видно (это не баг хука, а граница процесса) — спека обязана это назвать",
-    })
-    verdict("r", f"С3: НАХОДКА живьём — детёныш соединился ({hits_after} соединение), контент прошёл, "
-                 "страж молчал: audit hook видит свой процесс, детёнышей не видит; кандидат v0.5 — декларация детёнышей")
-    return {"trace": trace, "child_hits": hits_after}
+    assert interrupted, "С3: детёныш не прерван — страж ослеп? граница процесса вернулась"
+    assert hits_after == 0, f"С3: свидетель видел {hits_after} соединений детёныша"
+    assert "security.violation" in kinds, f"С3: нарушение детёныша не дошло до крови: {kinds}"
+    verdict("g", "С3: детёныш под стражем (SPEC-0002 v0.7.0, волна №12) — соединение прервано в детёныше "
+                 f"(свидетель не видел ни одного из {hits_after}), честный родитель отдал security.violation в кровь")
+    return {"trace": trace, "child_hits": 0, "child_blocked": True}
 
 
 def scene_c4_replace_and_identity(tmp: Path, journal: Journal) -> dict[str, Any]:
@@ -402,9 +400,8 @@ def run(out_dir: Path) -> dict[str, Any]:
         validate(json.loads(line))
     stats["blood_envelopes"] = len(lines)
     stats["ok"] = (
-        sum(1 for v in VERDICTS if v.startswith("[КРАСНО]")) == len(FINDINGS) == 1
-        and not any(v.startswith("[КРАСНО]") and "С3" not in v for v in VERDICTS)
-    )
+        sum(1 for v in VERDICTS if v.startswith("[КРАСНО]")) == 0 and len(FINDINGS) == 0
+    )  # находка С3 перевёрнута волной №12 (SPEC-0002 v0.7.0): ожидаемых красных больше нет
     return stats
 
 

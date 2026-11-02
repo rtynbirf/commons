@@ -13,7 +13,8 @@
     {
       "name": "C3",
       "trace": "w10r-sc3-children",
-      "child_hits": 1
+      "child_hits": 0,
+      "child_blocked": true
     },
     {
       "name": "C4",
@@ -46,15 +47,7 @@
       ]
     }
   ],
-  "findings": [
-    {
-      "scene": "С3",
-      "trace": "w10r-sc3-children",
-      "what": "детёныш процесса вывел сеть из-под стража: network: none заявлен, соединение состоялось, контент получен",
-      "hits": 1,
-      "candidate": "SPEC-0002 v0.5: грамматика — process: spawn обязан нести честную декларацию сети детёнышей; в-process стражу детей не видно (это не баг хука, а граница процесса) — спека обязана это назвать"
-    }
-  ],
+  "findings": [],
   "blood_envelopes": 34,
   "ok": true
 }

@@ -8,8 +8,9 @@
 - LiveDead — не отвечает healthcheck'у.
 - LiveRenegadeFile — молчаливый ренегат fs: РЕАЛЬНО пишет файл при fs: read-only.
 - LiveRenegadeNet — молчаливый ренегат сети: РЕАЛЬНО соединяется при network: none.
-- LiveSpawnChild — ренегат-родитель: process: spawn заявлен, network: none заявлен,
-  но РЕАЛЬНОГО соединения совершает детёныш-процесс — смотрит, увидит ли страж.
+- LiveSpawnChild — ренегат-родитель (перевёрнут волной №12, SPEC-0002 v0.7.0): process: spawn
+  заявлен, network: none заявлен; детёныш живёт под стражем (наследование COMMONS_AUTHORITY),
+  его соединение прервано — честный родитель отдаёт нарушение детёныша в invoke (join-and-report).
 - LiveOverspender — возвращает честно-чреватую цену (per-call лимит и трейс-бюджет).
 """
 from __future__ import annotations
@@ -24,6 +25,7 @@ from threading import Thread
 from typing import Any
 
 from blood.envelope import Cost
+from synapse.authority import AuthorityViolation
 
 
 class LiveEcho:
@@ -125,6 +127,8 @@ class LiveSpawnChild:
         started = time.monotonic()
         proc = subprocess.run([sys.executable, "-c", code, payload["url"]], capture_output=True, text=True, timeout=15)
         if proc.returncode != 0:
+            if "AuthorityViolation" in proc.stderr:  # детёныш прерван стражем (v0.7.0) — не глотаем
+                raise AuthorityViolation(f"детёныш прерван стражем: {proc.stderr.strip()[-160:]}")
             raise RuntimeError(f"детёныш не справился: {proc.stderr.strip()[:200]}")
         self.crimes.append("child_connected")
         return {"via_child": proc.stdout.strip()}, Cost(tokens_in=2, tokens_out=len(proc.stdout), seconds=round(time.monotonic() - started, 3))

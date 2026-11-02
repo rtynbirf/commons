@@ -8,12 +8,18 @@ fs знает пути ({mode, paths}, realpath — симлинк-побег з
 ({hosts, ports}, точное совпадение). Потоки (v0.6.0): поток, рождённый под стражем,
 наследует его (обёртка Thread.start — полномочия связывают код органа, а не поток;
 запись `__pycache__` ленивым импортом прерывается с предписанием прогреть импорты).
+Детёныши (v0.7.0): страж оборачивает subprocess.Popen — питоновский детёныш получает
+конверт COMMONS_AUTHORITY и живёт под полномочиями органа (sitecustomize), скоуп
+{mode: spawn, programs, max_children} декларирует рождение; execve роняет hook —
+чужой бинарник конверта не читает, его syscalls не видны (честная граница).
 """
 
 from __future__ import annotations
 
 import ipaddress
+import json
 import os
+import subprocess
 import sys
 import threading
 from contextlib import contextmanager
@@ -30,6 +36,7 @@ _GUARDED = frozenset({"open", "socket.connect", "socket.bind", "socket.getaddrin
 _WRITE_MODE_CHARS = frozenset("wax+")
 _WRITE_FLAGS = os.O_WRONLY | os.O_RDWR | os.O_APPEND | os.O_CREAT
 _PYCACHE_PRESCRIPTION = "ленивый импорт внутри invoke пишет __pycache__ — прогрейте импорты до вызова (SPEC-0002 п.8)"
+ACTIVE_ENV = "COMMONS_AUTHORITY"  # конверт полномочий детёныша (SPEC-0002 п.8, v0.7.0)
 
 
 class AuthorityViolation(RuntimeError):
@@ -46,9 +53,11 @@ class Guard(NamedTuple):
 
 
 _ACTIVE: ContextVar[Guard | None] = ContextVar("commons-authority-guard", default=None)
-_local = threading.local()  # флаг «уже внутри решения» — защита от рекурсии
+_local = threading.local()  # флаг «уже внутри решения» + счётчик детёнышей вызова
 _hook_lock, _hook_installed, _runtime_roots = threading.Lock(), False, None
 _thread_wrap_installed = False
+_popen_wrap_installed = False
+_repo_root_cached: str | None = None
 
 
 def normalize(authority: Any, organ: str | None = None) -> dict[str, Any]:
@@ -62,8 +71,8 @@ def normalize(authority: Any, organ: str | None = None) -> dict[str, Any]:
         allowed = _AXIS_VALUES.get(axis) if isinstance(axis, str) else None
         if allowed and value in allowed:
             out[axis] = value
-        elif allowed:
-            raise AuthorityConfigError(_where(organ, f"{axis}: неизвестное значение {value!r} (допустимо: {', '.join(allowed)})"))
+        elif axis == "process":
+            out["process"] = _normalize_process(value, organ)
         elif axis == "network":
             out["network"] = _normalize_network(value, organ)
         elif axis == "fs":
@@ -73,11 +82,38 @@ def normalize(authority: Any, organ: str | None = None) -> dict[str, Any]:
     return out
 
 
+def _normalize_process(value: Any, organ: str | None) -> Any:
+    """Ярлык или скоуп {mode: spawn, programs, max_children}: программы — имена без пути,
+    max_children — целое >= 1 (SPEC-0002 п.8, v0.7.0)."""
+    if isinstance(value, str) and value in PROCESS_VALUES:
+        return value
+    if isinstance(value, dict) and "mode" in value and "programs" in value:
+        if value["mode"] != "spawn":
+            raise AuthorityConfigError(_where(organ, "process: скоуп допустим только с mode: spawn (mode: none — ярлык без программ)"))
+        extra = set(value) - {"mode", "programs", "max_children"}
+        if extra:
+            raise AuthorityConfigError(_where(organ, f"process: неизвестные ключи {sorted(extra)} (допустимо: mode, programs, max_children)"))
+        programs = value["programs"]
+        if (not isinstance(programs, list) or not programs
+                or not all(isinstance(p, str) and p.strip() and p.strip() == p
+                           and os.path.basename(p) == p and p not in (".", "..") for p in programs)):
+            raise AuthorityConfigError(_where(organ, "process: programs — непустой список имён программ без разделителей пути"))
+        out: dict[str, Any] = {"mode": "spawn", "programs": [p.strip() for p in programs]}
+        if "max_children" in value:
+            limit = value["max_children"]
+            if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
+                raise AuthorityConfigError(_where(organ, "process: max_children — целое >= 1"))
+            out["max_children"] = limit
+        return out
+    raise AuthorityConfigError(_where(organ, f"process: неизвестное значение {value!r} (допустимо: none, spawn или {{mode: spawn, programs: [...], max_children: N}})"))
+
+
 @contextmanager
 def enforce(authority: dict, organ: str = "-"):
     """Активирует страж на время вызова органа; вложенность поддержана (восстанавливает прежнего)."""
     guard = Guard(organ, authority)
     token = _ACTIVE.set(guard)
+    _local.spawned = 0  # счётчик детёнышей этого вызова (max_children, v0.7.0)
     try:
         _install_hook()
         yield guard
@@ -122,10 +158,10 @@ def _normalize_network(value: Any, organ: str | None) -> Any:
 
 
 def _install_hook() -> None:
-    """Один audit hook на процесс + наследование стража потоками: лениво при первом
-    enforce, идемпотентно, потокобезопасно (SPEC-0002 п.8, v0.6.0)."""
-    global _hook_installed, _thread_wrap_installed
-    if _hook_installed and _thread_wrap_installed:
+    """Один audit hook на процесс + наследование стража потоками и детёнышами: лениво
+    при первом enforce, идемпотентно, потокобезопасно (SPEC-0002 п.8, v0.6.0/v0.7.0)."""
+    global _hook_installed, _thread_wrap_installed, _popen_wrap_installed
+    if _hook_installed and _thread_wrap_installed and _popen_wrap_installed:
         return
     with _hook_lock:
         if not _hook_installed:
@@ -133,6 +169,8 @@ def _install_hook() -> None:
             _hook_installed = True
         if not _thread_wrap_installed:
             _install_thread_inheritance()
+        if not _popen_wrap_installed:
+            _install_popen_inheritance()
 
 
 def _install_thread_inheritance() -> None:
@@ -167,6 +205,77 @@ def _install_thread_inheritance() -> None:
     _thread_wrap_installed = True
 
 
+def _repo_root() -> str:
+    """Корень дома (для PYTHONPATH детёныша: sitecustomize ищем там)."""
+    global _repo_root_cached
+    if _repo_root_cached is None:
+        _repo_root_cached = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return _repo_root_cached
+
+
+def _install_popen_inheritance() -> None:
+    """Детёныш получает конверт полномочий (v0.7.0): обёртка Popen.__init__ — один раз на
+    процесс, идемпотентно. execve роняет audit hook — внутри чужого процесса стража нет;
+    питоновский детёныш загружает страж на старте по конверту COMMONS_AUTHORITY
+    (sitecustomize), чужой бинарник конверта не читает — честная граница (SPEC-0002 п.8).
+    """
+    global _popen_wrap_installed
+    original_init = subprocess.Popen.__init__
+
+    def guarded_init(self: subprocess.Popen, args: Any, *pos_args: Any, **kwargs: Any) -> None:
+        guard = _ACTIVE.get()
+        if guard is not None:
+            args, kwargs = _popen_scope(guard, args, kwargs)
+        original_init(self, args, *pos_args, **kwargs)
+
+    subprocess.Popen.__init__ = guarded_init  # type: ignore[method-assign]
+    _popen_wrap_installed = True
+
+
+def _popen_scope(guard: Guard, args: tuple, kwargs: dict) -> tuple[tuple, dict]:
+    """Рождение детёныша: скоуп (programs/max_children/shell) до создания процесса +
+    конверт полномочий в окружении — наследование и при ярлыке spawn (v0.7.0)."""
+    process = guard.authority.get("process", "none")
+    if isinstance(process, dict):
+        if kwargs.get("shell"):
+            raise AuthorityViolation(_text(guard, "subprocess.Popen", "process: скоуп", "shell: True со скоупом process — argv не разбираем (fail-closed)"))
+        prog_path = kwargs.get("executable") or (args[0] if args else None)
+        program = os.path.basename(os.fsdecode(prog_path)) if isinstance(prog_path, (str, bytes)) and prog_path else None
+        declared = {os.path.basename(os.fsdecode(p)) for p in process["programs"]}
+        if program is None or program not in declared:
+            raise AuthorityViolation(_text(guard, "subprocess.Popen", f"process: programs {process['programs']}", f"программа детёныша вне заявленных программ: {prog_path!r}"))
+        limit = process.get("max_children")
+        if limit is not None:
+            spawned = getattr(_local, "spawned", 0)
+            if spawned >= limit:
+                raise AuthorityViolation(_text(guard, "subprocess.Popen", f"process: max_children {limit}", f"лимит детёнышей исчерпан (рождено {spawned})"))
+            _local.spawned = spawned + 1
+    env = kwargs.get("env")
+    child_env = dict(env) if isinstance(env, dict) else os.environ.copy()  # окружение вызывающего не мутируем
+    child_env[ACTIVE_ENV] = json.dumps({"organ": guard.organ, "authority": guard.authority}, ensure_ascii=False)
+    root = _repo_root()
+    parts = [p for p in child_env.get("PYTHONPATH", "").split(os.pathsep) if p]
+    if root not in parts:
+        child_env["PYTHONPATH"] = os.pathsep.join([root, *parts])
+    kwargs["env"] = child_env
+    return args, kwargs
+
+
+def boot_child(raw: str) -> None:
+    """Загрузка стража в детёныше (v0.7.0): конверт COMMONS_AUTHORITY -> пожизненный страж
+    процесса (contextvar держится до смерти). Битый конверт — AuthorityConfigError:
+    sitecustomize роняет детёныш до первого оператора (fail-closed)."""
+    try:
+        data = json.loads(raw)
+        if not isinstance(data, dict) or not isinstance(data.get("authority"), dict):
+            raise ValueError("конверт обязан быть dict с authority")
+        authority = normalize(data["authority"], organ=str(data.get("organ") or "-"))
+    except Exception as exc:
+        raise AuthorityConfigError(f"детёныш: {ACTIVE_ENV} не разобран ({type(exc).__name__}: {exc})") from None
+    _ACTIVE.set(Guard(str(data.get("organ") or "-"), authority))
+    _install_hook()
+
+
 def _hook(event: str, args: tuple) -> None:
     guard = _ACTIVE.get()
     if guard is None or event not in _GUARDED:
@@ -188,8 +297,8 @@ def _check(guard: Guard, event: str, args: tuple) -> None:
             _check_mutation(guard, event, args)
         elif event.startswith("socket."):
             _check_socket(guard, event, args)
-        elif (process := guard.authority.get("process", "none")) != "spawn":
-            raise AuthorityViolation(_text(guard, "subprocess.Popen", f"process: {process}", "создание процессов запрещено"))
+        elif not _spawn_allowed(guard.authority.get("process", "none")):
+            raise AuthorityViolation(_text(guard, "subprocess.Popen", f"process: {guard.authority.get('process', 'none')}", "создание процессов запрещено"))
     except AuthorityViolation:
         raise
     except Exception as exc:  # кривые args: событие охраняемое — fail-closed (SPEC-0002 G1)
@@ -198,6 +307,11 @@ def _check(guard: Guard, event: str, args: tuple) -> None:
 
 def _text(guard: Guard, event: str, rule: str, detail: str) -> str:
     return f"орган {guard.organ!r}: {event} {detail} — нарушено заявленное правило ({rule})"
+
+
+def _spawn_allowed(process: Any) -> bool:
+    """spawn разрешён ярлыком или скоупом (детальный скоуп проверяет обёртка Popen, v0.7.0)."""
+    return process == "spawn" or (isinstance(process, dict) and process.get("mode") == "spawn")
 
 
 def _pycache_hint(path: Any) -> str:

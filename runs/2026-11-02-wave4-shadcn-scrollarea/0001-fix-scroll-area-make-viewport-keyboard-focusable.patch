@@ -1,0 +1,90 @@
+From a8d1b801f733c8c78021f7fa3ea9c14a5034d1cd Mon Sep 17 00:00:00 2001
+From: rtynbirf <119601232+rtynbirf@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 11:35:27 +0000
+Subject: [PATCH] fix(scroll-area): make viewport keyboard-focusable
+
+The scroll-area viewport carries focus-visible ring styles but no
+tabIndex, so in Safari/WebKit a scroll area whose content has no
+focusable elements cannot take keyboard focus at all; axe-core flags
+scrollable-region-focusable (WCAG 2.1.1/2.1.3, Level A) on
+[data-slot="scroll-area-viewport"]. Chromium and Firefox already
+expose the scroller to the keyboard; WebKit does not (shadcn-ui/ui#12567).
+
+Set tabIndex={0} on the scrollable element in all four live registry
+sources: bases/radix (ScrollAreaPrimitive.Viewport), bases/base
+(Viewport), bases/aria (the scroll region is the root overflow-auto
+div; props spread through it), and the legacy new-york-v4 source for
+consistency. Generated artifacts under styles/ and public/r/ are left
+to the registry build.
+
+The component already renders focus-visible ring styles on the same
+element, so keyboard focus visibility comes for free; mouse users see
+no change. Interactive content inside the area already satisfies the
+axe rule via focusable-content; the added tab-stop only covers the
+static-content case.
+
+Verified: ESLint clean on the touched files; tsc error list identical
+before and after the patch (pre-existing project errors only, none in
+the touched files); prettier-plugin-tailwindcss does not run in the
+preparation environment (pre-existing, fails on untouched files too).
+
+Fixes: #12567
+Signed-off-by: rtynbirf <119601232+rtynbirf@users.noreply.github.com>
+---
+ apps/v4/registry/bases/aria/ui/scroll-area.tsx  | 1 +
+ apps/v4/registry/bases/base/ui/scroll-area.tsx  | 1 +
+ apps/v4/registry/bases/radix/ui/scroll-area.tsx | 1 +
+ apps/v4/registry/new-york-v4/ui/scroll-area.tsx | 1 +
+ 4 files changed, 4 insertions(+)
+
+diff --git a/apps/v4/registry/bases/aria/ui/scroll-area.tsx b/apps/v4/registry/bases/aria/ui/scroll-area.tsx
+index eb1ecebf..3e171056 100644
+--- a/apps/v4/registry/bases/aria/ui/scroll-area.tsx
++++ b/apps/v4/registry/bases/aria/ui/scroll-area.tsx
+@@ -16,6 +16,7 @@ function ScrollArea({
+         "cn-scroll-area relative [scrollbar-width:thin] [scrollbar-color:var(--color-border)_transparent] overflow-auto outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1",
+         className
+       )}
++      tabIndex={0}
+       {...props}
+     >
+       {children}
+diff --git a/apps/v4/registry/bases/base/ui/scroll-area.tsx b/apps/v4/registry/bases/base/ui/scroll-area.tsx
+index a7acc337..60c59bce 100644
+--- a/apps/v4/registry/bases/base/ui/scroll-area.tsx
++++ b/apps/v4/registry/bases/base/ui/scroll-area.tsx
+@@ -17,6 +17,7 @@ function ScrollArea({
+     >
+       <ScrollAreaPrimitive.Viewport
+         data-slot="scroll-area-viewport"
++        tabIndex={0}
+         className="cn-scroll-area-viewport size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
+       >
+         {children}
+diff --git a/apps/v4/registry/bases/radix/ui/scroll-area.tsx b/apps/v4/registry/bases/radix/ui/scroll-area.tsx
+index cd597c80..9c7fa450 100644
+--- a/apps/v4/registry/bases/radix/ui/scroll-area.tsx
++++ b/apps/v4/registry/bases/radix/ui/scroll-area.tsx
+@@ -17,6 +17,7 @@ function ScrollArea({
+     >
+       <ScrollAreaPrimitive.Viewport
+         data-slot="scroll-area-viewport"
++        tabIndex={0}
+         className="cn-scroll-area-viewport size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
+       >
+         {children}
+diff --git a/apps/v4/registry/new-york-v4/ui/scroll-area.tsx b/apps/v4/registry/new-york-v4/ui/scroll-area.tsx
+index 4542a3e2..ca5d5707 100644
+--- a/apps/v4/registry/new-york-v4/ui/scroll-area.tsx
++++ b/apps/v4/registry/new-york-v4/ui/scroll-area.tsx
+@@ -17,6 +17,7 @@ function ScrollArea({
+     >
+       <ScrollAreaPrimitive.Viewport
+         data-slot="scroll-area-viewport"
++        tabIndex={0}
+         className="size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1"
+       >
+         {children}
+-- 
+2.47.3
+

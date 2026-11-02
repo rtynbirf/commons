@@ -238,6 +238,9 @@ cards:
       - date: 2026-11-02
         url: "https://raw.githubusercontent.com/shadcn-ui/ui/main/LICENSE.md"
         fact: "лицензия MIT (shadcn, 2023)"
+      - date: 2026-11-02
+        url: "https://github.com/shadcn-ui/ui/tree/main/.github"
+        fact: "PR-шаблона нет (в .github только issue-шаблоны и CI)"
 
   # --- КОЖА: веб-фреймворк. Ошейников нет; описания PR — человеческие. ---
   - repo: vercel/next.js

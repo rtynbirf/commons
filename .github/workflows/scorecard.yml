@@ -27,7 +27,7 @@ jobs:
           persist-credentials: false
 
       - name: Тело проходит осмотр (OpenSSF Scorecard)
-        uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.4.2 (2026-11-02)
+        uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.5.0 (2026-11-02)
         with:
           results_file: results.sarif
           results_format: sarif

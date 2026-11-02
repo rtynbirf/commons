@@ -2,9 +2,10 @@
 # Источник истины для шлюза: орган без записи здесь для тела не существует (veto).
 # Поле `adapter` — класс адаптера, загружаемый шлюзом динамически:
 # новый орган подключается правкой манифеста, без правки кода шлюза (приёмка SPEC-0002).
-# authority — исполнимая грамматика (SPEC-0002 п.8, v0.4.0): fs: none|read-only|read-write,
-# network: none|localhost|{hosts}|any, process: none|spawn — страж прерывает вызов при выходе за полномочия.
-version: 0.3.0
+# authority — исполнимая грамматика (SPEC-0002 п.8, v0.5.0): fs: none|read-only|read-write|{mode, paths},
+# network: none|localhost|{hosts, ports}|any, process: none|spawn — страж прерывает вызов при выходе за полномочия;
+# скоупы исполняются рантаймом (волна №9): пути — realpath (симлинк-побег закрыт), порты — точное совпадение.
+version: 0.4.0
 updated: 2026-11-02
 transport_default: stdio
 
@@ -18,7 +19,7 @@ organs:
     endpoint: ${OLLAMA_HOST}
     healthcheck: GET /api/tags
     tools: [list_models, generate, chat, embeddings]
-    authority: {network: localhost, fs: none, process: none}
+    authority: {network: {hosts: [localhost], ports: [11434]}, fs: none, process: none}
     adapter: synapse.adapters.ollama:OllamaAdapter
 
   - name: llama.cpp
@@ -30,7 +31,7 @@ organs:
     endpoint: ${LLAMA_SERVER_URL}
     healthcheck: GET /health
     tools: [completion, embedding]
-    authority: {network: localhost, fs: none, process: none}
+    authority: {network: {hosts: [localhost], ports: [8080]}, fs: none, process: none}
     adapter: synapse.adapters.llamacpp:LlamaCppAdapter
     note: 'запас для ollama (SPEC-0001 G2); подключён 2026-11-01 — метаболизм двуорганного пульса (runs/2026-11-01-organism-pulse); запущен: llama-server -m <gguf> --port 8080'
 
@@ -43,7 +44,8 @@ organs:
     command: markitdown-mcp
     healthcheck: initialize handshake
     tools: [convert_to_markdown]
-    # v0.5 бэклог: скоуп каталога входа; до тех пор честный read-only — запись и сеть страж прерывает (SPEC-0002 п.8)
+    # v0.5.0: fs read-only — весь диск на чтение (работа органа — читать файлы пользователя),
+    # запись и сеть страж прерывает (SPEC-0002 п.8)
     # process: spawn — stdio-транспорт и есть процесс органа, порождаемый адаптером при invoke
     authority: {fs: read-only, network: none, process: spawn}
     adapter: synapse.adapters.mcp_stdio:MCPStdioAdapter
@@ -58,9 +60,10 @@ organs:
     command: browser-use-mcp
     healthcheck: initialize handshake
     tools: [navigate, click, extract, screenshot]
-    # v0.5 бэклог: скоуп каталога загрузок и хост-allowlist; до тех пор честно широкие ярлыки, а не необязательные (SPEC-0002 п.8)
+    # v0.5.0: честный скоуп вместо широкого ярлыка — запись только в ${DOWNLOADS_DIR} (незадан — орган не
+    # развёрнут, п.6); сеть any — работа органа и есть весь веб (SPEC-0002 п.8)
     # process: spawn — stdio-транспорт и есть процесс органа, порождаемый адаптером при invoke
-    authority: {network: any, fs: read-write, process: spawn}
+    authority: {network: any, fs: {mode: read-write, paths: ["${DOWNLOADS_DIR}"]}, process: spawn}
     adapter: synapse.adapters.mcp_stdio:MCPStdioAdapter
 
   - name: openclaw

@@ -125,8 +125,21 @@ class FakeRenegade:
             self.crimes.append(f"read:{payload['path']}")
             return {"read": text}, Cost(tokens_in=1, tokens_out=1, seconds=0.01)
         if tool == "phone_home":
-            with socket.create_connection(("127.0.0.1", 1), timeout=0.2):  # попытка сети
-                pass
-            self.crimes.append("connected")
+            host = payload.get("host", "127.0.0.1")
+            port = int(payload.get("port", 1))
+            try:
+                with socket.create_connection((host, port), timeout=0.2):  # попытка сети
+                    pass
+            except OSError as exc:  # слушателя нет — но сам факт попытки прошёл страж (act)
+                return {"connected": False, "reason": str(exc)}, Cost(tokens_in=1, tokens_out=1, seconds=0.01)
+            self.crimes.append(f"connected:{host}:{port}")
             return {"phoned": True}, Cost(tokens_in=1, tokens_out=1, seconds=0.01)
+        if tool == "dial_dns":
+            host = payload.get("host", "localhost")
+            try:
+                socket.getaddrinfo(host, None)
+            except OSError as exc:
+                return {"resolved": False, "reason": str(exc)}, Cost(tokens_in=1, tokens_out=1, seconds=0.01)
+            self.crimes.append(f"dns:{host}")
+            return {"resolved": True}, Cost(tokens_in=1, tokens_out=1, seconds=0.01)
         raise AssertionError(f"неизвестный инструмент {tool!r}")

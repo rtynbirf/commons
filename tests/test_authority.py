@@ -337,3 +337,186 @@ def test_loop_survives_invoke_fall_via_reserve(tmp_path: Path, journal: Journal)
     assert replacement["payload"] == {"from": "fallen", "to": "reserve"}
     (reflect,) = journal.by_type("reflect")
     assert reflect["payload"]["satisfied"] is True
+
+
+# --- l) скоупы v0.5.0 (волна №9): страж знает пути и порты ---------------------
+
+
+def test_scoped_fs_write_inside_scope_is_alive(tmp_path: Path, journal: Journal) -> None:
+    """Приёмка v0.5.0: запись внутри заявленного корня жива — скоуп не ломает честную работу."""
+    downloads = tmp_path / "downloads"
+    downloads.mkdir()
+    gateway = _gateway(
+        tmp_path,
+        journal,
+        [_organ("scoped", adapter="tests.fakes:FakeRenegade", tools=["smuggle_file"],
+                authority={"fs": {"mode": "read-write", "paths": [str(downloads)]}, "network": "none", "process": "none"})],
+    )
+    result = gateway.call("scoped", "smuggle_file", {"path": str(downloads / "ok.txt")}, "scope-in")
+    assert result == {"smuggled": True}
+    assert (downloads / "ok.txt").read_text(encoding="utf-8") == "контрабанда"
+    assert not journal.by_type("security.violation")
+    (act,) = journal.by_type("act")
+    assert act["trace_id"] == "scope-in"
+
+
+def test_scoped_fs_write_outside_scope_is_interrupted(tmp_path: Path, journal: Journal) -> None:
+    """Приёмка v0.5.0: ренегат со скоупом пишет вне каталога — security.violation, файл не создан."""
+    downloads = tmp_path / "downloads"
+    downloads.mkdir()
+    target = tmp_path / "outside.txt"
+    gateway = _gateway(
+        tmp_path,
+        journal,
+        [_organ("scoped", adapter="tests.fakes:FakeRenegade", tools=["smuggle_file"],
+                authority={"fs": {"mode": "read-write", "paths": [str(downloads)]}, "network": "none", "process": "none"})],
+    )
+    renegade = _adapter(gateway, FakeRenegade)
+
+    with pytest.raises(AuthorityViolation):
+        gateway.call("scoped", "smuggle_file", {"path": str(target)}, "scope-out")
+
+    assert not target.exists(), "страж пропустил запись вне корня"
+    assert renegade.crimes == [], "запись успела случиться до прерывания"
+    (violation,) = journal.by_type("security.violation")
+    assert violation["organ"] == "scoped" and not journal.by_type("act")
+
+
+def test_scoped_fs_read_only_blocks_write_inside_root(tmp_path: Path, journal: Journal) -> None:
+    """Приёмка v0.5.0: read-only-скоуп — чтение внутри живо, запись внутри прервана."""
+    downloads = tmp_path / "downloads"
+    downloads.mkdir()
+    (downloads / "note.txt").write_text("заметка", encoding="utf-8")
+    gateway = _gateway(
+        tmp_path,
+        journal,
+        [_organ("reader", adapter="tests.fakes:FakeRenegade", tools=["read_thing", "smuggle_file"],
+                authority={"fs": {"mode": "read-only", "paths": [str(downloads)]}, "network": "none", "process": "none"})],
+    )
+    result = gateway.call("reader", "read_thing", {"path": str(downloads / "note.txt")}, "scope-ro-read")
+    assert result["read"] == "заметка"
+    with pytest.raises(AuthorityViolation):
+        gateway.call("reader", "smuggle_file", {"path": str(downloads / "nope.txt")}, "scope-ro-write")
+    assert not (downloads / "nope.txt").exists()
+
+
+def test_scoped_fs_python_runtime_reads_survive(tmp_path: Path, journal: Journal) -> None:
+    """Приёмка v0.5.0: исключение рантайма Python живо и при скоупе — иначе орган не жив."""
+    import os as _os
+
+    gateway = _gateway(
+        tmp_path,
+        journal,
+        [_organ("reader", adapter="tests.fakes:FakeRenegade", tools=["read_thing"],
+                authority={"fs": {"mode": "read-only", "paths": [str(tmp_path)]}, "network": "none", "process": "none"})],
+    )
+    stdlib_file = _os.__file__
+    result = gateway.call("reader", "read_thing", {"path": str(stdlib_file)}, "scope-runtime")
+    assert "read" in result
+
+
+def test_scoped_fs_symlink_escape_is_closed(tmp_path: Path, journal: Journal) -> None:
+    """Приёмка v0.5.0: симлинк внутри корня, цель вне — страж сверяет realpath и прерывает."""
+    downloads = tmp_path / "downloads"
+    downloads.mkdir()
+    secret = tmp_path / "secret.txt"
+    secret.write_text("секрет", encoding="utf-8")
+    bait = downloads / "bait.txt"
+    bait.symlink_to(secret)
+    gateway = _gateway(
+        tmp_path,
+        journal,
+        [_organ("scoped", adapter="tests.fakes:FakeRenegade", tools=["smuggle_file"],
+                authority={"fs": {"mode": "read-write", "paths": [str(downloads)]}, "network": "none", "process": "none"})],
+    )
+
+    with pytest.raises(AuthorityViolation):
+        gateway.call("scoped", "smuggle_file", {"path": str(bait)}, "scope-link")
+
+    assert secret.read_text(encoding="utf-8") == "секрет", "симлинк-побег доёл файл"
+    assert not journal.by_type("act")
+
+
+def test_scoped_fs_rename_outside_root_interrupted(tmp_path: Path) -> None:
+    """Приёмка v0.5.0: мутации при скоупе — rename с целью вне корня прерван, внутри жив."""
+    import os as _os
+
+    from synapse.authority import enforce, normalize
+
+    root = tmp_path / "scope"
+    root.mkdir()
+    (root / "a.txt").write_text("a", encoding="utf-8")
+    authority = normalize({"fs": {"mode": "read-write", "paths": [str(root)]}})
+    with pytest.raises(AuthorityViolation):
+        with enforce(authority, "mutator"):
+            _os.rename(root / "a.txt", tmp_path / "b.txt")
+    assert (root / "a.txt").exists(), "файл переехал вопреки скоупу"
+    with enforce(authority, "mutator"):
+        _os.rename(root / "a.txt", root / "c.txt")
+    assert (root / "c.txt").exists()
+
+
+def test_ports_scope_declared_alive_undeclared_interrupted(tmp_path: Path, journal: Journal) -> None:
+    """Приёмка v0.5.0: {hosts, ports} — заявленный порт жив, незаявленный прерван ДО попытки."""
+    import socket as _socket
+
+    listener = _socket.socket()
+    listener.bind(("127.0.0.1", 0))
+    listener.listen(1)
+    open_port = listener.getsockname()[1]
+    try:
+        gateway = _gateway(
+            tmp_path,
+            journal,
+            [_organ("porty", adapter="tests.fakes:FakeRenegade", tools=["phone_home", "dial_dns"],
+                    authority={"fs": "none", "network": {"hosts": ["127.0.0.1"], "ports": [open_port]}, "process": "none"})],
+        )
+        result = gateway.call("porty", "phone_home", {"host": "127.0.0.1", "port": open_port}, "port-ok")
+        assert result["phoned"] is True
+        porty = _adapter(gateway, FakeRenegade)
+        with pytest.raises(AuthorityViolation):
+            gateway.call("porty", "phone_home", {"host": "127.0.0.1", "port": open_port + 1}, "port-bad")
+        assert porty.crimes == [f"connected:127.0.0.1:{open_port}"], "коннект на незаявленный порт успел случиться"
+        (violation,) = [e for e in journal.by_type("security.violation")]
+        assert violation["trace_id"] == "port-bad"
+    finally:
+        listener.close()
+
+
+def test_ports_scope_dns_carries_only_host(tmp_path: Path, journal: Journal) -> None:
+    """Приёмка v0.5.0: getaddrinfo не несёт порта — хостовое правило, портовое не применяется."""
+    gateway = _gateway(
+        tmp_path,
+        journal,
+        [_organ("porty", adapter="tests.fakes:FakeRenegade", tools=["dial_dns"],
+                authority={"fs": "none", "network": {"hosts": ["localhost"], "ports": [11434]}, "process": "none"})],
+    )
+    result = gateway.call("porty", "dial_dns", {"host": "localhost"}, "dns-ok")
+    assert result["resolved"] is True
+    with pytest.raises(AuthorityViolation):
+        gateway.call("porty", "dial_dns", {"host": "example.invalid"}, "dns-bad")
+
+
+@pytest.mark.parametrize(
+    ("authority", "почему"),
+    [
+        ({"fs": "none", "network": {"ports": [80]}, "process": "none"}, "ports без hosts"),
+        ({"fs": "none", "network": {"hosts": ["h"], "ports": ["80"]}, "process": "none"}, "порт-строка"),
+        ({"fs": "none", "network": {"hosts": ["h"], "ports": [0]}, "process": "none"}, "порт 0"),
+        ({"fs": "none", "network": {"hosts": ["h"], "ports": [70000]}, "process": "none"}, "порт вне диапазона"),
+        ({"fs": {"mode": "read-write", "paths": ["rel/path"]}, "network": "none", "process": "none"}, "относительный путь"),
+        ({"fs": {"mode": "read-write", "paths": []}, "network": "none", "process": "none"}, "пустой paths"),
+        ({"fs": {"paths": ["/abs"]}, "network": "none", "process": "none"}, "скоуп без mode"),
+        ({"fs": {"mode": "walrus", "paths": ["/abs"]}, "network": "none", "process": "none"}, "неизвестный режим"),
+        ({"fs": {"mode": "read-write", "paths": ["/abs", ""]}, "network": "none", "process": "none"}, "пустой путь"),
+    ],
+)
+def test_scoped_grammar_fail_closed(
+    tmp_path: Path,
+    journal: Journal,
+    authority: dict[str, Any],
+    почему: str,
+) -> None:
+    """Приёмка v0.5.0: неисполнимые скоупы — шлюз не стартует (fail-closed грамматика)."""
+    with pytest.raises(GatewayConfigError):
+        _gateway(tmp_path, journal, [_organ("bad", adapter="tests.fakes:FakeEcho", tools=["echo"], authority=authority)])

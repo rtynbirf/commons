@@ -62,6 +62,7 @@ class Gateway:
             raise GatewayConfigError("манифест: отсутствует список organs")
 
         self._organs: dict[str, dict[str, Any]] = {}
+        undeployed_authority: set[str] = set()
         for entry in raw["organs"]:
             if not isinstance(entry, dict) or not REQUIRED_FIELDS.issubset(entry):
                 missing = REQUIRED_FIELDS - set(entry or {})
@@ -77,18 +78,22 @@ class Gateway:
                 raise GatewayConfigError(f"манифест: {name}: для транспорта {transport} нужны {sorted(absent)}")
             if not isinstance(entry["tools"], list) or not entry["tools"]:
                 raise GatewayConfigError(f"манифест: {name}: список tools пуст или не список")
-            try:
-                entry["authority"] = normalize_authority(entry.get("authority"))
-            except AuthorityConfigError as exc:
-                raise GatewayConfigError(f"манифест: {name}: authority: {exc}") from exc  # SPEC-0002 п.8: грамматика исполнима
-            if self._unresolved(name, entry):
-                # SPEC-0002 п.6: адрес/команда не развёрнуты — орган не получает адаптера и трафика,
-                # но запись в манифесте жива (veto-семантика и замены работают как раньше).
+            unresolved = self._unresolved(name, entry)
+            if unresolved:
+                # SPEC-0002 п.6: адрес/команда или authority-путь не развёрнуты — орган не получает
+                # трафика, но запись в манифесте жива (veto-семантика и замены как раньше).
+                if unresolved.endswith(".authority"):
+                    undeployed_authority.add(name)  # v0.5.0: скоуп не развернулся — страж не стартует, адаптера нет
                 self._organs[name] = entry
                 continue
             for field in ("endpoint", "command"):
                 if field in entry:
                     entry[field] = self._expand_env(entry[field])
+            entry["authority"] = self._expand_env(entry.get("authority"))
+            try:
+                entry["authority"] = normalize_authority(entry["authority"])
+            except AuthorityConfigError as exc:
+                raise GatewayConfigError(f"манифест: {name}: authority: {exc}") from exc  # SPEC-0002 п.8: грамматика исполнима
             self._organs[name] = entry
 
         subs = raw.get("substitutions") or {}
@@ -100,6 +105,8 @@ class Gateway:
 
         self._adapters: dict[str, Any] = {}
         for name, entry in self._organs.items():
+            if name in undeployed_authority:
+                continue  # орган не развёрнут (п.6): страж не может получить свои полномочия — адаптера нет
             dotted = entry.get("adapter")
             if dotted:
                 adapter = self._instantiate_adapter(dotted, entry)
@@ -110,22 +117,39 @@ class Gateway:
 
     @staticmethod
     def _unresolved(name: str, entry: dict[str, Any]) -> str | None:
-        """SPEC-0002 п.6: незаданная ${VAR} в endpoint/command = орган не развёрнут."""
+        """SPEC-0002 п.6: незаданная ${VAR} в endpoint/command/authority = орган не развёрнут (v0.5.0: и в путях скоупов)."""
         for field in ("endpoint", "command"):
             value = entry.get(field)
             items = value if isinstance(value, list) else [value]
             for item in items:
                 if isinstance(item, str) and any(var not in os.environ for var in _PLACEHOLDER.findall(item)):
                     return f"{name}.{field}"
+        for item in Gateway._strings(entry.get("authority")):
+            if any(var not in os.environ for var in _PLACEHOLDER.findall(item)):
+                return f"{name}.authority"
         return None
 
     @staticmethod
+    def _strings(value: Any):
+        """Все строки внутри значения (рекурсивно: dict/list/str) — для проверки плейсхолдеров."""
+        if isinstance(value, str):
+            yield value
+        elif isinstance(value, dict):
+            for item in value.values():
+                yield from Gateway._strings(item)
+        elif isinstance(value, list):
+            for item in value:
+                yield from Gateway._strings(item)
+
+    @staticmethod
     def _expand_env(value: Any) -> Any:
-        """Расширяет ${VAR} (переменные гарантированно заданы — см. _unresolved)."""
+        """Расширяет ${VAR} (переменные гарантированно заданы — см. _unresolved), включая dict/list."""
         if isinstance(value, str):
             return _PLACEHOLDER.sub(lambda m: os.environ[m.group(1)], value)
         if isinstance(value, list):
             return [Gateway._expand_env(item) for item in value]
+        if isinstance(value, dict):
+            return {key: Gateway._expand_env(item) for key, item in value.items()}
         return value
 
     @staticmethod

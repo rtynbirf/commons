@@ -1,18 +1,22 @@
 # SPDX-FileCopyrightText: 2026 COMMONS contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Приёмки волны №23 — правило тишины и бюджет внимания человека (W-0032 + W-0025).
+"""Приёмки волны №23 (стык 0.42.1) — бюджет внимания человека (W-0025) и зерно цены в контуре тишины.
 
-W-0032 (SPEC-0004 v0.2.0 п.8, поверх ADR-0006): у тишины есть записанное окно
-и поведение по умолчанию — необратимое действие, по которому одобрение не
-пришло за окно, отменяется по-записанному (veto от правила, не от Человека),
-а не ждёт вечно. Запрос одобрения — событие крови с ЗАЯВЛЕННЫМ окном: запроса
-без окна не существует (fail-closed, ADR-0014).
+W-0032 (правило тишины) живёт контуром `brainstem/silence.py` — принят базой
+стыка по дисциплине стыка волны №18; его приёмки — `tests/test_silence.py` (17).
+Параллельная машина крови нашей линии (`brainstem/approval.py`) выметена на
+стыке: её кровь (`runs/2026-11-03-wave23-silence-attention`) — вещественное
+доказательство, валидна навсегда (гематология), читается метриками и дневником
+наравне с контурной (оба диалекта).
 
 W-0025 (SPEC-0004 v0.2.0 п.9, зерно FR-09 пакета «Human Membrane»): внимание
 Человека — ресурс организма: прерывания и вопросы учтены в цене события
 (`cost.attention` рядом с токенами и секундами), политика P0–P3, косметические
 вопросы с безопасным default не задаются, скрытой поведенческой телеметрии
 нет — счёт только по заявленной крови, неизмеримое = UNKNOWN.
+
+Зерно стыка: вопрос контура о необратимом — P0-прерывание — несёт цену
+(`ApprovalRequest.priority` → `cost.attention=1`, SPEC-0004 п.8).
 """
 from __future__ import annotations
 
@@ -23,22 +27,14 @@ import pytest
 from blood.envelope import Cost, make
 from blood.journal import Journal
 from brainstem import Budget, Loop, Step
-from brainstem.approval import (
-    CANCELLED_BY_SILENCE,
-    GRANTED,
-    WAITING,
-    answer,
-    grant,
-    pending,
-    request,
-)
 from brainstem.attention import (
     ATTENTION_PRIORITIES,
     attention_cost,
     metrics,
     should_ask,
 )
-from synapse.gateway import Gateway
+from brainstem.silence import ANSWER_APPROVED, ApprovalRequest, await_approval
+from tests.test_silence import FakeClock, fake_sleep
 
 from .conftest import step  # noqa: TID252
 
@@ -47,152 +43,6 @@ def _ts(shift_seconds: float = 0.0) -> str:
     """Момент для injected-времени: RFC 3339 с Z, как ставит журнал."""
     base = datetime(2026, 11, 3, 12, 0, 0, tzinfo=timezone.utc)
     return (base + timedelta(seconds=shift_seconds)).isoformat(timespec="milliseconds").replace("+00:00", "Z")
-
-
-def _parse(ts: str) -> datetime:
-    return datetime.fromisoformat(ts.replace("Z", "+00:00"))
-
-
-# --- W-0032: запрос одобрения — грамматика с окном, fail-closed ---
-
-
-def test_request_records_window_priority_and_attention() -> None:
-    journal = Journal()
-    envelope = request(
-        journal,
-        what="удалить прод-таблицу",
-        window_seconds=3600,
-        priority="P0",
-        trace_id="t1",
-        now=_ts(0),
-    )
-    stored = journal.by_type("approval.request")
-    assert len(stored) == 1
-    assert stored[0]["payload"]["what"] == "удалить прод-таблицу"
-    assert stored[0]["payload"]["window_seconds"] == 3600
-    assert stored[0]["payload"]["priority"] == "P0"
-    assert stored[0]["payload"]["expires_at"] == _ts(3600)
-    assert stored[0]["source"] == "pid1"
-    assert stored[0]["cost"]["attention"] == 1  # P0 — прерывание Человека
-    assert envelope["id"] == stored[0]["id"]
-
-
-@pytest.mark.parametrize("window", [None, 0, -5])
-def test_request_without_window_fail_closed(window: int | None) -> None:
-    journal = Journal()
-    with pytest.raises(ValueError):
-        request(
-            journal,
-            what="шаг",
-            window_seconds=window,  # type: ignore[arg-type]
-            priority="P0",
-            trace_id="t1",
-            now=_ts(0),
-        )
-    assert len(journal.all()) == 0  # конверта нет — события не существует
-
-
-def test_request_bad_priority_fail_closed() -> None:
-    journal = Journal()
-    with pytest.raises(ValueError):
-        request(
-            journal,
-            what="шаг",
-            window_seconds=60,
-            priority="P9",  # не из словаря — не грамматика (ADR-0014)
-            trace_id="t1",
-            now=_ts(0),
-        )
-    assert len(journal.all()) == 0
-
-
-def test_request_retry_is_deduped_a01() -> None:
-    journal = Journal()
-    first = request(journal, what="шаг", window_seconds=60, priority="P0", trace_id="t1", now=_ts(0))
-    second = request(journal, what="шаг", window_seconds=60, priority="P0", trace_id="t1", now=_ts(5))
-    assert first["id"] == second["id"]
-    assert len(journal.by_type("approval.request")) == 1  # повторная заявка — одно событие
-
-
-# --- W-0032: ответ — грант до окна, тишина за окном, ожидание до окна ---
-
-
-def test_grant_before_expiry_is_recorded_with_causation() -> None:
-    journal = Journal()
-    ask = request(journal, what="шаг", window_seconds=600, priority="P0", trace_id="t1", now=_ts(0))
-    give = grant(journal, ask, who="PID 1", trace_id="t1", now=_ts(60))
-    assert give["type"] == "approval.grant"
-    assert give["payload"]["request_id"] == ask["id"]
-    assert give["payload"]["who"] == "PID 1"
-    assert give["causation_id"] == ask["id"]  # честное происхождение (SPEC-0003 п.10)
-    verdict, envelope = answer(journal, ask, now=_ts(120))
-    assert verdict == GRANTED
-    assert envelope is not None and envelope["type"] == "approval.grant"
-
-
-def test_grant_retry_is_deduped_a01() -> None:
-    journal = Journal()
-    ask = request(journal, what="шаг", window_seconds=600, priority="P0", trace_id="t1", now=_ts(0))
-    first = grant(journal, ask, who="PID 1", trace_id="t1", now=_ts(60))
-    second = grant(journal, ask, who="PID 1", trace_id="t1", now=_ts(90))
-    assert first["id"] == second["id"]
-    assert len(journal.by_type("approval.grant")) == 1
-
-
-def test_answer_waiting_before_expiry() -> None:
-    journal = Journal()
-    ask = request(journal, what="шаг", window_seconds=600, priority="P0", trace_id="t1", now=_ts(0))
-    verdict, envelope = answer(journal, ask, now=_ts(120))
-    assert verdict == WAITING
-    assert envelope is None
-    assert journal.by_type("veto") == ()  # ожидание ничего не пишет и ничего не отменяет
-
-
-def test_silence_cancels_after_window_by_record() -> None:
-    journal = Journal()
-    ask = request(journal, what="шаг", window_seconds=600, priority="P0", trace_id="t1", now=_ts(0))
-    verdict, envelope = answer(journal, ask, now=_ts(601))
-    assert verdict == CANCELLED_BY_SILENCE
-    assert envelope is not None and envelope["type"] == "veto"
-    assert envelope["payload"]["request_id"] == ask["id"]
-    assert "тишины" in envelope["payload"]["reason"]
-    assert envelope["source"] == "pid1"  # отмена правилом дома, не чужой голос
-    vetoes = journal.by_type("veto")
-    assert len(vetoes) == 1
-
-
-def test_silence_answer_is_idempotent_a01() -> None:
-    journal = Journal()
-    ask = request(journal, what="шаг", window_seconds=600, priority="P0", trace_id="t1", now=_ts(0))
-    first_verdict, first = answer(journal, ask, now=_ts(601))
-    second_verdict, second = answer(journal, ask, now=_ts(700))
-    assert first_verdict == second_verdict == CANCELLED_BY_SILENCE
-    assert first is not None and second is not None
-    assert first["id"] == second["id"]
-    assert len(journal.by_type("veto")) == 1  # повторное правило не пишет вторую строку
-
-
-def test_late_grant_does_not_revive_cancelled() -> None:
-    journal = Journal()
-    ask = request(journal, what="шаг", window_seconds=600, priority="P0", trace_id="t1", now=_ts(0))
-    verdict_before, _ = answer(journal, ask, now=_ts(601))
-    assert verdict_before == CANCELLED_BY_SILENCE
-    give = grant(journal, ask, who="PID 1", trace_id="t1", now=_ts(900))
-    assert give["type"] == "approval.grant"  # весть записана — кровь append-only
-    verdict_after, envelope = answer(journal, ask, now=_ts(950))
-    assert verdict_after == CANCELLED_BY_SILENCE  # опоздавшее «да» не исполняет необратимое
-    assert envelope is not None and envelope["type"] == "veto"
-
-
-def test_pending_lists_only_unanswered() -> None:
-    journal = Journal()
-    given = request(journal, what="шаг-а", window_seconds=600, priority="P0", trace_id="t1", now=_ts(0))
-    expired = request(journal, what="шаг-б", window_seconds=10, priority="P1", trace_id="t1", now=_ts(0))
-    waiting = request(journal, what="шаг-в", window_seconds=600, priority="P1", trace_id="t1", now=_ts(0))
-    grant(journal, given, who="PID 1", trace_id="t1", now=_ts(30))
-    answer(journal, expired, now=_ts(60))
-    left = pending(journal, now=_ts(60))
-    assert [item["id"] for item in left] == [waiting["id"]]
 
 
 # --- W-0025: словарь внимания, цена и политика вопросов ---
@@ -243,12 +93,45 @@ def test_cost_attention_roundtrip_and_old_blood() -> None:
     assert totals.totals("t1").attention == 1  # итоги трейса несут и внимание
 
 
-def test_metrics_count_only_declared_blood() -> None:
+def test_metrics_unknown_stays_unknown() -> None:
+    report = metrics([], now=_ts(0))
+    assert report["questions"] == 0
+    assert report["wait_seconds_max"] is None  # неизмеримое = UNKNOWN, не ноль
+    assert report["dismissed_fraction"] is None
+
+
+# --- стык: метрики читают оба диалекта крови одобрения ---
+
+
+def _historical_dialect(journal: Journal) -> None:
+    """Кровь волны №23 нашей линии (диалект approval.request/grant) — свидетельство."""
+    ask_a = make(
+        "approval.request", "pid1", "self", "t1",
+        {"what": "шаг-а", "window_seconds": 600, "priority": "P0", "expires_at": _ts(600)},
+        Cost(attention=1), idempotency_key="hist:request:a", occurred_at=_ts(0), trust="unverified",
+    )
+    journal.append(ask_a)
+    journal.append(make(
+        "approval.grant", "pid1", "self", "t1",
+        {"request_id": ask_a["id"], "who": "PID 1"},
+        Cost(), idempotency_key="hist:grant:a", causation_id=ask_a["id"], occurred_at=_ts(30), trust="unverified",
+    ))
+    ask_b = make(
+        "approval.request", "pid1", "self", "t1",
+        {"what": "шаг-б", "window_seconds": 10, "priority": "P1", "expires_at": _ts(10)},
+        Cost(attention=1), idempotency_key="hist:request:b", occurred_at=_ts(0), trust="unverified",
+    )
+    journal.append(ask_b)
+    journal.append(make(
+        "veto", "pid1", "self", "t1",
+        {"request_id": ask_b["id"], "rule": "silence", "reason": "правило тишины: окно истекло без одобрения — по умолчанию «нет»"},
+        Cost(), idempotency_key="hist:silence:b", causation_id=ask_b["id"], occurred_at=_ts(60), trust="verified",
+    ))
+
+
+def test_metrics_reads_historical_blood_of_our_line() -> None:
     journal = Journal()
-    given = request(journal, what="шаг-а", window_seconds=600, priority="P0", trace_id="t1", now=_ts(0))
-    expired = request(journal, what="шаг-б", window_seconds=10, priority="P1", trace_id="t1", now=_ts(0))
-    grant(journal, given, who="PID 1", trace_id="t1", now=_ts(30))
-    answer(journal, expired, now=_ts(60))
+    _historical_dialect(journal)
     journal.append(
         make("act", "brainstem", "self", "t1", {"tool": "drop", "reversibility": "irreversible"}, Cost(seconds=0.1))
     )
@@ -258,6 +141,7 @@ def test_metrics_count_only_declared_blood() -> None:
     assert report["granted"] == 1
     assert report["cancelled_by_silence"] == 1
     assert report["refused"] == 0
+    assert report["late_approvals"] == 0
     assert report["dangerous_actions"] == 1
     assert report["wait_seconds_max"] == pytest.approx(60.0)  # максимум: тишина ждала 0→60 с (granted — 30 с)
     assert report["dismissed_fraction"] == pytest.approx(0.5)
@@ -265,17 +149,111 @@ def test_metrics_count_only_declared_blood() -> None:
     assert metrics(journal.all(), now=_ts(70)) == report
 
 
-def test_metrics_unknown_stays_unknown() -> None:
-    report = metrics([], now=_ts(0))
-    assert report["questions"] == 0
-    assert report["wait_seconds_max"] is None  # неизмеримое = UNKNOWN, не ноль
-    assert report["dismissed_fraction"] is None
+def test_metrics_reads_contour_blood() -> None:
+    journal = Journal()
+    clock = FakeClock()
+    first = await_approval(
+        journal, "t1",
+        ApprovalRequest(what="demo.a", window_s=0.5, why="одобрено в окне", priority="P0"),
+        lambda query: ANSWER_APPROVED, clock=clock, sleeper=fake_sleep(clock),
+    )
+    assert first == ANSWER_APPROVED
+    verdict = await_approval(
+        journal, "t1",
+        ApprovalRequest(what="demo.b", window_s=0.3, why="канал молчит всё окно", priority="P1"),
+        lambda query: None, clock=clock, sleeper=fake_sleep(clock),
+    )
+    assert verdict == "expired"
+    report = metrics(journal.all())
+    assert report["questions"] == 2
+    assert report["interruptions"] == 2  # P0 и P1 заявили цену вопроса (зерно стыка)
+    assert report["granted"] == 1
+    assert report["refused"] == 0
+    assert report["cancelled_by_silence"] == 1
+    assert report["late_approvals"] == 0  # контур одноразовый: опоздавших не бывает
+    assert report["dismissed_fraction"] == pytest.approx(0.5)
+    assert report["wait_seconds_max"] is not None and report["wait_seconds_max"] > 0  # заявленное waited_s
+    assert metrics(journal.all()) == report
 
 
-# --- стык волн: ствол и дневник говорят по-новому ---
+# --- зерно стыка: вопрос контура о необратимом — P0-цена ---
 
 
-def test_loop_veto_consumes_attention_p0(gateway: Gateway, journal: Journal) -> None:
+def test_contour_question_about_irreversible_costs_attention_p0(gateway: object, journal: Journal) -> None:
+    loop = Loop(gateway, journal, approval_channel=lambda query: ANSWER_APPROVED)
+    done = loop.run(
+        [Step(organ="sense-a", tool="echo", payload={"key": "k", "value": "v"},
+              intent="необратимое с окном", reversibility="irreversible", approval_window=0.5)],
+        trace_id="t1",
+        budget=Budget(),
+    )
+    assert done is True
+    requested = [e for e in journal.by_type("approval.requested") if e["trace_id"] == "t1"]
+    assert len(requested) == 1
+    assert requested[0]["cost"]["attention"] == 1  # остановка и вопрос Человеку — заявленная цена (W-0025)
+    acts = [e for e in journal.by_type("act") if e["trace_id"] == "t1"]
+    assert len(acts) == 1 and acts[0]["payload"].get("reversibility") == "irreversible"
+
+
+def test_contour_question_without_irreversible_declares_no_price(gateway: object, journal: Journal) -> None:
+    loop = Loop(gateway, journal, approval_channel=lambda query: ANSWER_APPROVED)
+    done = loop.run(
+        [Step(organ="sense-a", tool="echo", payload={"data": "x"},
+              intent="обратимое с окном", approval_window=0.5)],
+        trace_id="t1",
+        budget=Budget(),
+    )
+    assert done is True
+    requested = [e for e in journal.by_type("approval.requested") if e["trace_id"] == "t1"]
+    assert len(requested) == 1
+    # приоритет не заявлен — ключа нет (A02, старый стиль крови жив)
+    assert requested[0]["cost"] == {"tokens_in": 0, "tokens_out": 0, "seconds": 0.0}
+
+
+def test_contour_unknown_priority_fail_closed(journal: Journal) -> None:
+    with pytest.raises(ValueError, match="приоритет"):
+        await_approval(
+            journal, "t1",
+            ApprovalRequest(what="demo.x", window_s=0.5, priority="P9"),
+            lambda query: None, clock=FakeClock(),
+        )
+    assert len(journal.all()) == 0  # конверта нет — события нет (ADR-0014)
+
+
+# --- стык: дневник говорит на обоих диалектах ---
+
+
+def test_diary_speaks_both_dialects() -> None:
+    from blood.diary import entries
+
+    journal = Journal()
+    clock = FakeClock()
+    verdict = await_approval(
+        journal, "t1",
+        ApprovalRequest(what="удалить прод-таблицу", window_s=0.5, why="необратимое", priority="P0"),
+        lambda query: ANSWER_APPROVED, clock=clock, sleeper=fake_sleep(clock),
+    )
+    assert verdict == ANSWER_APPROVED
+    expired = await_approval(
+        journal, "t1",
+        ApprovalRequest(what="письмо наружу", window_s=0.2, why="канал молчит", priority="P1"),
+        lambda query: None, clock=clock, sleeper=fake_sleep(clock),
+    )
+    assert expired == "expired"
+    _historical_dialect(journal)  # кровь нашей линии — в том же доме
+    report = entries(journal)
+    results = [record["результат"] for record in report["records"]]
+    assert any("вопрос Человеку" in result for result in results)  # оба диалекта вопроса в словаре дневника
+    assert any("одобрил" in result for result in results)  # и оба диалекта одобрения
+    assert any("тишина" in result for result in results)  # expired и veto правила названы отказом с причиной
+    prices = [record["цена"] for record in report["records"] if "вопрос Человеку" in record["результат"]]
+    assert prices and "внимание Человека 1" in prices[0]  # P0-вопрос несёт заявленную цену внимания
+
+
+# --- стык: остановка до факта по-прежнему несёт цену P0 (вето без окна) ---
+
+
+def test_loop_veto_consumes_attention_p0(gateway: object, journal: Journal) -> None:
     loop = Loop(gateway, journal)
     ok = loop.run([step(organ="sense-a", tool="echo")], trace_id="t1", budget=Budget())
     assert ok is True
@@ -291,20 +269,3 @@ def test_loop_veto_consumes_attention_p0(gateway: Gateway, journal: Journal) -> 
     assert vetoes[0]["cost"]["attention"] == 1  # остановка и вопрос Человеку — P0-цена
     halts = [event for event in journal.by_type("halt") if event["trace_id"] == "t2"]
     assert halts and "attention" not in halts[0]["cost"]  # halt сам внимания не тратит
-
-
-def test_diary_speaks_approvals() -> None:
-    from blood.diary import entries
-
-    journal = Journal()
-    ask = request(journal, what="удалить прод-таблицу", window_seconds=600, priority="P0", trace_id="t1", now=_ts(0))
-    grant(journal, ask, who="PID 1", trace_id="t1", now=_ts(30))
-    expired = request(journal, what="письмо наружу", window_seconds=10, priority="P1", trace_id="t1", now=_ts(0))
-    answer(journal, expired, now=_ts(20))
-    report = entries(journal)
-    results = [record["результат"] for record in report["records"]]
-    assert any("вопрос Человеку" in result for result in results)  # словарь дневника знает approval.request
-    assert any("одобрил" in result for result in results)  # и approval.grant
-    assert any("тишины" in result for result in results)  # veto правила назван отказом с причиной
-    prices = [record["цена"] for record in report["records"] if "вопрос Человеку" in record["результат"]]
-    assert prices and "внимание Человека 1" in prices[0]  # P0-вопрос несёт заявленную цену внимания

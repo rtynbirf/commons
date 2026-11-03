@@ -89,9 +89,13 @@
         "shutdown",
         "alert",
         "approval.request",
-        "approval.grant"
+        "approval.grant",
+        "approval.requested",
+        "approval.granted",
+        "approval.veto",
+        "approval.expired"
       ],
-      "description": "Тип события (SPEC-0003 п.17): словарь дома; approval.request — вопрос Человеку об одобрении с заявленным окном тишины (W-0032, SPEC-0004 п.7), approval.grant — его одобрение; неизвестный тип — fail-closed при записи (ADR-0014)"
+      "description": "Тип события (SPEC-0003 п.17): словарь дома. Живой контур одобрения (W-0032, SPEC-0004 п.8, brainstem/silence.py): approval.requested — вопрос Человеку с заявленным окном тишины, approval.granted/approval.veto — воля Человека (source pid1), approval.expired — тишина за окном, дефолт cancel. Кровь волны №23 нашей линии (runs/2026-11-03-wave23-silence-attention) говорит диалектом approval.request/approval.grant — валидна навсегда; неизвестный тип — fail-closed при записи (ADR-0014)"
     },
     "source": {
       "type": "string",

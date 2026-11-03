@@ -1,0 +1,18 @@
+organs:
+- adapter: tests.fakes:FakeEcho
+  authority:
+    fs: read-only
+    network: none
+  command: fake-echo
+  healthcheck: initialize handshake
+  license: MIT
+  mode: dependency
+  name: echo-a
+  system: senses
+  tools:
+  - echo
+  transport: stdio
+  upstream: https://example.invalid/echo-a
+transport_default: stdio
+updated: '2026-11-03'
+version: run-0.1.0

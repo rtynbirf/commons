@@ -89,21 +89,34 @@ def _fact_ts(envelope: dict[str, Any]) -> str:
 
 
 def metrics(events: Any, *, now: str | None = None) -> dict[str, Any]:
-    """Счёт внимания по заявленной крови — read-only проекция (SPEC-0004 п.8).
+    """Счёт внимания по заявленной крови — read-only проекция (SPEC-0004 п.9).
 
     Принимает только конверты крови (какие дали — те и считает: ни файлов,
     ни сети, ни скрытого состояния — телеметрии нет). Неизмеримое = UNKNOWN
-    (None), не ноль. Ключи:
+    (None), не ноль. Читает оба диалекта крови одобрения (стык 0.42.1):
+    живой контур `brainstem/silence.py` пишет `approval.requested` →
+    `approval.granted`/`approval.veto`/`approval.expired`, кровь волны №23
+    нашей линии — `approval.request`/`approval.grant` + `veto` с
+    `request_id` (валидна навсегда — гематология); ни один вопрос не
+    считается дважды — диалекты не смешиваются внутри контура.
 
-    - `questions` — вопросы Человеку (`approval.request`);
+    Ключи:
+
+    - `questions` — вопросы Человеку (`approval.request` + `approval.requested`);
     - `interruptions` — из них прерывания (заявленный `cost.attention` > 0);
-    - `granted` / `refused` / `cancelled_by_silence` — ответы (одобрение,
-      явный отказ Человека — veto с request_id без правила, отказ правилом
-      тишины — veto с request_id и rule=silence);
+      вопрос без заявленной цены — не прерывание в счёте (незаявленное не
+      достраивается, A02), но вопросом остаётся;
+    - `granted` / `refused` / `cancelled_by_silence` — ответы (одобрение;
+      явный отказ Человека — veto с request_id без правила или
+      `approval.veto`; отказ правилом тишины — veto с rule=silence или
+      `approval.expired`);
     - `late_approvals` — одобрения, записанные после отмены тишиной: весть
       в крови (append-only), решение приняла тишина — отдельным счётом,
-      не спрятаны и не перепутаны с решениями;
-    - `wait_seconds_max` — максимальное заявленное ожидание ответа
+      не спрятаны и не перепутаны с решениями; связка одобрения с запросом
+      заявлена только в диалекте `approval.grant` (request_id) — в контуре
+      одобрение после `expired` невозможно (контур одноразовый), счёт — 0;
+    - `wait_seconds_max` — максимальное ожидание ответа: заявленное
+      `waited_s` контура, у нашей крови — разница времён факта
       (запись вопроса → запись ответа); не считалось — None;
     - `dismissed_fraction` — доля отказов (тишина + явное «нет») среди
       решённых вопросов; решённых нет — None;
@@ -113,7 +126,9 @@ def metrics(events: Any, *, now: str | None = None) -> dict[str, Any]:
     Чистая функция: та же кровь — тот же отчёт.
     """
     items = list(events)
-    questions = [e for e in items if e.get("type") == "approval.request"]
+    questions_our = [e for e in items if e.get("type") == "approval.request"]
+    questions_their = [e for e in items if e.get("type") == "approval.requested"]
+    questions = questions_our + questions_their
     interruptions = [e for e in questions if int((e.get("cost") or {}).get("attention", 0)) > 0]
 
     grants: dict[str, dict[str, Any]] = {}
@@ -133,28 +148,49 @@ def metrics(events: Any, *, now: str | None = None) -> dict[str, Any]:
                 else:
                     refusals.setdefault(rid, e)
 
+    # Диалект контура: ответы без request_id — корреляция по (trace_id, what);
+    # контур одноразовый — первое решение и есть единственное.
+    their_granted = [e for e in items if e.get("type") == "approval.granted"]
+    their_veto = [e for e in items if e.get("type") == "approval.veto"]
+    their_expired = [e for e in items if e.get("type") == "approval.expired"]
+    their_answers: dict[tuple[Any, Any], dict[str, Any]] = {}
+    for e in (*their_granted, *their_veto, *their_expired):
+        payload = e.get("payload") or {}
+        their_answers.setdefault((e.get("trace_id"), payload.get("what")), e)
+
     waits: list[float] = []
     late_approvals = 0
-    granted = 0
+    granted_our = 0
     for rid, envelope in grants.items():
         if rid in silences:
             late_approvals += 1  # опоздавшее одобрение — весть, решение приняла тишина (W-0032)
         else:
-            granted += 1
-    for question in questions:
+            granted_our += 1
+    for question in questions_our:
         rid = question["id"]
         answer_event = (grants.get(rid) if rid not in silences else None) or refusals.get(rid) or silences.get(rid)
         if answer_event is not None:
             waits.append((_parse(_fact_ts(answer_event)) - _parse(_fact_ts(question))).total_seconds())
+    for question in questions_their:
+        payload = question.get("payload") or {}
+        answer_event = their_answers.get((question.get("trace_id"), payload.get("what")))
+        if answer_event is not None:
+            waited = (answer_event.get("payload") or {}).get("waited_s")
+            # ожидание заявлено контуром (waited_s) — заявленное честнее вычисленного
+            waits.append(float(waited) if isinstance(waited, (int, float))
+                         else (_parse(_fact_ts(answer_event)) - _parse(_fact_ts(question))).total_seconds())
 
-    decided = granted + len(refusals) + len(silences)
-    denied = len(refusals) + len(silences)
+    granted = granted_our + len(their_granted)
+    refused = len(refusals) + len(their_veto)
+    silenced = len(silences) + len(their_expired)
+    decided = granted + refused + silenced
+    denied = refused + silenced
     return {
         "questions": len(questions),
         "interruptions": len(interruptions),
         "granted": granted,
-        "refused": len(refusals),
-        "cancelled_by_silence": len(silences),
+        "refused": refused,
+        "cancelled_by_silence": silenced,
         "late_approvals": late_approvals,
         "wait_seconds_max": round(max(waits), 6) if waits else None,
         "dismissed_fraction": round(denied / decided, 6) if decided else None,

@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -19,7 +20,7 @@ from typing import Any
 from blood.envelope import Cost, make, new_trace_id
 from blood.journal import Journal
 from memory import Memory
-from synapse.gateway import AuthorityViolation, Gateway, OrganUnavailable, SynapseVeto
+from synapse.gateway import AuthorityViolation, BloodRecordError, Gateway, OrganUnavailable, SynapseVeto
 
 
 @dataclass(frozen=True)
@@ -193,6 +194,13 @@ class Loop:
             if memory_context:
                 plan_payload["memory_context"] = memory_context
             self._emit("plan", step.organ, plan_payload, trace_id)
+            # Проверка ДО факта (F-03, волна №20): несериализуемый payload шага не доходит
+            # до органа — эффект не случается без крови (закон 2), трейс завершён halt (G1).
+            try:
+                json.dumps(step.payload, ensure_ascii=False)
+            except (TypeError, ValueError) as exc:
+                self._emit("halt", "self", {"reason": f"payload шага не сериализуется в кровь: {exc}", "at_step": index}, trace_id)
+                return False
             try:
                 result = self.gateway.call(step.organ, step.tool, step.payload, trace_id)
             except SynapseVeto as veto:
@@ -207,6 +215,13 @@ class Loop:
                 # SPEC-0002 п.8: нарушителя не заменяют молча — reflect + halt, трейс полон.
                 self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": f"security: {violation}"}, trace_id))
                 self._emit("halt", "self", {"reason": f"полномочия превышены: {violation}", "at_step": index}, trace_id)
+                return False
+            except BloodRecordError as broken:
+                # Эффект без крови (F-03, волна №20): орган отработал, кровь не приняла акт —
+                # трейс завершён halt (G1), причина и в reflect, и в halt; эффект случился —
+                # назван в крови error-конвертом шлюза, не спрятан.
+                self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": f"кровь: {broken}"}, trace_id))
+                self._emit("halt", "self", {"reason": f"эффект без крови: {broken}", "at_step": index}, trace_id)
                 return False
 
             # Per-call лимит (M3 SPEC-0001 G3): вызов оплачен — превышение фиксируем алертом.

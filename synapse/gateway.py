@@ -25,7 +25,7 @@ from typing import Any
 
 import yaml
 
-from blood.envelope import Cost, make
+from blood.envelope import Cost, EnvelopeError, make
 from blood.journal import Journal
 from synapse.authority import AuthorityConfigError, AuthorityViolation, enforce, normalize as normalize_authority
 
@@ -36,6 +36,13 @@ _PLACEHOLDER = re.compile(r"\$\{([^}]+)\}")
 
 class GatewayConfigError(RuntimeError):
     """Манифест не валиден — шлюз не стартует (SPEC-0002)."""
+
+
+class BloodRecordError(RuntimeError):
+    """Эффект без крови (F-03 аудита 2026-11-03, волна №20): орган отработал,
+    а запись `act` упала — кровь не приняла факт. Ствол переводит трейс в halt:
+    отказной выход завершён (SPEC-0001 G1), и в крови остаётся error-конверт
+    шлюза с причиной — эффект без крови не остаётся незамеченным."""
 
 
 class SynapseVeto(RuntimeError):
@@ -242,7 +249,15 @@ class Gateway:
         cost_dict = cost.as_dict() if hasattr(cost, "as_dict") else dict(cost)
         cost_dict["seconds"] = round(measured, 6)
 
-        self._emit("act", organ, {"tool": tool, "payload": payload or {}}, Cost.from_dict(cost_dict), trace_id)
+        # Эффект без крови не остаётся незамеченным (F-03, волна №20): если запись `act`
+        # упала ПОСЛЕ вызова органа — эффект уже случился; в кровь пишется error-конверт
+        # с причиной (он сериализуем), а ствол получает BloodRecordError и завершает
+        # трейс halt'ом (SPEC-0001 G1: любой отказной выход завершён halt).
+        try:
+            self._emit("act", organ, {"tool": tool, "payload": payload or {}}, Cost.from_dict(cost_dict), trace_id)
+        except EnvelopeError as exc:
+            self._emit("error", organ, {"reason": f"эффект без крови: акт не записан: {exc}", "tool": tool}, trace_id=trace_id)
+            raise BloodRecordError(f"{organ}.{tool}: орган отработал, кровь не приняла акт: {exc}") from exc
         return result
 
     def _substitute_or_raise(self, organ: str, tool: str, payload: dict[str, Any] | None, trace_id: str, _seen: frozenset[str]) -> Any:

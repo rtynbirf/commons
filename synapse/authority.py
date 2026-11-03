@@ -41,9 +41,15 @@ NETWORK_LABELS = ("none", "localhost", "any")
 PROCESS_VALUES = ("none", "spawn")
 _STRICT: dict[str, Any] = {"fs": "none", "network": "none", "process": "none"}
 _AXIS_VALUES = {"process": PROCESS_VALUES}  # fs обрабатывается целиком в _normalize_fs (ярлык или скоуп)
-_FS_MUTATIONS = frozenset({"os.remove", "os.rename", "os.mkdir", "os.rmdir", "os.chmod", "os.chown"})
+_FS_MUTATIONS = frozenset({"os.remove", "os.rename", "os.mkdir", "os.rmdir", "os.chmod", "os.chown",
+                           # волна №20 (F-04 аудита коллег): полная грамматика мутаций — os.truncate обнулял файл
+                           # при fs: read-only, symlink/link прокладывали побег мимо корней, utime подделывал времена
+                           "os.truncate", "os.symlink", "os.link", "os.utime", "os.setxattr", "os.removexattr"})
+# Чтение структуры каталогов (волна №20, F-05): os.listdir/os.scandir — audit-события есть;
+# os.stat/os.mkfifo/os.mknod — audit-событий нет (честная граница платформы, SPEC-0002 п.8 v0.11.0)
+_FS_LISTINGS = frozenset({"os.listdir", "os.scandir"})
 _GUARDED = frozenset({"open", "socket.connect", "socket.bind", "socket.getaddrinfo", "subprocess.Popen",
-                      "os.posix_spawn", "os.system"}) | _FS_MUTATIONS
+                      "os.posix_spawn", "os.system"}) | _FS_MUTATIONS | _FS_LISTINGS
 _WRITE_MODE_CHARS = frozenset("wax+")
 _WRITE_FLAGS = os.O_WRONLY | os.O_RDWR | os.O_APPEND | os.O_CREAT
 _PYCACHE_PRESCRIPTION = "ленивый импорт внутри invoke пишет __pycache__ — прогрейте импорты до вызова (SPEC-0002 п.8)"
@@ -493,6 +499,8 @@ def _check(guard: Guard, event: str, args: tuple) -> None:
             _check_open(guard, args)
         elif event in _FS_MUTATIONS:
             _check_mutation(guard, event, args)
+        elif event in _FS_LISTINGS:
+            _check_listing(guard, args)
         elif event.startswith("socket."):
             _check_socket(guard, event, args)
         elif event == "os.posix_spawn":
@@ -551,18 +559,38 @@ def _check_open(guard: Guard, args: tuple) -> None:
 
 
 def _check_mutation(guard: Guard, event: str, args: tuple) -> None:
-    """Мутации ФС (remove/rename/mkdir/rmdir/chmod/chown): при скоупе — только внутри корней (rename — оба конца)."""
+    """Мутации ФС (v0.11.0, волна №20 — полный список: remove/rename/mkdir/rmdir/chmod/chown/
+    truncate/symlink/link/utime/setxattr/removexattr): при скоупе — только внутри корней;
+    rename и link — оба конца; symlink — создаваемая ссылка (args[1]: цель ссылки — произвольный
+    текст, может указывать куда угодно — свойство symlink, названное честно в SPEC-0002 п.8)."""
     fs = guard.authority.get("fs", "none")
     if isinstance(fs, dict):
         if fs.get("mode") != "read-write":
             raise AuthorityViolation(_text(guard, event, f"fs: {fs.get('mode')} скоуп", "мутация файловой системы запрещена"))
-        targets = list(args[:2]) if event == "os.rename" else args[:1]
+        # rename/link — оба конца; symlink — только создаваемая ссылка (args[0] — произвольный текст цели)
+        targets = list(args[:2]) if event in ("os.rename", "os.link") else (list(args[1:2]) if event == "os.symlink" else args[:1])
         for target in targets:
             if not _inside_roots(fs.get("paths") or [], target):
                 raise AuthorityViolation(_text(guard, event, f"fs: {fs.get('mode')} скоуп {fs.get('paths')}", f"цель вне заявленных корней: {target!r}"))
         return
     if fs != "read-write":
         raise AuthorityViolation(_text(guard, event, f"fs: {fs}", "мутация файловой системы запрещена"))
+
+
+def _check_listing(guard: Guard, args: tuple) -> None:
+    """Чтение структуры каталогов (v0.11.0, волна №20, F-05): os.listdir/os.scandir при fs: none —
+    нарушение (утечка структуры каталогов), кроме рантайма Python (как open-чтение);
+    при скоупе — только внутри заявленных корней (realpath); read-only/read-write — чтение живо."""
+    fs = guard.authority.get("fs", "none")
+    path = args[0] if args else None
+    if isinstance(fs, dict):
+        if not _inside_roots(fs.get("paths") or [], path):
+            raise AuthorityViolation(_text(guard, "listdir", f"fs: {fs.get('mode')} скоуп {fs.get('paths')}", f"чтение структуры каталогов вне заявленных корней: {path!r}"))
+        return
+    if fs != "none":
+        return  # read-only/read-write: чтение каталогов живо
+    if not _under_python_runtime(path):
+        raise AuthorityViolation(_text(guard, "listdir", "fs: none", f"чтение структуры каталогов запрещено (кроме рантайма Python): {path!r}"))
 
 
 def _under_python_runtime(path: Any) -> bool:

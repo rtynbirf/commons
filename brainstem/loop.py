@@ -58,6 +58,12 @@ class Step:
     спрашивать по-настоящему лучше, чем остановиться от отсутствия нерва.
     `approval_why` — зачем одобрение, попадает в approval.requested;
     пусто — берётся намерение шага.
+
+    `basis` (A20, SPEC-0001 п.9, волна №28) — id гипотезы творческой
+    песочницы (brainstem.sandbox), на которой строится шаг. Гипотеза — не
+    факт: шаг на гипотезе без критерия проверки (`accept`) — veto до факта;
+    ссылка на гипотезу, которой нет в крови, — тоже veto (незаявленное не
+    достраивается). None — шаг на проверенном знании, старые планы валидны.
     """
 
     organ: str
@@ -69,6 +75,7 @@ class Step:
     approval: str | None = None
     approval_window: float | None = None
     approval_why: str = ""
+    basis: str | None = None
 
 
 @dataclass
@@ -311,6 +318,8 @@ class Loop:
                 plan_payload["reversibility"] = step.reversibility  # заявка ДО факта (W-0024, п.5)
             if step.approval is not None:
                 plan_payload["approval"] = step.approval  # кто одобрил (заявка, unverified по природе)
+            if step.basis is not None:
+                plan_payload["basis"] = step.basis  # на чьей гипотезе строится шаг (A20, заявка ДО факта)
             memory_context = self._recall(step.intent, trace_id)  # read-only, до PLAN (SPEC-0005 п.5)
             if memory_context:
                 plan_payload["memory_context"] = memory_context
@@ -342,6 +351,47 @@ class Loop:
                 )
                 self._emit("halt", "self", {"reason": "необратимое действие не одобрено — остановка до факта", "at_step": index}, trace_id)
                 return False
+            if step.basis is not None:
+                # Гипотеза не становится фактом (A20, SPEC-0001 п.9, волна №28):
+                # шаг на гипотезе песочницы без критерия проверки — veto до факта;
+                # ссылка на гипотезу, которой нет в крови, — тоже veto (незаявленное
+                # не достраивается). Проверенный путь — W-0027: план несёт basis,
+                # reflect называет критерий, которым мерил.
+                known = any(
+                    e.get("type") == "reflect"
+                    and isinstance(e.get("payload"), dict)
+                    and e["payload"].get("sandbox") is True
+                    and e.get("id") == step.basis
+                    for e in self.journal.all()
+                )
+                if step.accept is None:
+                    self._emit(
+                        "veto",
+                        "self",
+                        {
+                            "reason": "шаг на гипотезе без критерия проверки — гипотеза не становится фактом (A20, SPEC-0001 п.9)",
+                            "tool": step.tool,
+                            "basis": step.basis,
+                            "at_step": index,
+                        },
+                        trace_id,
+                    )
+                    self._emit("halt", "self", {"reason": "гипотеза без проверки не исполняется — остановка до факта", "at_step": index}, trace_id)
+                    return False
+                if not known:
+                    self._emit(
+                        "veto",
+                        "self",
+                        {
+                            "reason": f"basis ссылается на гипотезу, которой нет в крови: {step.basis!r} (незаявленное не достраивается)",
+                            "tool": step.tool,
+                            "basis": step.basis,
+                            "at_step": index,
+                        },
+                        trace_id,
+                    )
+                    self._emit("halt", "self", {"reason": "гипотезы нет в крови — шаг не исполняется", "at_step": index}, trace_id)
+                    return False
             # Проверка ДО факта (F-03, волна №20): несериализуемый payload шага не доходит
             # до органа — эффект не случается без крови (закон 2), трейс завершён halt (G1).
             try:

@@ -123,10 +123,11 @@ def test_unknown_fact_time_stays_unknown(tmp_path: Path) -> None:
 
 
 def test_undo_is_not_promised(tmp_path: Path) -> None:
-    """Отменяемость честная: компенсатор не построен (W-0024) — отмена не обещается."""
+    """Отменяемость честная (W-0024, волна №22): класс не заявлен — отмена не обещается;
+    незаявленное не достраивается (A02) — дневник не выдумывает отмену."""
     path = _pour(tmp_path / "blood.jsonl", _session(tmp_path / "src.jsonl"))
     text = render(path, TRACE)
-    assert "отмена не обещается: компенсатор не построен (W-0024)" in text
+    assert "класс обратимости не заявлен — отмена не обещается" in text
     assert "отменять нечего — план не исполнялся" in text
 
 

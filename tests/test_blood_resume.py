@@ -321,7 +321,10 @@ def test_reconstruct_halted_session(tmp_path: Path, manifest_path: Path) -> None
     assert len(session["acts"]) == 1
     assert len(session["halts"]) == 1
     assert "бюджет исчерпан" in session["halts"][0]["reason"]
-    assert session["halts"][0]["at_step"] == 1
+    # W-0029 (SPEC-0001 G3 v0.4.0): бюджет проверяется и ПОСЛЕ шага — бюджет
+    # исчерпан первым же вызовом, halt падает сразу после него (at_step=0);
+    # второй шаг даже не планируется (раньше halt ждал проверки перед шагом 2).
+    assert session["halts"][0]["at_step"] == 0
     assert session["totals"]["tokens_in"] == journal.totals(trace_id).tokens_in
 
 

@@ -1,1 +1,2 @@
 {"file": "runs/2026-11-03-wave21-seal-accept/blood.jsonl", "events": 5, "last_id": "056c1796-23fa-4bd8-b71e-df0fb03d4290", "last_sha256": "5fc01fb02b0499e0d01f0c71e5a64f3896c01dc47e32da72550a3cb4d2dd2c47", "sealed_at": "2026-11-03T01:02:49.082Z"}
+{"file": "runs/2026-11-03-wave22-reversibility-budget/blood.jsonl", "events": 37, "last_id": "81b5e9c1-c5b1-4753-b350-033acd487e47", "last_sha256": "e4c367ad3463ed89b4aa4461e22442200edd8fc16ffe2e6cee9ed36d7f5a602a", "sealed_at": "2026-11-03T01:26:26.737Z"}

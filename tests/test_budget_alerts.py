@@ -71,12 +71,17 @@ def _metabolism_loop(tmp_path: Path, organ_budgets: dict[str, Budget]) -> tuple[
 
 
 def test_alert_once_at_threshold(loop, journal) -> None:
-    """totals перевалил alert_ratio*лимит → ровно ОДИН alert; повторное пересечение молчит."""
+    """totals перевалил alert_ratio*лимит → ровно ОДИН alert; повторное пересечение молчит.
+
+    Волна №22 (W-0029, SPEC-0001 G3 v0.4.0): приёмка перевернулась честно —
+    перерасход последним шагом (120 ≥ 100) больше не проходит молча: трейс
+    закрыт halt после шага, перерасход оплатившего его (было: run()=True,
+    «исчерпания ни одна проверка не видела»)."""
     budget = Budget(tokens_in=100, alert_ratio=0.5)  # порог алерта = 50
     plan = [step(payload=echo_payload(30)) for _ in range(4)]
-    assert loop.run(plan, trace_id="alert-once", budget=budget) is True
+    assert loop.run(plan, trace_id="alert-once", budget=budget) is False
 
-    # Проверки перед шагами видят totals: 0, 30, 60 (>= 50 → alert), 90 (уже алертили — тишина).
+    # Проверки порога перед шагами видят totals: 0, 30, 60 (>= 50 → alert), 90 (уже алертили — тишина).
     alerts = journal.by_type("alert")
     assert len(alerts) == 1
     (alert,) = alerts
@@ -84,9 +89,12 @@ def test_alert_once_at_threshold(loop, journal) -> None:
     assert alert["organ"] == "self"
     assert "бюджет близок" in alert["payload"]["reason"]
     assert alert["payload"]["at_step"] == 2  # сработал на totals=60, перед 3-м шагом
-    assert journal.totals("alert-once").tokens_in == 120  # 4 вызова по 30
-    # Исчерпания (100) ни одна проверка не видела → halt нет; второй alert не пишется.
-    assert journal.by_type("halt") == ()
+    assert journal.totals("alert-once").tokens_in == 120  # 4 вызова по 30 — перерасход состоялся и оплачен
+    # W-0029: halt ПОСЛЕ последнего шага — трейс не проходит с превышенным бюджетом.
+    halts = journal.by_type("halt")
+    assert len(halts) == 1
+    assert "бюджет исчерпан" in halts[0]["payload"]["reason"]
+    assert halts[0]["payload"]["at_step"] == 3  # исчерпал последний шаг
 
 
 def test_halt_on_exhaustion_unchanged(loop, journal) -> None:
@@ -182,7 +190,11 @@ def test_backward_compatible(loop, journal) -> None:
 
 
 def test_alert_and_halt_ordering(loop, journal) -> None:
-    """Alert на пороге (30 >= 30) пишется раньше halt на границе (60 >= 60); по одному каждому."""
+    """Alert на пороге (30 >= 30) пишется раньше halt на границе (60 >= 60); по одному каждому.
+
+    Волна №22 (W-0029): halt падает сразу после шага, исчерпавшего бюджет
+    (после-шаговая проверка), а не перед следующим — at_step=1, второй шаг
+    даже не планируется."""
     budget = Budget(tokens_in=60, alert_ratio=0.5)  # порог алерта = 30
     plan = [step(payload=echo_payload(30)) for _ in range(3)]
     assert loop.run(plan, trace_id="order", budget=budget) is False
@@ -196,4 +208,6 @@ def test_alert_and_halt_ordering(loop, journal) -> None:
     assert "бюджет близок" in alerts[0]["payload"]["reason"]
     assert "бюджет исчерпан" in halts[0]["payload"]["reason"]
     assert alerts[0]["payload"]["at_step"] == 1  # totals=30 >= 30, перед 2-м шагом
-    assert halts[0]["payload"]["at_step"] == 2  # totals=60 >= 60, перед 3-м шагом
+    assert halts[0]["payload"]["at_step"] == 1  # totals=60 >= 60 — сразу после шага 1 (W-0029)
+    # halt после шага 1: третий шаг не планируется
+    assert len([e for e in events if e["type"] == "plan"]) == 2

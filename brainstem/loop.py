@@ -19,7 +19,7 @@ from typing import Any, Callable
 
 import jsonschema
 
-from blood.envelope import Cost, make, new_trace_id
+from blood.envelope import REVERSIBILITY_CLASSES, Cost, make, new_trace_id
 from blood.journal import Journal
 from memory import Memory
 from synapse.gateway import AuthorityViolation, BloodRecordError, Gateway, OrganUnavailable, SynapseVeto
@@ -32,6 +32,18 @@ class Step:
     `accept` (W-0027, SPEC-0001 v0.3.0) — проверяемый критерий приёмки
     результата: JSON-схема (dict) или предикат (callable result→bool).
     None — прежняя рефлексия M1 (результат есть — удовлетворено).
+
+    `reversibility` (W-0024, SPEC-0001 v0.4.0 п.5, SPEC-0003 п.16) — заявка
+    класса обратимости ДО факта: reversible / compensatable /
+    partially_reversible / irreversible / unknown (словарь —
+    `blood.envelope.REVERSIBILITY_CLASSES`). None — не заявлено: старые планы
+    валидны (аддитивно), кровь поля не получает, дневник честно называет
+    незаявленное. Класс не из словаря — дефект плана: halt до факта.
+
+    `approval` (W-0024, FR-06) — кто одобрил необратимое ДО факта: строка-заявка
+    («PID 1, 2026-11-03»), доверие unverified по природе. Необратимое без
+    одобрения ствол не исполняет — veto до факта (спрашивать = остановиться
+    и назвать, чего не хватает; решение — за Человеком, не за циклом).
     """
 
     organ: str
@@ -39,6 +51,8 @@ class Step:
     payload: dict[str, Any] = field(default_factory=dict)
     intent: str = ""
     accept: dict[str, Any] | Callable[[Any], bool] | None = None
+    reversibility: str | None = None
+    approval: str | None = None
 
 
 @dataclass
@@ -178,27 +192,8 @@ class Loop:
 
     @staticmethod
     def _accept(step: "Step", result: Any) -> tuple[str, bool, str | None]:
-        """Меряет результат критерием шага. Возвращает (критерий, вердикт, причина).
-
-        JSON-схема — jsonschema; предикат — callable, исключение предиката —
-        провал с названной причиной (дефект плана, не органа); непонятный
-        критерий — fail-closed: намерение не удовлетворено, причина названа.
-        """
-        accept = step.accept
-        if accept is None:
-            return "m1", result is not None, None
-        if isinstance(accept, dict):
-            try:
-                jsonschema.validate(result, accept)
-            except jsonschema.ValidationError as exc:
-                return "jsonschema", False, f"результат не принят по схеме шага: {exc.message}"
-            return "jsonschema", True, None
-        if callable(accept):
-            try:
-                return "predicate", bool(accept(result)), None
-            except Exception as exc:  # noqa: BLE001 — упавший критерий — дефект плана, не органа
-                return "predicate", False, f"критерий шага упал: {exc!r}"
-        return "unknown", False, f"критерий шага не понимается: {type(accept).__name__}"
+        """Меряет результат критерием шага (см. measure_criterion)."""
+        return measure_criterion(step.accept, result)
 
     # --- цикл ---
 
@@ -231,10 +226,39 @@ class Loop:
                     alerted = True
 
             plan_payload: dict[str, Any] = {"index": index, "tool": step.tool, "intent": step.intent}
+            if step.reversibility is not None:
+                plan_payload["reversibility"] = step.reversibility  # заявка ДО факта (W-0024, п.5)
+            if step.approval is not None:
+                plan_payload["approval"] = step.approval  # кто одобрил (заявка, unverified по природе)
             memory_context = self._recall(step.intent, trace_id)  # read-only, до PLAN (SPEC-0005 п.5)
             if memory_context:
                 plan_payload["memory_context"] = memory_context
             self._emit("plan", step.organ, plan_payload, trace_id)
+            # Обратимость до факта (W-0024, SPEC-0001 v0.4.0 п.5): чужой класс — дефект
+            # плана, опечатка не значит молча «unknown» (ADR-0014); необратимое без
+            # одобрения — veto до факта: спрашивать = остановиться и назвать.
+            if step.reversibility is not None and step.reversibility not in REVERSIBILITY_CLASSES:
+                self._emit(
+                    "halt",
+                    "self",
+                    {"reason": f"класс обратимости не понимается: {step.reversibility!r}", "at_step": index},
+                    trace_id,
+                )
+                return False
+            if step.reversibility == "irreversible" and not step.approval:
+                self._emit(
+                    "veto",
+                    "self",
+                    {
+                        "reason": "необратимое действие требует одобрения до факта (W-0024, FR-06)",
+                        "tool": step.tool,
+                        "reversibility": "irreversible",
+                        "at_step": index,
+                    },
+                    trace_id,
+                )
+                self._emit("halt", "self", {"reason": "необратимое действие не одобрено — остановка до факта", "at_step": index}, trace_id)
+                return False
             # Проверка ДО факта (F-03, волна №20): несериализуемый payload шага не доходит
             # до органа — эффект не случается без крови (закон 2), трейс завершён halt (G1).
             try:
@@ -243,7 +267,9 @@ class Loop:
                 self._emit("halt", "self", {"reason": f"payload шага не сериализуется в кровь: {exc}", "at_step": index}, trace_id)
                 return False
             try:
-                result = self.gateway.call(step.organ, step.tool, step.payload, trace_id)
+                result = self.gateway.call(
+                    step.organ, step.tool, step.payload, trace_id, reversibility=step.reversibility
+                )
             except SynapseVeto as veto:
                 self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": f"veto: {veto}"}, trace_id))
                 self._emit("halt", "self", {"reason": f"veto: {veto}", "at_step": index}, trace_id)
@@ -286,7 +312,48 @@ class Loop:
                 reason = why or "орган вернул пустой результат"
                 self._emit("halt", "self", {"reason": f"намерение не удовлетворено: {reason}", "at_step": index}, trace_id)
                 return False
+
+            # W-0029 (SPEC-0001 G3, 0.4.0, зерно коллег F-07): бюджет проверяется и
+            # ПОСЛЕ шага — перерасход последним шагом не проходит молча: трейс
+            # завершён halt, а не проходом (G1: отказной выход завершён halt).
+            exhausted_after = budget.exhausted_by(self.journal.totals(trace_id))
+            if exhausted_after is not None:
+                self._emit(
+                    "halt",
+                    "self",
+                    {"reason": f"бюджет исчерпан: {exhausted_after}", "at_step": index},
+                    trace_id,
+                )
+                return False
         return True
+
+
+def measure_criterion(
+    accept: dict[str, Any] | Callable[[Any], bool] | None, result: Any
+) -> tuple[str, bool, str | None]:
+    """Меряет результат критерием приёмки (W-0027, SPEC-0001 v0.3.0/п.4).
+
+    Возвращает (критерий, вердикт, причина). Общая грамматика цикла (Step.accept)
+    и компенсатора (проверка состояния после — SPEC-0001 п.6): одна машина,
+    чтобы честность не расходилась. JSON-схема — jsonschema; предикат —
+    callable, исключение предиката — провал с названной причиной (дефект
+    плана, не органа); непонятный критерий — fail-closed: намерение
+    не удовлетворено, причина названа.
+    """
+    if accept is None:
+        return "m1", result is not None, None
+    if isinstance(accept, dict):
+        try:
+            jsonschema.validate(result, accept)
+        except jsonschema.ValidationError as exc:
+            return "jsonschema", False, f"результат не принят по схеме шага: {exc.message}"
+        return "jsonschema", True, None
+    if callable(accept):
+        try:
+            return "predicate", bool(accept(result)), None
+        except Exception as exc:  # noqa: BLE001 — упавший критерий — дефект плана, не органа
+            return "predicate", False, f"критерий шага упал: {exc!r}"
+    return "unknown", False, f"критерий шага не понимается: {type(accept).__name__}"
 
 
 def _normalize(result: Any) -> Any:

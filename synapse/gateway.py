@@ -25,7 +25,7 @@ from typing import Any
 
 import yaml
 
-from blood.envelope import Cost, EnvelopeError, make
+from blood.envelope import REVERSIBILITY_CLASSES, Cost, EnvelopeError, make
 from blood.journal import Journal
 from synapse.authority import AuthorityConfigError, AuthorityViolation, enforce, normalize as normalize_authority
 
@@ -110,6 +110,20 @@ class Gateway:
             if unknown:
                 raise GatewayConfigError(f"манифест: замены для {organ} ссылаются на неизвестные органы {unknown}")
 
+        # Компенсаторы (W-0024, SPEC-0001 п.6): инструмент отмены объявляется
+        # манифестом — данные, не код (G2). Кривое объявление — манифест не валиден.
+        self._compensators: dict[str, dict[str, str]] = {}
+        for name, entry in self._organs.items():
+            comps = entry.get("compensators") or {}
+            if not isinstance(comps, dict):
+                raise GatewayConfigError(f"манифест: {name}: поле compensators не словарь")
+            for tool, undo in comps.items():
+                if tool not in entry["tools"]:
+                    raise GatewayConfigError(f"манифест: {name}: компенсатор для незаявленного инструмента {tool!r}")
+                if not isinstance(undo, str) or undo not in entry["tools"]:
+                    raise GatewayConfigError(f"манифест: {name}: компенсатор {tool!r} -> {undo!r}: инструмент отмены не заявлен у органа")
+            self._compensators[name] = dict(comps)
+
         self._adapters: dict[str, Any] = {}
         for name, entry in self._organs.items():
             if name in undeployed_authority:
@@ -186,9 +200,19 @@ class Gateway:
 
     # --- кровь ---
 
-    def _emit(self, event_type: str, organ: str, payload: dict[str, Any], cost: Cost | None = None, trace_id: str = "-") -> None:
+    def _emit(
+        self,
+        event_type: str,
+        organ: str,
+        payload: dict[str, Any],
+        cost: Cost | None = None,
+        trace_id: str = "-",
+        idempotency_key: str | None = None,
+    ) -> None:
         if self.journal is not None:
-            self.journal.append(make(event_type, "synapse", organ, trace_id, payload, cost))
+            self.journal.append(
+                make(event_type, "synapse", organ, trace_id, payload, cost, idempotency_key=idempotency_key)
+            )
 
     # --- health ---
 
@@ -204,6 +228,10 @@ class Gateway:
     def manifest_entry(self, organ: str) -> dict[str, Any]:
         return dict(self._organs[organ])
 
+    def compensator_for(self, organ: str, tool: str) -> str | None:
+        """Инструмент отмены из манифеста (W-0024, SPEC-0001 п.6); не объявлен — None."""
+        return self._compensators.get(organ, {}).get(tool)
+
     @property
     def organ_names(self) -> list[str]:
         return list(self._organs)
@@ -215,11 +243,30 @@ class Gateway:
 
     # --- вызов ---
 
-    def call(self, organ: str, tool: str, payload: dict[str, Any] | None, trace_id: str, _seen: frozenset[str] = frozenset()) -> Any:
+    def call(
+        self,
+        organ: str,
+        tool: str,
+        payload: dict[str, Any] | None,
+        trace_id: str,
+        _seen: frozenset[str] = frozenset(),
+        *,
+        reversibility: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> Any:
         """Вызов органа через синапс. Любой исход попадает в кровь.
 
         `_seen` — защита от циклов в таблице замен (SPEC-0002 п.3):
         орган дважды в одной цепочке замен не появляется.
+
+        `reversibility` (W-0024, SPEC-0003 п.16) — заявка класса обратимости,
+        переносится в акт (заявка путешествует с действием, в том числе к
+        замене органа); не заявлена — поле не пишется; класс не из словаря —
+        veto + SynapseVeto до invoke (fail-closed, ADR-0014).
+
+        `idempotency_key` (A01, SPEC-0003 п.9) — ключ отправителя: повторная
+        доставка того же эффекта не создаёт вторую строку акта (компенсатор
+        шлёт `compensate:{act_id}`).
         """
         entry = self._organs.get(organ)
         if entry is None:
@@ -230,9 +277,20 @@ class Gateway:
             self._emit("veto", organ, {"reason": "инструмент не объявлен в манифесте", "tool": tool}, trace_id=trace_id)
             raise SynapseVeto(f"{organ}.{tool}: инструмент не объявлен в манифесте")
 
+        if reversibility is not None and reversibility not in REVERSIBILITY_CLASSES:
+            self._emit(
+                "veto",
+                organ,
+                {"reason": f"класс обратимости не понимается: {reversibility!r}", "tool": tool, "reversibility": reversibility},
+                trace_id=trace_id,
+            )
+            raise SynapseVeto(f"{organ}.{tool}: класс обратимости не понимается: {reversibility!r}")
+
         adapter = self._adapters.get(organ)
         if adapter is None or not self.health(organ):
-            return self._substitute_or_raise(organ, tool, payload, trace_id, _seen)
+            return self._substitute_or_raise(
+                organ, tool, payload, trace_id, _seen, reversibility=reversibility, idempotency_key=idempotency_key
+            )
 
         started = time.monotonic()
         try:
@@ -254,14 +312,35 @@ class Gateway:
         # с причиной (он сериализуем), а ствол получает BloodRecordError и завершает
         # трейс halt'ом (SPEC-0001 G1: любой отказной выход завершён halt).
         try:
-            self._emit("act", organ, {"tool": tool, "payload": payload or {}}, Cost.from_dict(cost_dict), trace_id)
+            self._emit(
+                "act",
+                organ,
+                {"tool": tool, "payload": payload or {}, **({"reversibility": reversibility} if reversibility is not None else {})},
+                Cost.from_dict(cost_dict),
+                trace_id,
+                idempotency_key=idempotency_key,
+            )
         except EnvelopeError as exc:
             self._emit("error", organ, {"reason": f"эффект без крови: акт не записан: {exc}", "tool": tool}, trace_id=trace_id)
             raise BloodRecordError(f"{organ}.{tool}: орган отработал, кровь не приняла акт: {exc}") from exc
         return result
 
-    def _substitute_or_raise(self, organ: str, tool: str, payload: dict[str, Any] | None, trace_id: str, _seen: frozenset[str]) -> Any:
-        """Трафик уходит к замене из substitutions; замен/цикл — error и OrganUnavailable (SPEC-0002 п.3)."""
+    def _substitute_or_raise(
+        self,
+        organ: str,
+        tool: str,
+        payload: dict[str, Any] | None,
+        trace_id: str,
+        _seen: frozenset[str],
+        *,
+        reversibility: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> Any:
+        """Трафик уходит к замене из substitutions; замен/цикл — error и OrganUnavailable (SPEC-0002 п.3).
+
+        Заявка обратимости и идемпотентный ключ путешествуют с вызовом —
+        замена органа не меняет заявление о действии и не множит эффект (W-0024).
+        """
         substitute = self._find_substitute(organ, trace_id)
         if substitute is None:
             self._emit("error", organ, {"reason": "орган недоступен, замены нет", "tool": tool}, trace_id=trace_id)
@@ -269,7 +348,15 @@ class Gateway:
         if substitute in _seen:
             self._emit("error", organ, {"reason": f"цикл замен: {' -> '.join((*_seen, organ, substitute))}", "tool": tool}, trace_id=trace_id)
             raise OrganUnavailable(f"{organ}: цикл в таблице замен ({substitute} уже в цепочке)")
-        return self.call(substitute, tool, payload, trace_id, _seen | {organ})
+        return self.call(
+            substitute,
+            tool,
+            payload,
+            trace_id,
+            _seen | {organ},
+            reversibility=reversibility,
+            idempotency_key=idempotency_key,
+        )
 
     def _find_substitute(self, failed: str, trace_id: str) -> str | None:
         for reserve in self._substitutions.get(failed, []):

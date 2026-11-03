@@ -144,6 +144,31 @@ def test_anchor_book_is_wellformed() -> None:
         assert record["last_sha256"] is None or re.fullmatch(r"[0-9a-f]{64}", record["last_sha256"])
 
 
+def test_anchor_book_has_no_dangling_prints() -> None:
+    """Каждая печать указывает на кровь, живущую в доме (волна №27, ДОБИВАЙ).
+
+    Косяк, пойманный живьём: в книге висела печать
+    `runs/2026-11-03-wave22-silence/blood.jsonl` (19 событий) — каталога,
+    который не существовал ни в одном коммите (стык волн №22: артефакты их
+    линии выметены, строка-печать осталась). Гейты пропускали: проверка
+    якорей идёт по существующим файлам крови, а не по книге. Печать в
+    никуда — ложь книги: выметается, дрейф красится приёмкой."""
+    if not ANCHORS.exists():
+        return
+    dangling: list[str] = []
+    for lineno, raw in enumerate(ANCHORS.read_text(encoding="utf-8").splitlines(), start=1):
+        if not raw.strip():
+            continue
+        record = json.loads(raw)
+        target = record.get("file")
+        if not isinstance(target, str) or not (REPO_ROOT / target).exists():
+            dangling.append(f"anchors.jsonl:{lineno}: печать в никуду -> {target!r}")
+    assert not dangling, (
+        "якорная книга ссылается на несуществующую кровь (печать без крови — ложь): "
+        + "; ".join(dangling)
+    )
+
+
 def test_journals_match_their_last_anchor() -> None:
     """Живая кровь не урезана и не подменена после печати: для каждого файла
     с якорем — событий не меньше запечатанных; при равенстве последний конверт

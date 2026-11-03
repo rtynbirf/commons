@@ -74,16 +74,22 @@ axioms:
     marker: "resume"
   - id: A11
     title: "Память-файлы: экспорт"
-    status: НЕ СЛУЖЕНО
-    todo: "ТЗ-1.1"
+    status: СЛУЖЕНО
+    since: 0.46.0
+    witness: memory/files.py
+    marker: "def export"
   - id: A12
     title: "Память-файлы: forget с обходом индексов и кэшей"
-    status: НЕ СЛУЖЕНО
-    todo: "ТЗ-1.1"
+    status: СЛУЖЕНО
+    since: 0.46.0
+    witness: memory/files.py
+    marker: "def forget"
   - id: A13
     title: "Память-файлы: diff"
-    status: НЕ СЛУЖЕНО
-    todo: "ТЗ-1.1"
+    status: СЛУЖЕНО
+    since: 0.46.0
+    witness: memory/files.py
+    marker: "def diff"
   - id: A14
     title: "Бюджет внимания человека P0–P3"
     status: СЛУЖЕНО
@@ -108,10 +114,10 @@ axioms:
     adr: docs/adr/ADR-0014-unknown-event-fail-closed.md
   - id: A18
     title: "Семантика источника знаний (provenance, prompt-injection)"
-    status: ЧАСТИЧНО
-    todo: "ТЗ-1.2"
-    witness: immune/barrier.py
-    marker: "license"
+    status: СЛУЖЕНО
+    since: 0.46.0
+    witness: blood/provenance.py
+    marker: "knowledge_source"
   - id: A19
     title: "Conscience: калибровка честности по провалам"
     status: НЕ СЛУЖЕНО
@@ -132,8 +138,8 @@ axioms:
     marker: "PROVENANCE"
   - id: A23
     title: "Орган не включает себя сам (approval до факта)"
-    status: ЧАСТИЧНО
-    todo: "ТЗ-1.3"
+    status: СЛУЖЕНО
+    since: 0.46.0
     witness: brainstem/silence.py
     marker: "approval"
   - id: A24

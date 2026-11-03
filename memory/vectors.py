@@ -87,6 +87,19 @@ class SQLiteVectorIndex:
         scored.sort(key=lambda item: (-item[1], item[0]))
         return scored[:k] if k > 0 else []
 
+    def ids(self) -> list[str]:
+        """Все vec_id индекса (ТЗ-1.1, A11/A13: экспорт и diff память-файлов)."""
+        return [row[0] for row in self._connection.execute("SELECT vec_id FROM vectors ORDER BY vec_id")]
+
+    def forget(self, vec_id: str) -> bool:
+        """Забывает запись (ТЗ-1.1, A12): True — была и удалена, False — её не было.
+
+        Удаление из производной честно: сама запись не возвращается; кровь
+        (истина) этим методом не трогается — забвение крови не существует.
+        """
+        cursor = self._connection.execute("DELETE FROM vectors WHERE vec_id = ?", (vec_id,))
+        return cursor.rowcount > 0
+
     def count(self) -> int:
         """Число векторов в индексе."""
         (total,) = self._connection.execute("SELECT COUNT(*) FROM vectors").fetchone()

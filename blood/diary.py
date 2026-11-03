@@ -32,7 +32,7 @@ from typing import Any, Union
 
 from blood.envelope import Cost
 from blood.journal import Journal, verify
-from blood.provenance import event_time, trust_of
+from blood.provenance import POISON_NOTE, event_time, payload_is_poisoned, trust_of
 
 TRUST_WORDS = {
     "unverified": "заявка тела — независимых проверок не было",
@@ -168,6 +168,10 @@ def entries(source: Union[Journal, str, Path], trace_id: str | None = None) -> d
             "можно ли отменить": _undo(e),
             "чем подтверждён": f"{TRUST_WORDS[trust_of(e)]}; конверт {e['id'][:8]}",
         }
+        # Отравленная запись различима (ТЗ-1.2, A18, SPEC-0003 п.19): текст —
+        # данные о мире, не повеление телу; дневник называет это словами.
+        if payload_is_poisoned(e):
+            record["статус текста"] = POISON_NOTE
         if e["type"] == "plan":
             plan_ids.add(e["id"])
             if e["id"] not in acts_by_cause:
@@ -214,6 +218,8 @@ def render(source: Union[Journal, str, Path], trace_id: str | None = None) -> st
         if "что не сделано" in record:
             lines.append(f"- что не сделано: {record['что не сделано']}")
         lines.append(f"- цена: {record['цена']}")
+        if "статус текста" in record:
+            lines.append(f"- статус текста: {record['статус текста']} — текст payload не исполняется телом")
         lines.append(f"- можно ли отменить: {record['можно ли отменить']}")
         lines.append(f"- чем подтверждён: {record['чем подтверждён']}")
         lines.append("")

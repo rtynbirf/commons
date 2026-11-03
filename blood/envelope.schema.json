@@ -87,8 +87,11 @@
         "organ.replace",
         "boot",
         "shutdown",
-        "alert"
-      ]
+        "alert",
+        "approval.request",
+        "approval.grant"
+      ],
+      "description": "Тип события (SPEC-0003 п.17): словарь дома; approval.request — вопрос Человеку об одобрении с заявленным окном тишины (W-0032, SPEC-0004 п.7), approval.grant — его одобрение; неизвестный тип — fail-closed при записи (ADR-0014)"
     },
     "source": {
       "type": "string",
@@ -129,6 +132,11 @@
         "seconds": {
           "type": "number",
           "minimum": 0
+        },
+        "attention": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Заявленный расход внимания Человека (SPEC-0003 п.17, W-0025, SPEC-0004 п.8): прерывание (P0/P1) — 1, сводка и тихая запись — 0; поле необязательно: отсутствие = не заявлено (незаявленное не достраивается, A02), ноль не пишется — старый стиль крови жив"
         }
       }
     }

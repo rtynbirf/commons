@@ -44,18 +44,28 @@ REVERSIBILITY_CLASSES = (
 
 @dataclass(frozen=True)
 class Cost:
-    """Цена события: события без цены не существует (SPEC-0003 п.3)."""
+    """Цена события: события без цены не существует (SPEC-0003 п.3).
+
+    `attention` (W-0025, SPEC-0003 п.17, SPEC-0004 п.8) — заявленный расход
+    внимания Человека: 0 не пишется в словарь (старый стиль крови жив,
+    отсутствие поля = не заявлено, A02 — незаявленное не достраивается);
+    прерывание (P0/P1) — 1, сводка и тихая запись — 0.
+    """
 
     tokens_in: int = 0
     tokens_out: int = 0
     seconds: float = 0.0
+    attention: int = 0
 
     def as_dict(self) -> dict[str, Any]:
-        return {
+        price: dict[str, Any] = {
             "tokens_in": int(self.tokens_in),
             "tokens_out": int(self.tokens_out),
             "seconds": float(self.seconds),
         }
+        if self.attention:
+            price["attention"] = int(self.attention)  # 0 не пишется: старый стиль жив (A02)
+        return price
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> "Cost":
@@ -64,6 +74,7 @@ class Cost:
             tokens_in=int(data.get("tokens_in", 0)),
             tokens_out=int(data.get("tokens_out", 0)),
             seconds=float(data.get("seconds", 0.0)),
+            attention=int(data.get("attention", 0)),
         )
 
     def __add__(self, other: "Cost") -> "Cost":
@@ -71,6 +82,7 @@ class Cost:
             tokens_in=self.tokens_in + other.tokens_in,
             tokens_out=self.tokens_out + other.tokens_out,
             seconds=self.seconds + other.seconds,
+            attention=self.attention + other.attention,
         )
 
 

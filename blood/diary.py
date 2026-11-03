@@ -54,6 +54,8 @@ RESULT_WORDS = {
     "organ.health": "сердцебиение органа",
     "organ.replace": "орган заменён",
     "alert": "сигнал бюджета: порог достигнут",
+    "approval.request": "вопрос Человеку: ждём одобрение (правило тишины, W-0032)",
+    "approval.grant": "Человек одобрил",
 }
 
 
@@ -127,6 +129,9 @@ def _price(cost: dict[str, Any]) -> str:
         parts.append(f"токены {tokens_in}/{tokens_out}")
     if seconds:
         parts.append(f"{seconds:g} с")
+    attention = int(cost.get("attention", 0))
+    if attention:
+        parts.append(f"внимание Человека {attention}")  # заявленный расход (W-0025, SPEC-0003 п.17)
     return ", ".join(parts) if parts else "нулевая"
 
 

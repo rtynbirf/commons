@@ -21,6 +21,7 @@ import jsonschema
 
 from blood.envelope import REVERSIBILITY_CLASSES, Cost, make, new_trace_id
 from blood.journal import Journal
+from brainstem.attention import attention_cost
 from memory import Memory
 from synapse.gateway import AuthorityViolation, BloodRecordError, Gateway, OrganUnavailable, SynapseVeto
 
@@ -143,9 +144,21 @@ class Loop:
 
     # --- кровь ---
 
-    def _emit(self, event_type: str, organ: str, payload: dict[str, Any], trace_id: str) -> dict[str, Any]:
-        """Пишет конверт в кровь и возвращает его — память помнит уже записанное (SPEC-0005 п.1)."""
-        return self.journal.append(make(event_type, "brainstem", organ, trace_id, payload, Cost()))
+    def _emit(
+        self,
+        event_type: str,
+        organ: str,
+        payload: dict[str, Any],
+        trace_id: str,
+        cost: Cost | None = None,
+    ) -> dict[str, Any]:
+        """Пишет конверт в кровь и возвращает его — память помнит уже записанное (SPEC-0005 п.1).
+
+        Цена задаётся эмитентом: прерывание Человека (вопрос об одобрении,
+        W-0025) заявляет расход внимания в `cost.attention`; незаявленное
+        — нулей не получает (A02, SPEC-0003 п.17).
+        """
+        return self.journal.append(make(event_type, "brainstem", organ, trace_id, payload, cost or Cost()))
 
     # --- память (SPEC-0005): кэш-советник, отказ — degrade, кровь — истина ---
 
@@ -256,6 +269,7 @@ class Loop:
                         "at_step": index,
                     },
                     trace_id,
+                    cost=Cost(attention=attention_cost("P0")),  # остановка и вопрос Человеку — заявленная цена (W-0025)
                 )
                 self._emit("halt", "self", {"reason": "необратимое действие не одобрено — остановка до факта", "at_step": index}, trace_id)
                 return False

@@ -52,12 +52,20 @@ def test_every_envelope_valid_by_schema(journal: Path) -> None:
 @pytest.mark.parametrize("journal", JOURNALS, ids=lambda p: p.parent.name)
 def test_every_event_has_full_price(journal: Path) -> None:
     for event in events_of(journal):
-        assert set(event["cost"]) == FULL_PRICE, (
+        # Полная цена (SPEC-0003 п.3): обязательное трио в каждом конверте.
+        assert FULL_PRICE <= set(event["cost"]), (
             f"{journal.name}: событие {event['id']} без полной цены (SPEC-0003 п.3)"
         )
         assert event["cost"]["tokens_in"] >= 0
         assert event["cost"]["tokens_out"] >= 0
         assert event["cost"]["seconds"] >= 0
+        # Внимание Человека (SPEC-0003 п.17, W-0025, волна №23) — аддитивно:
+        # отсутствие = не заявлено (A02), заявленное — целое ≥ 0; ноль не
+        # пишется, поэтому встреченное внимание ≥ 1 (старый стиль жив).
+        if "attention" in event["cost"]:
+            assert isinstance(event["cost"]["attention"], int) and event["cost"]["attention"] >= 1, (
+                f"{journal.name}: событие {event['id']} несёт внимание не по словарю (SPEC-0003 п.17)"
+            )
 
 
 @pytest.mark.parametrize("journal", JOURNALS, ids=lambda p: p.parent.name)

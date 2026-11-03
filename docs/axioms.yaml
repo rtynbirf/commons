@@ -120,12 +120,16 @@ axioms:
     marker: "knowledge_source"
   - id: A19
     title: "Conscience: калибровка честности по провалам"
-    status: НЕ СЛУЖЕНО
-    todo: "ТЗ-2.1"
+    status: СЛУЖЕНО
+    since: 0.47.0
+    witness: blood/conscience.py
+    marker: "Не согласен"
   - id: A20
     title: "Creative-песочница: гипотезы без write/execute"
-    status: НЕ СЛУЖЕНО
-    todo: "ТЗ-2.2"
+    status: СЛУЖЕНО
+    since: 0.47.0
+    witness: brainstem/sandbox.py
+    marker: "гипотеза, не факт"
   - id: A21
     title: "Swarm-consent: согласие обеих сторон обмена"
     status: НЕ СЛУЖЕНО

@@ -507,7 +507,9 @@ def test_secretfree_house_is_clean(tmp_path: Path) -> None:
 
 
 def _clean_house(root: Path) -> None:
-    """Минимальный зелёный дом: все 13 гейтов чисты (волна №26: +axioms, +spec-first)."""
+    """Минимальный зелёный дом: все 13 гейтов чисты (волна №26: +axioms, +spec-first).
+    Такт аудита (0.48.2): гейт axioms держит порог DoD — зелёный дом несёт
+    СЛУЖЕНО/PASS ≥ 20, красных ≤ 2, СНЯТО с живым ADR (как живой дом)."""
     _touch(root, "pyproject.toml", 'version = "0.23.0"\n[project.scripts]\ncommons-x = "mod_x:main"\n')
     _touch(root, "mod_x.py", "def main(): ...\n")
     _touch(root, "CITATION.cff", "version: 0.23.0\n")
@@ -516,11 +518,17 @@ def _clean_house(root: Path) -> None:
     _touch(root, "README.en.md", "House 0.23.0.\n")
     _touch(root, "ROADMAP.md", "дело\n")
     _touch(root, "docs/personas.md", "### W-0001 — дело\nХочу: дело.\nСтатус: СЛУЖЕНО — артефакт.\n")
-    rows = "".join(
-        f'  - id: A{i:02d}\n    title: "аксиома {i:02d}"\n    status: НЕ СЛУЖЕНО\n    todo: "ТЗ-0.0"\n'
-        for i in range(1, 26)
-    )
-    _touch(root, "docs/axioms.yaml", f"axioms:\n{rows}")
+    _touch(root, "tests/test_witness.py", "маркер служения жив\n")
+    _touch(root, "docs/adr/ADR-0001.md", "# ADR-0001 — снятие аксиомы\n")
+    rows: list[str] = []
+    for i in range(1, 26):
+        if i == 2:  # СНЯТО — живой ADR обязателен (гейт axioms)
+            rows.append('  - id: A02\n    title: "аксиома 02"\n    status: СНЯТО\n    adr: "docs/adr/ADR-0001.md"\n')
+        elif i == 3:  # единственная красная — с пунктом ТЗ (порог ≤ 2)
+            rows.append('  - id: A03\n    title: "аксиома 03"\n    status: НЕ СЛУЖЕНО\n    todo: "ТЗ-2.3"\n')
+        else:  # 23 СЛУЖЕНО с живым свидетелем и маркером (порог ≥ 20)
+            rows.append('  - id: A%02d\n    title: "аксиома %02d"\n    status: СЛУЖЕНО\n    witness: "tests/test_witness.py"\n    marker: "маркер служения"\n' % (i, i))
+    _touch(root, "docs/axioms.yaml", f"axioms:\n{''.join(rows)}")
 
 
 def test_doctor_json_report_is_machine_readable(tmp_path: Path, capsys) -> None:

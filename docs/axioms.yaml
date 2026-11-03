@@ -1,0 +1,148 @@
+# Реестр аксиом A01–A25 (пакет «Human Membrane») — машина сверяет его с домом.
+# Гейт доктора `axioms` (W-0034, волна №26, ТЗ-0.2): свидетель живёт в доме,
+# маркер служения держится в тексте свидетеля (СЛУЖЕНО/PASS), красные строки
+# несут пункт ТЗ, СНЯТО — живой ADR; упоминание A-NN вне реестра — сирота.
+# Вердикты — второй замер арбитража №2 (волна №25,
+# runs/2026-11-03-arbitration/ARBITRATION.md §2.1), разложенный по 25 ID.
+# Счёт по ID: СЛУЖЕНО/PASS 14 + СНЯТО 1 (A17, ADR-0014) · ЧАСТИЧНО 3 ·
+# НЕ СЛУЖЕНО 7 — счёт арбитража «15/4/6» держал групповые строки A04/A05
+# и A06–A09 единицами; поимённый разложение живёт здесь и теперь считается
+# машиной (косяк счёта назван в CHANGELOG 0.45.0).
+meta:
+  source: "арбитраж №2 (волна №25) + волна №26 (ТЗ-0.2, W-0034)"
+  updated: "2026-11-03"
+axioms:
+  - id: A01
+    title: "Повторная доставка не повторяет эффект (idempotency)"
+    status: СЛУЖЕНО
+    since: 0.35.0
+    witness: tests/test_blood_dedupe.py
+    marker: "idempotency_key"
+  - id: A02
+    title: "Тройное время конверта: occurred/observed/stored"
+    status: СЛУЖЕНО
+    since: 0.36.0
+    witness: tests/test_blood_origin.py
+    marker: "occurred_at"
+  - id: A03
+    title: "trace_id сквозной по всей крови"
+    status: PASS
+    since: 0.12.0
+    witness: tests/test_hematology.py
+    marker: "trace_id"
+  - id: A04
+    title: "Дневник: план показан намерением, не исполнением"
+    status: СЛУЖЕНО
+    since: 0.37.0
+    witness: tests/test_blood_diary.py
+    marker: "план"
+  - id: A05
+    title: "Дневник: независимый читатель, проверка до «успешно»"
+    status: СЛУЖЕНО
+    since: 0.37.0
+    witness: blood/diary.py
+    marker: "план"
+  - id: A06
+    title: "Класс обратимости заявляется до факта"
+    status: СЛУЖЕНО
+    since: 0.41.0
+    witness: tests/test_wave22_reversibility_budget.py
+    marker: "reversibility"
+  - id: A07
+    title: "Необратимое без одобрения не исполняется"
+    status: СЛУЖЕНО
+    since: 0.41.0
+    witness: brainstem/compensator.py
+    marker: "irreversible"
+  - id: A08
+    title: "Компенсация — отдельная операция с causation_id"
+    status: СЛУЖЕНО
+    since: 0.41.0
+    witness: brainstem/compensator.py
+    marker: "causation_id"
+  - id: A09
+    title: "COMPENSATION_PARTIAL — не PASS, честная частичность"
+    status: СЛУЖЕНО
+    since: 0.41.0
+    witness: brainstem/compensator.py
+    marker: "COMPENSATION_PARTIAL"
+  - id: A10
+    title: "Resume/replay по журналу"
+    status: PASS
+    since: 0.26.0
+    witness: tests/test_blood_resume.py
+    marker: "resume"
+  - id: A11
+    title: "Память-файлы: экспорт"
+    status: НЕ СЛУЖЕНО
+    todo: "ТЗ-1.1"
+  - id: A12
+    title: "Память-файлы: forget с обходом индексов и кэшей"
+    status: НЕ СЛУЖЕНО
+    todo: "ТЗ-1.1"
+  - id: A13
+    title: "Память-файлы: diff"
+    status: НЕ СЛУЖЕНО
+    todo: "ТЗ-1.1"
+  - id: A14
+    title: "Бюджет внимания человека P0–P3"
+    status: СЛУЖЕНО
+    since: 0.43.0
+    witness: tests/test_wave24_stop_attention.py
+    marker: "attention"
+  - id: A15
+    title: "Fail-closed страж полномочий"
+    status: PASS
+    since: 0.20.0
+    witness: synapse/authority.py
+    marker: "AuthorityViolation"
+  - id: A16
+    title: "Замена/отказ органа без каскада"
+    status: PASS
+    since: 0.13.0
+    witness: tests/test_pid1.py
+    marker: "substitution"
+  - id: A17
+    title: "Неизвестный тип события"
+    status: СНЯТО
+    adr: docs/adr/ADR-0014-unknown-event-fail-closed.md
+  - id: A18
+    title: "Семантика источника знаний (provenance, prompt-injection)"
+    status: ЧАСТИЧНО
+    todo: "ТЗ-1.2"
+    witness: immune/barrier.py
+    marker: "license"
+  - id: A19
+    title: "Conscience: калибровка честности по провалам"
+    status: НЕ СЛУЖЕНО
+    todo: "ТЗ-2.1"
+  - id: A20
+    title: "Creative-песочница: гипотезы без write/execute"
+    status: НЕ СЛУЖЕНО
+    todo: "ТЗ-2.2"
+  - id: A21
+    title: "Swarm-consent: согласие обеих сторон обмена"
+    status: НЕ СЛУЖЕНО
+    todo: "ТЗ-2.3"
+  - id: A22
+    title: "Провенанс содержимого (PROVENANCE, donation)"
+    status: PASS
+    since: 0.5.0
+    witness: PROVENANCE.md
+    marker: "PROVENANCE"
+  - id: A23
+    title: "Орган не включает себя сам (approval до факта)"
+    status: ЧАСТИЧНО
+    todo: "ТЗ-1.3"
+    witness: brainstem/silence.py
+    marker: "approval"
+  - id: A24
+    title: "Dispatcher: cursor/ack/retry/DLQ/backpressure"
+    status: НЕ СЛУЖЕНО
+    todo: "ТЗ-2.4"
+  - id: A25
+    title: "Бюджет → halt, timeout, concurrency"
+    status: ЧАСТИЧНО
+    todo: "ТЗ-2.4"
+    witness: brainstem/loop.py
+    marker: "halt"

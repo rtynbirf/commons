@@ -11,9 +11,9 @@ authors:
   - name: "rtynbirf"
     website: "https://github.com/rtynbirf"
 <<<<<<< HEAD
-version: 0.49.0
+version: 0.50.0
 =======
-version: 0.49.0
+version: 0.50.0
 >>>>>>> ef133c6
 date-released: "2026-11-03"
 license: Apache-2.0

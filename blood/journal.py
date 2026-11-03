@@ -27,6 +27,18 @@
 ставит конверту `stored_at` — изготовитель конверта момент записи не выдумывает.
 `stored_at` (как и `prev_id`) — метаданные файла, не часть эффекта: дедуп
 (A01) их конфликтом не считает.
+
+С 0.12.0 (п.15, волна №21, W-0026) журнал шьёт и содержание: при append он
+ставит конверту `prev_sha256` — канонический SHA-256 предыдущего конверта
+файла. Подмена содержимого при сохранённых `id`/`prev_id` (граница п.14)
+меняет канонический хэш и роняется при чтении (`verify` — content_gaps).
+Хэш-цепочка транзитивна: подделка любого конверта в середине роняет ссылки
+на него во всех последующих. Усечение хвоста хэшами внутри файла не ловится
+по определению — против него внешний якорь: `seal` печатает файл (сколько
+событий, какой хэш), `verify` с якорем красит усечение и подмену хвоста.
+Конверты без `prev_sha256` (v0.4–v0.11) валидны навсегда: хэш-зона файла
+начинается с первого заверённого конверта, старая кровь не заверяется —
+граница честно названа, не скрыта.
 """
 
 from __future__ import annotations
@@ -35,7 +47,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterator
 
-from blood.envelope import Cost, EnvelopeError, now_utc, validate
+from blood.envelope import Cost, EnvelopeError, canonical_sha256, now_utc, validate
 
 
 class Journal:
@@ -47,6 +59,10 @@ class Journal:
         # Якорь цепочки prev_id (SPEC-0003 п.7): id последнего известного
         # конверта. None — цепочка ещё не началась (первый конверт файла).
         self._last_id: str | None = None
+        # Якорь хэш-цепочки (SPEC-0003 п.15, W-0026): канонический SHA-256
+        # последнего известного конверта. None — заверять нечего (первый
+        # конверт файла или старая кровь без хэшей).
+        self._last_sha: str | None = None
         # Честный счётчик битых строк при чтении (from_jsonl, п.8).
         self.skipped: int = 0
         # Память dedupe (A01, SPEC-0003): id → записанный конверт;
@@ -64,7 +80,7 @@ class Journal:
         повторная сессия не начинает журнал с чистого листа.
         """
         self._fh = open(path, "a", encoding="utf-8")
-        self._last_id = self._last_valid_id(Path(path))
+        self._last_id, self._last_sha = self._last_anchor(Path(path))
         self._remember_file(Path(path))
 
     def _remember_file(self, path: Path) -> None:
@@ -102,17 +118,18 @@ class Journal:
             self._fh = None
 
     @staticmethod
-    def _last_valid_id(path: Path) -> str | None:
-        """id последнего валидного конверта файла (якорь цепочки, п.7).
+    def _last_anchor(path: Path) -> tuple[str | None, str | None]:
+        """Якорь файла для продолжения цепочек (п.7 и п.15): id и канонический
+        SHA-256 последнего разобранного конверта с id.
 
         Битая строка и конверт без id якорем не служат — скан идёт до конца
-        файла, якорем становится последний разбором пройденный конверт с id.
-        Журналы организма — десятки килобайт: честный полный проход дешевле
-        хитрых хвостов.
+        файла. Журналы организма — десятки килобайт: честный полный проход
+        дешевле хитрых хвостов.
         """
         if not path.exists() or path.stat().st_size == 0:
-            return None
-        anchor: str | None = None
+            return None, None
+        last_id: str | None = None
+        last_sha: str | None = None
         with path.open("rb") as fh:
             for raw in fh:
                 line = raw.strip()
@@ -123,8 +140,9 @@ class Journal:
                 except (json.JSONDecodeError, UnicodeDecodeError):
                     continue
                 if isinstance(envelope, dict) and envelope.get("id"):
-                    anchor = envelope["id"]
-        return anchor
+                    last_id = envelope["id"]
+                    last_sha = canonical_sha256(envelope)
+        return last_id, last_sha
 
     def append(self, envelope: dict[str, Any]) -> dict[str, Any]:
         """Записывает конверт, проставляя prev_id цепочки (SPEC-0003 п.7).
@@ -135,10 +153,12 @@ class Journal:
         содержанием — конфликт, fail-closed (EnvelopeError).
 
         При записи журнал ставит `stored_at` (п.9) — момент записи знает
-        журнал, не изготовитель конверта.
+        журнал, не изготовитель конверта. При записи журнал ставит и
+        `prev_sha256` (п.15, W-0026) — печать содержания: предыдущий конверт
+        заверяется каноническим хэшем, подмена ловится при чтении.
 
-        Возвращает записанный конверт (уже с prev_id и stored_at) — память
-        помнит уже записанное (SPEC-0005 п.1).
+        Возвращает записанный конверт (уже с prev_id, stored_at и prev_sha256)
+        — память помнит уже записанное (SPEC-0005 п.1).
         """
         envelope = dict(envelope)
         env_id = envelope.get("id")
@@ -158,6 +178,8 @@ class Journal:
         envelope["stored_at"] = now_utc()
         if self._last_id is not None:
             envelope["prev_id"] = self._last_id
+        if self._last_sha is not None:
+            envelope["prev_sha256"] = self._last_sha
         # Кровь не принимает несериализуемое (SPEC-0003 п.14, волна №20, F-02):
         # сериализация ДО мутации памяти — конверт, который не упадёт в файл,
         # не должен попадать и в память; отказ записи ничего не меняет.
@@ -170,6 +192,7 @@ class Journal:
             self._fh.write(line)
             self._fh.flush()
         self._last_id = envelope["id"]
+        self._last_sha = canonical_sha256(envelope)
         self._by_id[envelope["id"]] = envelope
         if isinstance(envelope.get("idempotency_key"), str):
             self._key_to_id[envelope["idempotency_key"]] = envelope["id"]
@@ -180,9 +203,14 @@ class Journal:
         """Содержание конверта без метаданных файла — то, что сравнивается
         при повторном append: тот же id обязан нести тот же эффект.
         `prev_id` — цепочка файла; `stored_at` — момент записи (п.9), ставит
-        его журнал; оба — метаданные, эффект не повторяют и конфликтом не служат.
+        его журнал; `prev_sha256` — печать содержания (п.15), ставит его тоже
+        журнал. Все три — метаданные файла, эффект не повторяют и конфликтом
+        не служат.
         """
-        return {k: v for k, v in envelope.items() if k not in ("prev_id", "stored_at")}
+        return {
+            k: v for k, v in envelope.items()
+            if k not in ("prev_id", "stored_at", "prev_sha256")
+        }
 
     def all(self) -> tuple[dict[str, Any], ...]:
         return tuple(self._events)
@@ -248,6 +276,7 @@ class Journal:
                     journal._key_to_id[key] = env_id
         if journal._events:
             journal._last_id = journal._events[-1]["id"]
+            journal._last_sha = canonical_sha256(journal._events[-1])
         return journal
 
     def __iter__(self) -> Iterator[dict[str, Any]]:
@@ -257,17 +286,68 @@ class Journal:
         return len(self._events)
 
 
-def verify(path: str | Path) -> dict[str, Any]:
-    """Целостность журнала при чтении (SPEC-0003 п.7): гэпы цепочки prev_id.
+def seal(path: str | Path, *, name: str | None = None) -> dict[str, Any]:
+    """Печатает файл крови внешним якорем (SPEC-0003 п.15, W-0026).
 
-    Цепочка заявлена с первого конверта, несущего `prev_id`; каждый конверт
-    после него обязан нести `prev_id`, равный id предыдущего валидного
-    конверта файла, иначе — разрыв. Первый конверт файла с `prev_id` — гэп
-    (цепочка не могла начаться). Битая строка и конверт без id якорем цепочки
-    не служат — честный `skipped`. Пролитая кровь без цепочки (v0.4.0 и
-    старше) валидна навсегда: `chained: false`, гэпов нет.
+    Усечение хвоста хэш-цепочкой внутри файла не ловится по определению —
+    подрезанный файл сам сшит и доволен. Против этого якорь СНАРУЖИ: сколько
+    событий было и каким каноническим хэшем был запечатан последний конверт.
+    Якорь — не подмена append-only: кровь не трогает, он лишь память читателя.
 
-    Возвращает отчёт: {"events": N, "gaps": [...], "skipped": S, "chained": bool}.
+    Возвращает {"file", "events", "last_id", "last_sha256", "sealed_at"} —
+    запись якорной книги (blood/anchors.jsonl): живой прогон опечатывает свою
+    кровь, гематология сверяет файлы с книгой. Битые строки и конверты без id
+    якорем не служат — печатаются только разобранные события.
+    """
+    events = 0
+    last_id: str | None = None
+    last_sha: str | None = None
+    path = Path(path)
+    if path.exists() and path.stat().st_size > 0:
+        with path.open("rb") as fh:
+            for raw in fh:
+                line = raw.strip()
+                if not line:
+                    continue
+                try:
+                    envelope = json.loads(line)
+                except (json.JSONDecodeError, UnicodeDecodeError):
+                    continue
+                if not isinstance(envelope, dict) or not envelope.get("id"):
+                    continue
+                events += 1
+                last_id = envelope["id"]
+                last_sha = canonical_sha256(envelope)
+    return {
+        "file": name or path.name,
+        "events": events,
+        "last_id": last_id,
+        "last_sha256": last_sha,
+        "sealed_at": now_utc(),
+    }
+
+
+def verify(path: str | Path, anchor: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Целостность журнала при чтении (SPEC-0003 п.7 + п.15).
+
+    Две цепочки, две честные границы:
+
+    - **порядок** (`prev_id`, п.7): цепочка заявлена с первого конверта,
+      несущего `prev_id`; разрыв — удаление/подмена/вставка — гэп в `gaps`.
+      Кровь без цепочки (v0.4.0 и старше) валидна навсегда: `chained: false`.
+    - **содержание** (`prev_sha256`, п.15, W-0026): конверт с печатью обязан
+      ссылаться на канонический SHA-256 предыдущего валидного конверта файла;
+      подмена содержимого — `content_gaps`. Хэш-зона начинается с первого
+      заверённого конверта; кровь без печатей (`hashed: false`) содержимое не
+      заверяет — старая граница п.14 остаётся названной, не скрытой.
+    - **якорь** (`anchor` от `seal`): событий меньше запечатанного — усечение
+      хвоста; при равенстве не совпали id/хэш последнего — подмена хвоста.
+      Файл, выросший после печати, якорю верен (рост — не гэп).
+
+    Битая строка и конверт без id якорем не служат — честный `skipped`.
+
+    Возвращает отчёт: {"events": N, "gaps": [...], "skipped": S, "chained": bool,
+    "content_gaps": [...], "hashed": bool}.
     """
     events = 0
     skipped = 0
@@ -275,6 +355,12 @@ def verify(path: str | Path) -> dict[str, Any]:
     chained = False
     chain_started = False
     prev_id_actual: str | None = None
+    content_gaps: list[dict[str, Any]] = []
+    hashed = False
+    hash_started = False
+    prev_sha_actual: str | None = None
+    last_id: str | None = None
+    last_sha: str | None = None
 
     with Path(path).open("rb") as fh:
         for lineno, raw in enumerate(fh, start=1):
@@ -316,4 +402,58 @@ def verify(path: str | Path) -> dict[str, Any]:
                 })
             prev_id_actual = envelope["id"]
 
-    return {"events": events, "gaps": gaps, "skipped": skipped, "chained": chained}
+            declared_sha = envelope.get("prev_sha256")
+            if declared_sha is not None:
+                hashed = True
+                hash_started = True
+                if prev_sha_actual is None:
+                    content_gaps.append({
+                        "line": lineno,
+                        "id": envelope["id"],
+                        "reason": "первый конверт файла несёт prev_sha256 — нечего заверять",
+                    })
+                elif declared_sha != prev_sha_actual:
+                    content_gaps.append({
+                        "line": lineno,
+                        "id": envelope["id"],
+                        "reason": "подмена содержимого: prev_sha256 не совпал с каноническим хэшем предыдущего конверта",
+                    })
+            elif hash_started:
+                content_gaps.append({
+                    "line": lineno,
+                    "id": envelope["id"],
+                    "reason": "конверт в заверенной зоне без prev_sha256",
+                })
+            prev_sha_actual = canonical_sha256(envelope)
+            last_id = envelope["id"]
+            last_sha = prev_sha_actual
+
+    if anchor is not None:
+        anchor_events = int(anchor.get("events", 0))
+        if events < anchor_events:
+            content_gaps.append({
+                "line": None,
+                "id": anchor.get("last_id"),
+                "reason": (
+                    f"усечение хвоста: в файле {events} событий, "
+                    f"якорь помнит {anchor_events}"
+                ),
+            })
+        elif events == anchor_events and (
+            last_id != anchor.get("last_id") or last_sha != anchor.get("last_sha256")
+        ):
+            content_gaps.append({
+                "line": None,
+                "id": anchor.get("last_id"),
+                "reason": "хвост подменён: последний конверт не совпадает с запечатанным якорем (id или хэш)",
+            })
+        # events > anchor_events — файл вырос после печати: рост не гэп.
+
+    return {
+        "events": events,
+        "gaps": gaps,
+        "skipped": skipped,
+        "chained": chained,
+        "content_gaps": content_gaps,
+        "hashed": hashed,
+    }

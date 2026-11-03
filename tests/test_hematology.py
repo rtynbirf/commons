@@ -101,6 +101,67 @@ def test_journal_chain_has_no_gaps(journal: Path) -> None:
     )
 
 
+# --- хэш-цепочка содержания и якорная книга (SPEC-0003 п.15, W-0026, волна №21)
+
+ANCHORS = REPO_ROOT / "blood" / "anchors.jsonl"
+
+
+@pytest.mark.parametrize("journal", JOURNALS, ids=lambda p: p.parent.name)
+def test_journal_content_chain_has_no_gaps(journal: Path) -> None:
+    """Хэш-гигиена: заверенная кровь цела — подменённый конверт, конверт в
+    заверенной зоне без печати, усечённый хвост (по якорю) — content_gaps.
+    Кровь без печатей (v0.4–v0.11) валидна навсегда: hashed=False, претензий нет.
+    """
+    from blood.journal import verify
+
+    report = verify(journal)
+    assert report["content_gaps"] == [], (
+        f"{journal.name}: хэш-цепочка содержания порвана — append-only нарушен: "
+        f"{report['content_gaps'][:3]}"
+    )
+
+
+def test_anchor_book_is_wellformed() -> None:
+    """Якорная книга (blood/anchors.jsonl) — по одной записи-печати на строку:
+    файл крови, счёт событий, id и канонический хэш последнего конверта.
+    Книги может не быть — печать крови начата волной №21."""
+    if not ANCHORS.exists():
+        return
+    for lineno, raw in enumerate(ANCHORS.read_text(encoding="utf-8").splitlines(), start=1):
+        if not raw.strip():
+            continue
+        record = json.loads(raw)
+        assert {"file", "events", "last_id", "last_sha256", "sealed_at"} <= set(record), (
+            f"anchors.jsonl:{lineno}: запись без полей печати"
+        )
+        assert isinstance(record["events"], int) and record["events"] >= 0
+        assert record["last_sha256"] is None or re.fullmatch(r"[0-9a-f]{64}", record["last_sha256"])
+
+
+def test_journals_match_their_last_anchor() -> None:
+    """Живая кровь не урезана и не подменена после печати: для каждого файла
+    с якорем — событий не меньше запечатанных; при равенстве последний конверт
+    совпадает с якорем (id и канонический хэш). Файл, выросший после печати,
+    якорю верен — рост не гэп."""
+    from blood.journal import verify
+
+    if not ANCHORS.exists():
+        return
+    last_by_file: dict[str, dict] = {}
+    for raw in ANCHORS.read_text(encoding="utf-8").splitlines():
+        if raw.strip():
+            record = json.loads(raw)
+            last_by_file[record["file"]] = record  # последняя печать — действующая
+    for journal in JOURNALS:
+        anchor = last_by_file.get(str(journal.relative_to(REPO_ROOT)))
+        if anchor is None:
+            continue
+        report = verify(journal, anchor=anchor)
+        assert report["content_gaps"] == [], (
+            f"{journal.name}: кровь разошлась с печатью: {report['content_gaps'][:2]}"
+        )
+
+
 # --- спека сдаёт свою кровь (приёмка SPEC-0003, п.1 и п.3) -------------------
 
 

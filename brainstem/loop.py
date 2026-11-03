@@ -15,7 +15,9 @@ import copy
 import json
 import time
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Callable
+
+import jsonschema
 
 from blood.envelope import Cost, make, new_trace_id
 from blood.journal import Journal
@@ -25,12 +27,18 @@ from synapse.gateway import AuthorityViolation, BloodRecordError, Gateway, Organ
 
 @dataclass(frozen=True)
 class Step:
-    """Один шаг плана: намерение + вызов органа через синапсы."""
+    """Один шаг плана: намерение + вызов органа через синапсы.
+
+    `accept` (W-0027, SPEC-0001 v0.3.0) — проверяемый критерий приёмки
+    результата: JSON-схема (dict) или предикат (callable result→bool).
+    None — прежняя рефлексия M1 (результат есть — удовлетворено).
+    """
 
     organ: str
     tool: str
     payload: dict[str, Any] = field(default_factory=dict)
     intent: str = ""
+    accept: dict[str, Any] | Callable[[Any], bool] | None = None
 
 
 @dataclass
@@ -95,6 +103,13 @@ class Loop:
 
     Инвариант halt (SPEC-0001 G1): любой отказной выход цикла завершён
     событием halt — G1-реконструкция трейса всегда полна.
+
+    Рефлексия (SPEC-0001 v0.3.0, W-0027): шаг может объявить проверяемый
+    критерий успеха (`Step.accept`) — JSON-схему или предикат; тогда REFLECT
+    меряет результат им, а не фактом непустого ответа («error с ok:false»
+    успехом не считается, F-06). Без критерия — прежняя рефлексия M1
+    (результат есть — удовлетворено), аддитивно: старые планы валидны.
+    Кровь честная: reflect называет критерий (`criterion`) — чем мерили.
     """
 
     def __init__(
@@ -158,6 +173,32 @@ class Loop:
             tokens_out=after.tokens_out - before.tokens_out,
             seconds=round(after.seconds - before.seconds, 6),
         )
+
+    # --- рефлексия по проверяемому критерию (W-0027, SPEC-0001 v0.3.0) ---
+
+    @staticmethod
+    def _accept(step: "Step", result: Any) -> tuple[str, bool, str | None]:
+        """Меряет результат критерием шага. Возвращает (критерий, вердикт, причина).
+
+        JSON-схема — jsonschema; предикат — callable, исключение предиката —
+        провал с названной причиной (дефект плана, не органа); непонятный
+        критерий — fail-closed: намерение не удовлетворено, причина названа.
+        """
+        accept = step.accept
+        if accept is None:
+            return "m1", result is not None, None
+        if isinstance(accept, dict):
+            try:
+                jsonschema.validate(result, accept)
+            except jsonschema.ValidationError as exc:
+                return "jsonschema", False, f"результат не принят по схеме шага: {exc.message}"
+            return "jsonschema", True, None
+        if callable(accept):
+            try:
+                return "predicate", bool(accept(result)), None
+            except Exception as exc:  # noqa: BLE001 — упавший критерий — дефект плана, не органа
+                return "predicate", False, f"критерий шага упал: {exc!r}"
+        return "unknown", False, f"критерий шага не понимается: {type(accept).__name__}"
 
     # --- цикл ---
 
@@ -232,10 +273,18 @@ class Loop:
                     self._emit("alert", step.organ, {"reason": f"лимит вызова превышен: {over}", "tool": step.tool}, trace_id)
 
             self._emit("observe", step.organ, {"result": _normalize(result), "tool": step.tool}, trace_id)
-            satisfied = result is not None  # рефлексия M1: намерение = вызов вернул результат
-            self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": satisfied}, trace_id))
+            criterion, satisfied, why = self._accept(step, result)
+            reflect_payload: dict[str, Any] = {
+                "intent": step.intent,
+                "satisfied": satisfied,
+                "criterion": criterion,
+            }
+            if why is not None:
+                reflect_payload["reason"] = why
+            self._remember(self._emit("reflect", "self", reflect_payload, trace_id))
             if not satisfied:
-                self._emit("halt", "self", {"reason": "намерение не удовлетворено: орган вернул пустой результат", "at_step": index}, trace_id)
+                reason = why or "орган вернул пустой результат"
+                self._emit("halt", "self", {"reason": f"намерение не удовлетворено: {reason}", "at_step": index}, trace_id)
                 return False
         return True
 

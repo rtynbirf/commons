@@ -219,7 +219,14 @@ def test_verify_empty_and_single_event(tmp_path: Path) -> None:
     empty = tmp_path / "empty.jsonl"
     empty.write_text("", encoding="utf-8")
     report = verify(empty)
-    assert report == {"events": 0, "gaps": [], "skipped": 0, "chained": False}
+    assert report == {
+        "events": 0,
+        "gaps": [],
+        "skipped": 0,
+        "chained": False,
+        "content_gaps": [],
+        "hashed": False,
+    }, "пустой файл: ни цепочек, ни печатей, ни претензий (отчёт п.7 + п.15)"
 
     single = tmp_path / "single.jsonl"
     _write_envelopes(single, [make("act", "brainstem", "self", "t1", {}, Cost())])

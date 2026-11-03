@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 from dataclasses import dataclass
@@ -62,6 +63,18 @@ class Cost:
 def now_utc() -> str:
     """Момент события, UTC, RFC 3339 с суффиксом Z."""
     return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def canonical_sha256(envelope: dict[str, Any]) -> str:
+    """Канонический SHA-256 содержания конверта (W-0026, SPEC-0003 п.15).
+
+    Каноническая форма — JSON без пробелов, ключи отсортированы, UTF-8:
+    хэш заверяет СМЫСЛ конверта, а не байты конкретной строки файла.
+    Хэш-цепочка в журнале шьёт и содержание: подмена любого конверта
+    меняет его канонический хэш и роняет все ссылки на него.
+    """
+    canonical = json.dumps(envelope, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def new_event_id() -> str:

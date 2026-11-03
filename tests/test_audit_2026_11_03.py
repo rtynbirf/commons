@@ -7,9 +7,10 @@
 до правок (проба `runs/2026-11-03-wave20-colleague-verification/`), здесь —
 приёмки закрытия: F-02 (кровь не принимает несериализуемое, SPEC-0003 п.14),
 F-03 (эффект без крови завершён halt, SPEC-0001 G1), F-04/F-05 (полная
-грамматика мутаций и чтения каталогов, SPEC-0002 п.8 v0.11.0). F-01 — не
-закрывается кодом, а честно называется границей (тест-документация ниже):
-защита содержимого — хотёлка W-0026.
+грамматика мутаций и чтения каталогов, SPEC-0002 п.8 v0.11.0). F-01 — граница
+была названа честно (приёмка-предписание), затем закрыта волной №21 (W-0026,
+SPEC-0003 п.15): приёмка перевернулась, как обещала; для старой крови без
+печатей граница остаётся названной.
 """
 from __future__ import annotations
 
@@ -62,15 +63,14 @@ def test_unserializable_envelope_with_journalled_journal(tmp_path: Path) -> None
     assert journal.totals(trace).tokens_in >= 0  # счёт жив, рассинхрона нет
 
 
-# --- F-01: честная граница цепочки (не закрывается кодом — документируется) ---
+# --- F-01: граница перевернута W-0026 (волна №21) — честно, по предписанию ---
 
 
-def test_chain_boundary_content_tampering_is_not_detected(tmp_path: Path) -> None:
-    """Приёмка-документация границы (SPEC-0003 п.14): подмена содержимого при
-    сохранённых id/prev_id проходит verify — цепочка шьёт порядок, а не байты.
-    НЕ скрываем и не притворяемся: граница названа в спеке и докстринге,
-    защита содержимого — хотёлка W-0026 (prev_sha256). При её служении этот
-    тест переворачивается честно — как приёмка-предписание волны №13."""
+def test_content_tampering_is_detected_in_hashed_blood(tmp_path: Path) -> None:
+    """Переворот приёмки-предписания волны №20 (W-0026, SPEC-0003 п.15):
+    подмена содержимого при сохранённых id/prev_id в ХЭШИРОВАННОЙ крови
+    ловится verify (content_gaps) — цепочка шьёт и байты, не только порядок.
+    Прежний тест называл границу живой и обещал перевернуться — перевёрнут."""
     path = tmp_path / "blood.jsonl"
     journal = Journal()
     journal.attach(path)
@@ -86,8 +86,36 @@ def test_chain_boundary_content_tampering_is_not_detected(tmp_path: Path) -> Non
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     report = verify(path)
-    assert report["chained"] and report["gaps"] == [], (
-        "граница жива: verify не заверяет содержимое (W-0026 закроет — тест перевернётся)"
+    assert report["chained"] and report["gaps"] == [], "цепочка порядка цела — подмена тоньше"
+    assert report["content_gaps"], "хэш-цепочка заверяет содержимое: граница закрыта"
+
+
+def test_content_tampering_boundary_in_legacy_blood(tmp_path: Path) -> None:
+    """Граница остаётся честно названной для старой крови: журнал, начатый до
+    W-0026 (v0.4–v0.11), печатей не несёт — содержимое не заверяется
+    (hashed=False), и verify не выдумывает претензий к пролитому. Новая кровь
+    хэшируется с рождения; смешанный файл заверяется от первого prev_sha256."""
+    path = tmp_path / "blood.jsonl"
+    trace = new_trace_id()
+    legacy = {
+        "id": "44444444-4444-4444-8444-444444444444",
+        "ts": "2026-11-01T12:00:00Z",
+        "type": "act",
+        "source": "brainstem",
+        "organ": "self",
+        "trace_id": trace,
+        "payload": {"n": 1},
+        "cost": {"tokens_in": 0, "tokens_out": 0, "seconds": 0.0},
+    }
+    path.write_text(json.dumps(legacy, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    forged = dict(legacy, payload={"n": 999, "forged": True})
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(forged, ensure_ascii=False) + "\n")
+
+    report = verify(path)
+    assert report["hashed"] is False and report["content_gaps"] == [], (
+        "старая кровь не заверяется — граница названа, не прикрыта (SPEC-0003 п.14)"
     )
 
 

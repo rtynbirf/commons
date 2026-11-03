@@ -99,7 +99,7 @@ def test_halted_path_is_not_recovered(tmp_path: Path) -> None:
 def test_path_counts_human_interruptions(tmp_path: Path) -> None:
     j = _journal(tmp_path)
     _plan(j, TRACE)
-    j.append(make("approval.request", "brainstem", "echo-a", TRACE, {"what": "необратимое"}, Cost(attention=1)))
+    j.append(make("approval.request", "brainstem", "echo-a", TRACE, {"what": "необратимое"}, Cost(attention=1), attention_class="P0"))
     _reflect(j, TRACE)
     p = path_of(_events(j))
     assert p["interruptions"] == 1

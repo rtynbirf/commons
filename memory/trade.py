@@ -50,14 +50,28 @@ def export(memory: Any, path: Path | str) -> dict[str, Any]:
     return {"status": "EXPORTED", "path": str(path), "items": len(items)}
 
 
-def import_snapshot(memory: Any, path: Path | str) -> dict[str, Any]:
-    """Импортирует снапшот fail-closed; возвращает diff: added/skipped/rejected/conflicts."""
+def import_snapshot(
+    memory: Any,
+    path: Path | str,
+    *,
+    tombstoned: set[str] | None = None,
+) -> dict[str, Any]:
+    """Импортирует снапшот fail-closed; возвращает diff: added/skipped/rejected/conflicts.
+
+    Надгробия (G4, стык 0.48.2): запись, на которую в крови висит forget-надгробие
+    (SPEC-0003 п.18), не возвращается в производные — импорт не оживляет забытое.
+    Надгробия передаются множеством id (`tombstoned`, из крови: тип forget →
+    payload["forget"]); None — импорт не сверялся с кровью, и отчёт называет это
+    честно (tombstones_checked: false), не выдаёт молчание за сверку.
+    """
     path = Path(path)
     result: dict[str, Any] = {
         "path": str(path),
         "schema": None,
         "added": 0,
         "skipped": 0,
+        "skipped_tombstoned": [] if tombstoned is not None else None,
+        "tombstones_checked": tombstoned is not None,
         "rejected": [],
         "conflicts": [],
     }
@@ -108,6 +122,10 @@ def import_snapshot(memory: Any, path: Path | str) -> dict[str, Any]:
         vector = item.get("vector")
         meta = item.get("meta")
         provenance = meta.get("provenance") if isinstance(meta, dict) else None
+
+        if tombstoned is not None and isinstance(vec_id, str) and vec_id in tombstoned:
+            result["skipped_tombstoned"].append(vec_id)  # забытое не оживает (G4)
+            continue
 
         if not isinstance(provenance, dict) or not provenance.get("origin") or not provenance.get("event_id"):
             result["rejected"].append(

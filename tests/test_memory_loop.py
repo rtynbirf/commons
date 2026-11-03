@@ -141,6 +141,12 @@ class StubVectorIndex:
     def count(self) -> int:
         return len(self.vectors)
 
+    def ids(self) -> list[str]:
+        return sorted(self.vectors)
+
+    def forget(self, vec_id: str) -> bool:
+        return self.vectors.pop(vec_id, None) is not None
+
     def flush(self) -> None:
         self.flushes += 1
 
@@ -160,6 +166,19 @@ class StubMemoryGraph:
         if tool:
             self.nodes.add(tool)
         self.edges.add((envelope["trace_id"], envelope["source"], envelope["organ"], tool))
+
+    def forget_envelope(self, envelope: dict[str, Any]) -> bool:
+        """Забывает конверт (протокол волны №27, ТЗ-1.1): True — был и выметен,
+        False — его не было. Обратная операция к add_envelope: ребро с тем же
+        (trace_id, source, organ, tool) выметается; узлы стаба — множество,
+        осиротевшие узлы не считаются записями (кровь — истина)."""
+        tool = envelope.get("payload", {}).get("tool")
+        tool = tool if isinstance(tool, str) else ""
+        edge = (envelope["trace_id"], envelope["source"], envelope["organ"], tool)
+        if edge in self.edges:
+            self.edges.discard(edge)
+            return True
+        return False
 
     def neighbors(self, node: str, k: int = 5) -> list[dict[str, Any]]:
         return []
@@ -320,7 +339,8 @@ def test_replay_blood_is_truth(manifest_path, journal, gateway, tmp_path) -> Non
     # Вектора — базовая линия контракта: dim=256, meta честный.
     assert all(len(vector) == 256 for vector, _ in index.vectors.values())
     reflect = reflects[0]
-    assert index.vectors[reflect["id"]][1] == {"type": "reflect", "source": "brainstem", "trace_id": "g1-truth"}
+    assert index.vectors[reflect["id"]][1] == {"type": "reflect", "source": "brainstem", "trace_id": "g1-truth",
+                                        "knowledge_source": "body", "trust": "unknown"}  # provenance записи (ТЗ-1.2)
 
     # Сессия завершена — replay сохранил оба движка.
     assert index.flushes == 1
@@ -398,7 +418,8 @@ def test_facade_context_maps_search_and_writes_nothing() -> None:
 
     assert hits and all(set(item) == {"id", "score", "meta"} for item in hits)
     assert hits[0]["id"] == env_a["id"]  # релевантное — выше нерелевантного
-    assert hits[0]["meta"] == {"type": "reflect", "source": "brainstem", "trace_id": "t-a"}
+    assert hits[0]["meta"] == {"type": "reflect", "source": "brainstem", "trace_id": "t-a",
+                          "knowledge_source": "body", "trust": "unknown"}  # provenance (ТЗ-1.2)
     # Read-only: ни индекс, ни граф не изменились.
     assert facade.index.count() == before_index
     assert facade.graph.stats() == before_graph

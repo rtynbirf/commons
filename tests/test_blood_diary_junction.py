@@ -129,7 +129,8 @@ def test_junction_totals_sum_costs(tmp_path: Path) -> None:
     journal.close()
 
     totals = entries(path)["totals"]
-    assert totals == {"tokens_in": 11, "tokens_out": 22, "seconds": 2.0}, "цена сходится"
+    # волна №24 (W-0025): цена сходится вместе с вниманием
+    assert totals == {"tokens_in": 11, "tokens_out": 22, "seconds": 2.0, "attention": 0}, "цена сходится"
 
 
 def test_junction_empty_journal_is_honest(tmp_path: Path) -> None:

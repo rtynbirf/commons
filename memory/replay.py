@@ -18,6 +18,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from blood.provenance import knowledge_source, trust_of
 from memory import MemoryGraph, VectorIndex, embed_text
 
 # Базовая линия векторизации (ADR-0007): dim контракта embed_text.
@@ -71,11 +72,18 @@ def envelope_text(envelope: dict[str, Any]) -> str:
 
 
 def envelope_meta(envelope: dict[str, Any]) -> dict[str, Any]:
-    """Метаданные вектора: type, source, trace_id (кого и в каком трейсе помнить)."""
+    """Метаданные вектора: type, source, trace_id + provenance записи (ТЗ-1.2).
+
+    Отравленная/чужая запись различима читателем памяти: откуда знает
+    (knowledge_source) и насколько можно верить (trust). Одна функция для
+    живого фасада и replay — G1 не расходится.
+    """
     return {
         "type": envelope.get("type", ""),
         "source": envelope.get("source", ""),
         "trace_id": envelope.get("trace_id", ""),
+        "knowledge_source": knowledge_source(envelope),
+        "trust": trust_of(envelope),
     }
 
 
@@ -90,17 +98,25 @@ def replay(path: Path, *, index: VectorIndex, graph: MemoryGraph) -> dict[str, A
     Прочие валидные конверты считаются в `envelopes`, но в память не попадают.
     Битая строка (не JSON / не dict / без обязательных полей) — в `skipped`.
 
+    Надгробия — часть истины крови (G4 SPEC-0005, ТЗ-1.1): конверт `forget`
+    закрывает id записи — забытые reflect-конверты в производные не
+    возвращаются (в том числе встреченные до надгробия в файле: replay
+    выметает их из уже наполненной памяти). Счёт — `forgotten`.
+
     В конце вызывает index.flush() и graph.flush() — сохранение на диск делает
     сам replay (сессия завершена), а не живой фасад (SPEC-0005 п.1).
 
     Возвращает отчёт:
-    {"envelopes": N, "indexed": V, "skipped": S, "graph": {"nodes": X, "edges": Y}},
-    где nodes/edges — из graph.stats().
+    {"envelopes": N, "indexed": V, "skipped": S, "forgotten": F,
+     "graph": {"nodes": X, "edges": Y}}, где nodes/edges — из graph.stats().
     """
     path = Path(path)
     envelopes = 0
     indexed = 0
     skipped = 0
+    forgotten = 0
+    tombstones: dict[str, str] = {}  # id записи → id надгробия (порядок файла — истина)
+    seen_reflect: dict[str, dict[str, Any]] = {}  # id → конверт (для честного выметания графа, G4)
 
     with path.open("rb") as blood:
         for raw_line in blood:
@@ -123,12 +139,33 @@ def replay(path: Path, *, index: VectorIndex, graph: MemoryGraph) -> dict[str, A
                 continue
 
             envelopes += 1
+
+            # Надгробие (ТЗ-1.1, G4): запись забыта — производные выметаются.
+            if envelope["type"] == "forget":
+                forgotten_id = (envelope.get("payload") or {}).get("forget")
+                if isinstance(forgotten_id, str):
+                    tombstones[forgotten_id] = envelope["id"]
+                continue
+
             if envelope["type"] not in _MEMORY_TYPES:
                 continue  # в кровь записан, в память не входит (SPEC-0005 п.1, G1)
 
+            if envelope["id"] in tombstones:
+                forgotten += 1
+                continue  # забытая запись в производные не возвращается (G4)
+
             graph.add_envelope(envelope)
             index.add(envelope["id"], embed_text(envelope_text(envelope), dim=_DIM), envelope_meta(envelope))
+            seen_reflect[envelope["id"]] = envelope
             indexed += 1
+
+    # Надгробие, встреченное ПОСЛЕ конверта (порядок файла): выметаем из уже
+    # наполненной памяти — итог тот же, что у живого forget (G4).
+    for forgotten_id, _tombstone_id in tombstones.items():
+        if forgotten_id in seen_reflect:
+            index.forget(forgotten_id)
+            graph.forget_envelope(seen_reflect[forgotten_id])
+            forgotten += 1
 
     index.flush()
     graph.flush()
@@ -137,5 +174,6 @@ def replay(path: Path, *, index: VectorIndex, graph: MemoryGraph) -> dict[str, A
         "envelopes": envelopes,
         "indexed": indexed,
         "skipped": skipped,
+        "forgotten": forgotten,
         "graph": dict(graph.stats()),
     }

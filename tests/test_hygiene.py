@@ -508,20 +508,7 @@ def test_secretfree_house_is_clean(tmp_path: Path) -> None:
 
 
 def _clean_house(root: Path) -> None:
-    """Минимальный зелёный дом: все 13 гейтов чисты (гейт spec-drift судит
-    дифф против базы — дом обязан быть judgeable: git есть, всё закоммичено,
-    дифф пуст — зелёный; 0.43.0, W-0030; 0.44.0, W-0034 — добавлена
-    docs/axioms.yaml: гейт axioms судит живую матрицу A01–A25)."""
-    import yaml as _yaml
-
-    axioms = {
-        "laws_priority": [{"name": "честность", "why": "кровь не лжёт"}],
-        "axioms": [
-            {"id": f"A{i:02d}", "check": "дело", "verdict": "open", "evidence": [], "plan": "дело"}
-            for i in range(1, 26)
-        ],
-    }
-    _touch(root, "docs/axioms.yaml", _yaml.safe_dump(axioms, allow_unicode=True))
+    """Минимальный зелёный дом: все 13 гейтов чисты (волна №26: +axioms, +spec-first)."""
     _touch(root, "pyproject.toml", 'version = "0.23.0"\n[project.scripts]\ncommons-x = "mod_x:main"\n')
     _touch(root, "mod_x.py", "def main(): ...\n")
     _touch(root, "CITATION.cff", "version: 0.23.0\n")
@@ -530,9 +517,11 @@ def _clean_house(root: Path) -> None:
     _touch(root, "README.en.md", "House 0.23.0.\n")
     _touch(root, "ROADMAP.md", "дело\n")
     _touch(root, "docs/personas.md", "### W-0001 — дело\nХочу: дело.\nСтатус: СЛУЖЕНО — артефакт.\n")
-    subprocess.run(["git", "-C", str(root), "init", "-q"], check=True, capture_output=True)
-    subprocess.run(["git", "-C", str(root), "-c", "user.email=h@h", "-c", "user.name=house", "add", "-A"], check=True, capture_output=True)
-    subprocess.run(["git", "-C", str(root), "-c", "user.email=h@h", "-c", "user.name=house", "commit", "-q", "-m", "clean"], check=True, capture_output=True)
+    rows = "".join(
+        f'  - id: A{i:02d}\n    title: "аксиома {i:02d}"\n    status: НЕ СЛУЖЕНО\n    todo: "ТЗ-0.0"\n'
+        for i in range(1, 26)
+    )
+    _touch(root, "docs/axioms.yaml", f"axioms:\n{rows}")
 
 
 def test_doctor_json_report_is_machine_readable(tmp_path: Path, capsys) -> None:

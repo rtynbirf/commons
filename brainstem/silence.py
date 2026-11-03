@@ -6,14 +6,9 @@
 approval.expired — ни одного немого ожидания. Правило симметрично
 донорскому триггеру тишины (окно follow-up наружу), но работает внутрь
 дома. Ответ Человека пишется с источником pid1 — воля человека в крови
-отличима от воли тела.
-
-Цена вопроса (W-0025, зерно стыка 0.42.1 — зерно параллельной линии вжито
-в принятый контур по дисциплине стыка волны №18): заявленный приоритет
-внимания ставит на `approval.requested` расход `cost.attention` — вопрос
-Человеку — прерывание, его цена названа (незаявленный приоритет — старый
-стиль крови, ключа нет, A02); чужой приоритет роняется ДО первой записи
-(fail-closed, ADR-0014).
+отличима от воли тела. Вопрос с окном — потраченное внимание Человека:
+approval.requested несёт cost.attention = 1 с классом P0 (W-0025,
+SPEC-0003 п.17, SPEC-0004 п.9) — тело видит, сколько внимания попросило.
 
 Fail-closed: окно <= 0 — ValueError ДО первой записи (правило без окна —
 не правило, ничего не случилось); канал упал или вернул мусор — error-
@@ -28,7 +23,6 @@ from typing import Any, Callable
 
 from blood.envelope import Cost, make
 from blood.journal import Journal
-from brainstem.attention import attention_cost
 
 ANSWER_APPROVED = "approved"
 ANSWER_VETOED = "vetoed"
@@ -40,19 +34,15 @@ _ANSWERS = (ANSWER_APPROVED, ANSWER_VETOED)
 
 @dataclass(frozen=True)
 class ApprovalRequest:
-    """Просьба об одобрении (W-0032): что, окно, зачем, приоритет внимания.
+    """Просьба об одобрении (W-0032): что, окно, зачем.
 
     Окно обязано: правило без окна — не правило (SPEC-0004 п.8), проверка
-    до первой записи в кровь. `priority` (W-0025, стык 0.42.1) — словарь
-    внимания `brainstem.attention.ATTENTION_PRIORITIES`; заявленный — ставит
-    на запрос цену `cost.attention` (P0/P1 — 1), незаявленный (None) — ключа
-    нет (A02), чужой — ValueError до записи (ADR-0014).
+    до первой записи в кровь.
     """
 
     what: str
     window_s: float
     why: str = ""
-    priority: str | None = None
 
 
 def await_approval(
@@ -83,9 +73,6 @@ def await_approval(
         )
     if poll_interval <= 0:
         raise ValueError(f"poll_interval должен быть > 0: {poll_interval}")
-    # Цена вопроса (W-0025): заявленный приоритет — расход внимания на запросе;
-    # чужой словарь роняется ДО первой записи — конверта нет, события нет.
-    price = attention_cost(request.priority) if request.priority is not None else 0
 
     journal.append(make(
         "approval.requested", "brainstem", "self", trace_id,
@@ -96,7 +83,8 @@ def await_approval(
             "default": "cancel",
             "rule": "silence=no (W-0032, SPEC-0004 п.8)",
         },
-        Cost(attention=price),  # 0 не пишется — старый стиль крови жив (A02)
+        Cost(attention=1),
+        attention_class="P0",
     ))
 
     started = clock()

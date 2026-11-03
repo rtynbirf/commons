@@ -41,15 +41,21 @@ REVERSIBILITY_CLASSES = (
     "unknown",
 )
 
+# Словарь классов внимания Человека (W-0025, SPEC-0003 п.17, SPEC-0004 п.9) —
+# перевод зерна FR-09 пакета, копий нет: P0 остановка перед риском, P1 вопрос
+# без безопасного дефолта, P2 отчёт, который должен быть увиден, P3 тихая
+# запись. Счёт только по фактам крови — скрытой телеметрии нет.
+ATTENTION_CLASSES = ("P0", "P1", "P2", "P3")
+
 
 @dataclass(frozen=True)
 class Cost:
     """Цена события: события без цены не существует (SPEC-0003 п.3).
 
-    `attention` (W-0025, SPEC-0003 п.17, SPEC-0004 п.8) — заявленный расход
-    внимания Человека: 0 не пишется в словарь (старый стиль крови жив,
-    отсутствие поля = не заявлено, A02 — незаявленное не достраивается);
-    прерывание (P0/P1) — 1, сводка и тихая запись — 0.
+    `attention` (W-0025, SPEC-0003 п.17) — обращения к вниманию Человека:
+    заданный вопрос, открытое окно ожидания, поданный аварийный стоп —
+    счёт только по фактам крови; скрытой поведенческой телеметрии нет.
+    Поле аддитивно: старая кровь без него валидна навсегда (п.6).
     """
 
     tokens_in: int = 0
@@ -62,6 +68,7 @@ class Cost:
             "tokens_in": int(self.tokens_in),
             "tokens_out": int(self.tokens_out),
             "seconds": float(self.seconds),
+            "attention": int(self.attention),
         }
         if self.attention:
             price["attention"] = int(self.attention)  # 0 не пишется: старый стиль жив (A02)
@@ -140,6 +147,8 @@ def make(
     causation_id: Any = _UNSET,
     trust: Any = _UNSET,
     privacy: Any = _UNSET,
+    attention_class: Any = _UNSET,
+    path: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Собирает и валидирует конверт. Невалидный конверт наружу не выходит.
 
@@ -157,9 +166,26 @@ def make(
     - `privacy` — public / internal / personal / sensitive (тоже fail-closed;
       отсутствие поля = не классифицировано, наружу такое считается sensitive).
 
+    Внимание Человека (W-0025, SPEC-0003 п.17): `cost.attention` — обращения к
+    вниманию по фактам; `attention_class` — класс траты P0–P3 (словарь —
+    `ATTENTION_CLASSES`). Fail-closed (ADR-0014): неизвестный класс, внимание
+    без класса и класс без внимания конверт не собирают — до крови не доходит.
+
     Момент записи (`stored_at`) журнал ставит сам при append — изготовитель
     конверта его не выдумывает.
     """
+    cost = cost or Cost()
+    if cost.attention < 0:
+        raise EnvelopeError(f"внимание не бывает отрицательным: {cost.attention}")
+    if attention_class is not _UNSET:
+        if attention_class not in ATTENTION_CLASSES:
+            raise EnvelopeError(
+                f"класс внимания не понимается: {attention_class!r} (словарь: {', '.join(ATTENTION_CLASSES)})"
+            )
+        if cost.attention <= 0:
+            raise EnvelopeError("класс внимания без потраченного внимания — обман, конверт не собирается")
+    elif cost.attention > 0:
+        raise EnvelopeError("внимание потрачено, класс не назван — конверт не собирается (SPEC-0003 п.17)")
     envelope = {
         "id": new_event_id(),
         "ts": now_utc(),
@@ -168,7 +194,7 @@ def make(
         "organ": organ,
         "trace_id": trace_id,
         "payload": payload or {},
-        "cost": (cost or Cost()).as_dict(),
+        "cost": cost.as_dict(),
     }
     if idempotency_key is not None:
         envelope["idempotency_key"] = idempotency_key
@@ -182,5 +208,9 @@ def make(
         envelope["trust"] = trust
     if privacy is not _UNSET:
         envelope["privacy"] = privacy
+    if attention_class is not _UNSET:
+        envelope["attention_class"] = attention_class
+    if path is not None:
+        envelope["path"] = path
     validate(envelope)
     return envelope

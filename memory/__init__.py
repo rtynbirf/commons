@@ -34,6 +34,14 @@ class VectorIndex(Protocol):
         """Число векторов в индексе."""
         ...
 
+    def ids(self) -> list[str]:
+        """Все id записей (ТЗ-1.1, A11/A13: экспорт и diff память-файлов)."""
+        ...
+
+    def forget(self, vec_id: str) -> bool:
+        """Забывает запись (ТЗ-1.1, A12): True — была и удалена, False — её не было."""
+        ...
+
     def flush(self) -> None:
         """Сохраняет состояние на диск (для персистентных движков)."""
         ...
@@ -45,6 +53,10 @@ class MemoryGraph(Protocol):
 
     def add_envelope(self, envelope: dict[str, Any]) -> None:
         """Вплетает конверт крови в граф; повтор конверта (по id) не меняет граф."""
+        ...
+
+    def forget_envelope(self, envelope: dict[str, Any]) -> bool:
+        """Забывает конверт (ТЗ-1.1, A12): True — был и выметен, False — его не было."""
         ...
 
     def neighbors(self, node: str, k: int = 5) -> list[dict[str, Any]]:

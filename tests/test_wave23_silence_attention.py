@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 COMMONS contributors
 # SPDX-License-Identifier: Apache-2.0
-"""Приёмки волны №23 (стык 0.42.1) — бюджет внимания человека (W-0025) и зерно цены в контуре тишины.
+"""Приёмки волны №23 (стык 0.42.1; семантика цены перевёрнута честно на стыке 0.48.2).
 
 W-0032 (правило тишины) живёт контуром `brainstem/silence.py` — принят базой
 стыка по дисциплине стыка волны №18; его приёмки — `tests/test_silence.py` (17).
@@ -9,14 +9,14 @@ W-0032 (правило тишины) живёт контуром `brainstem/sile
 доказательство, валидна навсегда (гематология), читается метриками и дневником
 наравне с контурной (оба диалекта).
 
-W-0025 (SPEC-0004 v0.2.0 п.9, зерно FR-09 пакета «Human Membrane»): внимание
-Человека — ресурс организма: прерывания и вопросы учтены в цене события
-(`cost.attention` рядом с токенами и секундами), политика P0–P3, косметические
-вопросы с безопасным default не задаются, скрытой поведенческой телеметрии
-нет — счёт только по заявленной крови, неизмеримое = UNKNOWN.
-
-Зерно стыка: вопрос контура о необратимом — P0-прерывание — несёт цену
-(`ApprovalRequest.priority` → `cost.attention=1`, SPEC-0004 п.8).
+W-0025 (зерно FR-09 пакета «Human Membrane»): внимание Человека — ресурс
+организма, счёт только по фактам крови, скрытой телеметрии нет, неизмеримое =
+UNKNOWN. Канон цены — их волна №24 (пришла в историю первой): каждый вопрос
+контура — P0-прерывание с `cost.attention=1`; внимание всегда присутствует в
+словаре цены (аддитивно, старая кровь без поля валидна навсегда); приоритетное
+ценообразование нашей линии (`ApprovalRequest.priority`) выметено на стыке
+0.48.2 как параллельная машина того же зерна — словарь приоритетов и
+`should_ask` живут в `brainstem/attention.py` как политика вопросов.
 """
 from __future__ import annotations
 
@@ -73,8 +73,9 @@ def test_should_ask_policy_p0_to_p3() -> None:
 
 
 def test_cost_attention_roundtrip_and_old_blood() -> None:
-    # цена аддитивна: 0 не пишется (старый стиль жив), заявленное пишется
-    assert Cost().as_dict() == {"tokens_in": 0, "tokens_out": 0, "seconds": 0.0}
+    # канон их волны №24: внимание — в словаре цены всегда (аддитивно,
+    # старая кровь без поля валидна навсегда — граница, не прореха)
+    assert Cost().as_dict() == {"tokens_in": 0, "tokens_out": 0, "seconds": 0.0, "attention": 0}
     assert Cost(attention=2).as_dict()["attention"] == 2
     envelope = make(
         "approval.request",
@@ -84,6 +85,7 @@ def test_cost_attention_roundtrip_and_old_blood() -> None:
         {"what": "шаг"},
         Cost(attention=1),
         occurred_at=_ts(0),
+        attention_class="P0",
     )
     assert envelope["cost"]["attention"] == 1
     assert Cost.from_dict({"tokens_in": 1, "tokens_out": 2, "seconds": 0.5}).attention == 0
@@ -107,8 +109,9 @@ def _historical_dialect(journal: Journal) -> None:
     """Кровь волны №23 нашей линии (диалект approval.request/grant) — свидетельство."""
     ask_a = make(
         "approval.request", "pid1", "self", "t1",
-        {"what": "шаг-а", "window_seconds": 600, "priority": "P0", "expires_at": _ts(600)},
+        {"what": "шаг-а", "window_seconds": 600, "expires_at": _ts(600)},
         Cost(attention=1), idempotency_key="hist:request:a", occurred_at=_ts(0), trust="unverified",
+        attention_class="P0",
     )
     journal.append(ask_a)
     journal.append(make(
@@ -118,8 +121,9 @@ def _historical_dialect(journal: Journal) -> None:
     ))
     ask_b = make(
         "approval.request", "pid1", "self", "t1",
-        {"what": "шаг-б", "window_seconds": 10, "priority": "P1", "expires_at": _ts(10)},
+        {"what": "шаг-б", "window_seconds": 10, "expires_at": _ts(10)},
         Cost(attention=1), idempotency_key="hist:request:b", occurred_at=_ts(0), trust="unverified",
+        attention_class="P0",
     )
     journal.append(ask_b)
     journal.append(make(
@@ -154,19 +158,19 @@ def test_metrics_reads_contour_blood() -> None:
     clock = FakeClock()
     first = await_approval(
         journal, "t1",
-        ApprovalRequest(what="demo.a", window_s=0.5, why="одобрено в окне", priority="P0"),
+        ApprovalRequest(what="demo.a", window_s=0.5, why="одобрено в окне"),
         lambda query: ANSWER_APPROVED, clock=clock, sleeper=fake_sleep(clock),
     )
     assert first == ANSWER_APPROVED
     verdict = await_approval(
         journal, "t1",
-        ApprovalRequest(what="demo.b", window_s=0.3, why="канал молчит всё окно", priority="P1"),
+        ApprovalRequest(what="demo.b", window_s=0.3, why="канал молчит всё окно"),
         lambda query: None, clock=clock, sleeper=fake_sleep(clock),
     )
     assert verdict == "expired"
     report = metrics(journal.all())
     assert report["questions"] == 2
-    assert report["interruptions"] == 2  # P0 и P1 заявили цену вопроса (зерно стыка)
+    assert report["interruptions"] == 2  # каждый вопрос — P0 с ценой 1 (канон их волны №24)
     assert report["granted"] == 1
     assert report["refused"] == 0
     assert report["cancelled_by_silence"] == 1
@@ -195,7 +199,9 @@ def test_contour_question_about_irreversible_costs_attention_p0(gateway: object,
     assert len(acts) == 1 and acts[0]["payload"].get("reversibility") == "irreversible"
 
 
-def test_contour_question_without_irreversible_declares_no_price(gateway: object, journal: Journal) -> None:
+def test_contour_question_declares_p0_price_canonical(gateway: object, journal: Journal) -> None:
+    """Канон их волны №24 (пришла в историю первой): каждый вопрос — P0 с ценой 1;
+    приоритетное ценообразование нашей линии выметено на стыке 0.48.2."""
     loop = Loop(gateway, journal, approval_channel=lambda query: ANSWER_APPROVED)
     done = loop.run(
         [Step(organ="sense-a", tool="echo", payload={"data": "x"},
@@ -206,18 +212,8 @@ def test_contour_question_without_irreversible_declares_no_price(gateway: object
     assert done is True
     requested = [e for e in journal.by_type("approval.requested") if e["trace_id"] == "t1"]
     assert len(requested) == 1
-    # приоритет не заявлен — ключа нет (A02, старый стиль крови жив)
-    assert requested[0]["cost"] == {"tokens_in": 0, "tokens_out": 0, "seconds": 0.0}
-
-
-def test_contour_unknown_priority_fail_closed(journal: Journal) -> None:
-    with pytest.raises(ValueError, match="приоритет"):
-        await_approval(
-            journal, "t1",
-            ApprovalRequest(what="demo.x", window_s=0.5, priority="P9"),
-            lambda query: None, clock=FakeClock(),
-        )
-    assert len(journal.all()) == 0  # конверта нет — события нет (ADR-0014)
+    assert requested[0]["cost"]["attention"] == 1
+    assert requested[0]["attention_class"] == "P0"
 
 
 # --- стык: дневник говорит на обоих диалектах ---
@@ -230,13 +226,13 @@ def test_diary_speaks_both_dialects() -> None:
     clock = FakeClock()
     verdict = await_approval(
         journal, "t1",
-        ApprovalRequest(what="удалить прод-таблицу", window_s=0.5, why="необратимое", priority="P0"),
+        ApprovalRequest(what="удалить прод-таблицу", window_s=0.5, why="необратимое"),
         lambda query: ANSWER_APPROVED, clock=clock, sleeper=fake_sleep(clock),
     )
     assert verdict == ANSWER_APPROVED
     expired = await_approval(
         journal, "t1",
-        ApprovalRequest(what="письмо наружу", window_s=0.2, why="канал молчит", priority="P1"),
+        ApprovalRequest(what="письмо наружу", window_s=0.2, why="канал молчит"),
         lambda query: None, clock=clock, sleeper=fake_sleep(clock),
     )
     assert expired == "expired"
@@ -250,10 +246,11 @@ def test_diary_speaks_both_dialects() -> None:
     assert prices and "внимание Человека 1" in prices[0]  # P0-вопрос несёт заявленную цену внимания
 
 
-# --- стык: остановка до факта по-прежнему несёт цену P0 (вето без окна) ---
+# --- стык (0.48.2): вето — остановка до факта без внимания (канон их волны №24:
+# внимание несут вопрос контура и внешний стоп, не воля тела) ---
 
 
-def test_loop_veto_consumes_attention_p0(gateway: object, journal: Journal) -> None:
+def test_loop_veto_stops_before_fact_without_attention(gateway: object, journal: Journal) -> None:
     loop = Loop(gateway, journal)
     ok = loop.run([step(organ="sense-a", tool="echo")], trace_id="t1", budget=Budget())
     assert ok is True
@@ -266,6 +263,6 @@ def test_loop_veto_consumes_attention_p0(gateway: object, journal: Journal) -> N
     assert done is False
     vetoes = [event for event in journal.by_type("veto") if event["trace_id"] == "t2"]
     assert len(vetoes) == 1
-    assert vetoes[0]["cost"]["attention"] == 1  # остановка и вопрос Человеку — P0-цена
+    assert vetoes[0]["cost"]["attention"] == 0  # вето — остановка, цену несёт вопрос (approval.requested)
     halts = [event for event in journal.by_type("halt") if event["trace_id"] == "t2"]
-    assert halts and "attention" not in halts[0]["cost"]  # halt сам внимания не тратит
+    assert halts and halts[0]["cost"]["attention"] == 0  # halt сам внимания не тратит

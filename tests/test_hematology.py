@@ -23,7 +23,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 JOURNALS = sorted((REPO_ROOT / "runs").glob("*/blood.jsonl"))
 SPEC_0003 = REPO_ROOT / "specs" / "SPEC-0003-blood-envelope.md"
 
-FULL_PRICE = {"tokens_in", "tokens_out", "seconds"}
+# волна №24 (W-0025): полная цена честна и по вниманию Человека (SPEC-0003 п.17)
+FULL_PRICE = {"tokens_in", "tokens_out", "seconds", "attention"}
 
 
 def events_of(journal: Path) -> list[dict]:
@@ -52,20 +53,17 @@ def test_every_envelope_valid_by_schema(journal: Path) -> None:
 @pytest.mark.parametrize("journal", JOURNALS, ids=lambda p: p.parent.name)
 def test_every_event_has_full_price(journal: Path) -> None:
     for event in events_of(journal):
-        # Полная цена (SPEC-0003 п.3): обязательное трио в каждом конверте.
-        assert FULL_PRICE <= set(event["cost"]), (
+        cost_keys = set(event["cost"])
+        # волна №24 (W-0025): новая кровь несёт и внимание (SPEC-0003 п.17);
+        # старая кровь (п.6) без поля валидна навсегда — граница названа, не прикрыта
+        assert cost_keys in (FULL_PRICE, FULL_PRICE - {"attention"}), (
             f"{journal.name}: событие {event['id']} без полной цены (SPEC-0003 п.3)"
         )
         assert event["cost"]["tokens_in"] >= 0
         assert event["cost"]["tokens_out"] >= 0
         assert event["cost"]["seconds"] >= 0
-        # Внимание Человека (SPEC-0003 п.17, W-0025, волна №23) — аддитивно:
-        # отсутствие = не заявлено (A02), заявленное — целое ≥ 0; ноль не
-        # пишется, поэтому встреченное внимание ≥ 1 (старый стиль жив).
         if "attention" in event["cost"]:
-            assert isinstance(event["cost"]["attention"], int) and event["cost"]["attention"] >= 1, (
-                f"{journal.name}: событие {event['id']} несёт внимание не по словарю (SPEC-0003 п.17)"
-            )
+            assert isinstance(event["cost"]["attention"], int) and event["cost"]["attention"] >= 0
 
 
 @pytest.mark.parametrize("journal", JOURNALS, ids=lambda p: p.parent.name)
@@ -144,6 +142,31 @@ def test_anchor_book_is_wellformed() -> None:
         )
         assert isinstance(record["events"], int) and record["events"] >= 0
         assert record["last_sha256"] is None or re.fullmatch(r"[0-9a-f]{64}", record["last_sha256"])
+
+
+def test_anchor_book_has_no_dangling_prints() -> None:
+    """Каждая печать указывает на кровь, живущую в доме (волна №27, ДОБИВАЙ).
+
+    Косяк, пойманный живьём: в книге висела печать
+    `runs/2026-11-03-wave22-silence/blood.jsonl` (19 событий) — каталога,
+    который не существовал ни в одном коммите (стык волн №22: артефакты их
+    линии выметены, строка-печать осталась). Гейты пропускали: проверка
+    якорей идёт по существующим файлам крови, а не по книге. Печать в
+    никуда — ложь книги: выметается, дрейф красится приёмкой."""
+    if not ANCHORS.exists():
+        return
+    dangling: list[str] = []
+    for lineno, raw in enumerate(ANCHORS.read_text(encoding="utf-8").splitlines(), start=1):
+        if not raw.strip():
+            continue
+        record = json.loads(raw)
+        target = record.get("file")
+        if not isinstance(target, str) or not (REPO_ROOT / target).exists():
+            dangling.append(f"anchors.jsonl:{lineno}: печать в никуду -> {target!r}")
+    assert not dangling, (
+        "якорная книга ссылается на несуществующую кровь (печать без крови — ложь): "
+        + "; ".join(dangling)
+    )
 
 
 def test_journals_match_their_last_anchor() -> None:

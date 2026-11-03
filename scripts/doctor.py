@@ -57,6 +57,17 @@ scripts/doctor_report.py, оба воркфлоу печатают её в $GITH
 
 Запуск: python3 scripts/doctor.py [--json] [корень]
   →  DOCTOR: N ok, M failed; exit 1 при M>0
+
+Волна №26 (0.45.0) — Ф-0' «гигиена дисциплины» (docs/TZ.md ТЗ-0.1…ТЗ-0.5):
+два новых гейта. Гейт axioms (W-0034): реестр аксиом docs/axioms.yaml (A01–A25
+пакета «Human Membrane») сверяется с живыми текстами дома — свидетель-файл
+жив, маркер служения в тексте на месте, красные строки несут пункт ТЗ,
+упоминание A-NN вне реестра — сирота; дрейф книг от машины — блоха.
+Гейт spec-first (W-0030): HEAD-коммит, меняющий blood/, synapse/, brainstem/
+без правки specs/, красен — «спека раньше кода» перестаёт быть лозунгом;
+git недоступен — fail-closed (непроверяемое ≠ чистое). CI обязан давать
+гейту родителя коммита: checkout с fetch-depth: 2 в ci.yml (hygiene, core)
+и fleas.yml — shallow-клон оставлял гейт красным на живом CI (урок 6ac04a8).
 """
 
 from __future__ import annotations
@@ -67,6 +78,8 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -94,6 +107,11 @@ WANT_REF = re.compile(r"\bW-(\d{4})\b")
 WANT_DEF_RE = re.compile(r"^#{2,3} W-(\d{4})\b", re.M)
 WANT_STATUS_RE = re.compile(r"^\s*(?:[-*]\s*)?\**Статус\**\s*:", re.IGNORECASE | re.M)
 PERSONAS = "docs/personas.md"
+AXIOMS = "docs/axioms.yaml"
+AXIOM_REF = re.compile(r"\bA(\d{2})\b")
+AXIOM_STATUSES = ("СЛУЖЕНО", "PASS", "ЧАСТИЧНО", "НЕ СЛУЖЕНО", "СНЯТО")
+# Директории публичного поведения: правка без генома красит (W-0030)
+CODE_SPEC_DIRS = ("blood/", "synapse/", "brainstem/")
 
 # W-0030 (0.43.0, зерно D3 коллег, находка F-09): публичное поведение дома —
 # три пакета ствола и крови; specs/ — геном. Правило «спека раньше кода».
@@ -458,114 +476,112 @@ def check_no_secrets(root: Path) -> tuple[int, list[str]]:
     return ok, fleas
 
 
-def check_spec_drift(root: Path) -> tuple[int, list[str]]:
-    """Поведение без спеки — красный PR (W-0030, 0.43.0, зерно D3 коллег, F-09).
-
-    Принцип дома «спека меняется раньше кода» становится машиной: если в
-    диффе против базы тронуты кровь/синапсы/ствол (blood/, synapse/,
-    brainstem/), а specs/ не тронут — блоха на каждом таком пути. База —
-    env SPEC_DRIFT_BASE (CI ставит base.sha PR'а; для пушей — HEAD~1;
-    локально по умолчанию HEAD — незакоммиченное). Новые файлы (untracked)
-    видны так же: новое поведение без спеки — та же блоха. Git недоступен —
-    fail-closed: гейт красный, а не слепой (закон иммунитета, SPEC-0006).
-    Граница честно названа: гейт судит дифф против базы, а не историю —
-    старые расползания ловят гематология и ревизии.
-    """
-    base = os.environ.get(SPEC_DRIFT_ENV, "").strip() or "HEAD"
-    try:
-        diff = subprocess.run(
-            ["git", "-C", str(root), "-c", "core.quotepath=off", "diff", "--name-only", base],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=True,
-        ).stdout.splitlines()
-        status = subprocess.run(
-            ["git", "-C", str(root), "-c", "core.quotepath=off", "status", "--porcelain", "-uall"],
-            capture_output=True,
-            text=True,
-            timeout=60,
-            check=True,
-        ).stdout.splitlines()
-    except (OSError, subprocess.SubprocessError) as exc:
-        detail = (exc.stderr if hasattr(exc, "stderr") and exc.stderr else str(exc)).strip()[:200]
-        return 0, [
-            f"spec-drift: гейт не смог прочитать diff против {base!r} ({detail}) — fail-closed, красный без суждения"
-        ]
-
-    changed = {line.strip() for line in diff if line.strip()}
-    for line in status:
-        if line.startswith("?? "):
-            changed.add(line[3:].strip())
-    behavior = sorted(p for p in changed if p.startswith(BEHAVIOR_PREFIXES))
-    specs_touched = any(p.startswith(SPEC_PREFIX) for p in changed)
-    fleas: list[str] = []
-    if behavior and not specs_touched:
-        for path in behavior:
-            fleas.append(
-                f"spec-drift: {path}: поведение без спеки — specs/ не тронуты (спека раньше кода, W-0030)"
-            )
-    return (0 if fleas else 1), fleas
-
-
-AXIOMS_FILE = Path("docs/axioms.yaml")
-AXIOM_IDS = [f"A{i:02d}" for i in range(1, 26)]
-AXIOM_VERDICTS = {"pass", "partial", "served", "adr", "open"}
-
-
 def check_axioms(root: Path) -> tuple[int, list[str]]:
-    """W-0034 (0.44.0, волна №25): гейт дрейфа аксиом — живая матрица A01–A25.
-
-    Ревизия 2026-11-03 сверила матрицу пакета A01–A25 с телом и оставила её
-    в пролитой крови (runs/2026-11-03-revision/) — история, не живой закон.
-    Дрейф версии, ссылок и хотёлок доктор ловил, а аксиомы расползались
-    молча. Теперь матрица живёт данными docs/axioms.yaml: вердикт — только
-    из словаря дома; указатель доказательства обязан существовать на диске;
-    открытая/частичная аксиома обязана называть план (где закрывается).
-    Fail-closed: нечитаемый yaml — красный без суждения (закон иммунитета,
-    SPEC-0006), а не «ну похоже на правду».
-    """
+    """Гейт дрейфа аксиом (W-0034, волна №26, ТЗ-0.2): матрица A01–A25 пакета
+    «Human Membrane» живёт реестром docs/axioms.yaml и сверяется с домом:
+    каждая строка — свидетель-файл в доме; вердикт СЛУЖЕНО/PASS обязан держать
+    маркер служения в тексте свидетеля (исчез — книги разошлись с машиной,
+    дрейф = блоха); ЧАСТИЧНО/НЕ СЛУЖЕНО обязаны нести пункт ТЗ; СНЯТО —
+    живой ADR; упоминание A-NN вне реестра — сирота. Реестра нет — блоха
+    (fail-closed, тишина гейта недопустима)."""
     fleas: list[str] = []
-    path = root / AXIOMS_FILE
+    registry = root / AXIOMS
+    if not registry.exists():
+        return 0, [f"{AXIOMS}: реестра аксиом нет — сверять нечем (fail-closed)"]
     try:
-        import yaml
-
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return 0, ["axioms: docs/axioms.yaml нет — матрицы нет, закона нет (fail-closed)"]
-    except Exception as exc:  # noqa: BLE001 — нечитаемое судим целиком
-        return 0, [f"axioms: docs/axioms.yaml не читается ({str(exc)[:120]}) — красный без суждения"]
-    if not isinstance(data, dict) or not isinstance(data.get("axioms"), list):
-        return 0, ["axioms: docs/axioms.yaml не содержит список axioms — формат дрейфанул"]
-    axioms = data["axioms"]
-    ids = [a.get("id") for a in axioms if isinstance(a, dict)]
-    if ids != AXIOM_IDS:
-        missing = [i for i in AXIOM_IDS if i not in ids]
-        dupes = sorted({i for i in ids if ids.count(i) > 1})
-        fleas.append(
-            f"axioms: матрица не полна — пропало {missing or '—'}, дубликаты {dupes or '—'} "
-            f"(тишина не значит «всё хорошо»)"
-        )
-    for a in axioms:
-        if not isinstance(a, dict):
-            fleas.append("axioms: чужая строка в матрице (не отображение) — блоха")
+        data = yaml.safe_load(registry.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as exc:
+        return 0, [f"{AXIOMS}: реестр нечитаем ({exc})"]
+    rows = {row.get("id"): row for row in data.get("axioms", []) if isinstance(row, dict)}
+    expected = {f"A{i:02d}" for i in range(1, 26)}
+    missing = sorted(expected - set(rows))
+    extra = sorted(set(rows) - expected)
+    if missing:
+        fleas.append(f"{AXIOMS}: строки реестра отсутствуют: {', '.join(missing)}")
+    if extra:
+        fleas.append(f"{AXIOMS}: строки вне A01–A25: {', '.join(extra)}")
+    for aid, row in sorted(rows.items()):
+        status = row.get("status")
+        if status not in AXIOM_STATUSES:
+            fleas.append(f"{AXIOMS}: {aid} — вердикт {status!r} вне словаря дома")
             continue
-        aid = a.get("id", "?")
-        verdict = a.get("verdict")
-        if verdict not in AXIOM_VERDICTS:
-            fleas.append(f"axioms: {aid}: чужой вердикт {verdict!r} — словарь дома не расширяется молча")
+        witness = row.get("witness")
+        if witness:
+            wpath = root / witness
+            if not wpath.exists():
+                fleas.append(f"{AXIOMS}: {aid} — свидетель не живёт в доме: {witness}")
+            elif status in ("СЛУЖЕНО", "PASS"):
+                marker = row.get("marker", "")
+                if marker and marker not in wpath.read_text(encoding="utf-8"):
+                    fleas.append(
+                        f"{AXIOMS}: {aid} — дрейф: маркер служения {marker!r} исчез из {witness}"
+                    )
+        elif status in ("СЛУЖЕНО", "PASS"):
+            fleas.append(f"{AXIOMS}: {aid} — СЛУЖЕНО/PASS без свидетеля")
+        if status in ("ЧАСТИЧНО", "НЕ СЛУЖЕНО") and not str(row.get("todo", "")).startswith("ТЗ-"):
+            fleas.append(f"{AXIOMS}: {aid} — красная строка без пункта ТЗ")
+        if status == "СНЯТО":
+            adr = row.get("adr")
+            if not adr or not (root / adr).exists():
+                fleas.append(f"{AXIOMS}: {aid} — СНЯТО без живого ADR")
+    defined = set(rows)
+    for path in _markdown_files(root):
+        rel = path.relative_to(root).as_posix()
+        if rel == AXIOMS:
             continue
-        for rel in a.get("evidence") or []:
-            if not (root / rel).exists():
-                fleas.append(f"axioms: {aid}: указатель {rel} ведёт в пустоту — фантазия, не доказательство")
-        if verdict in {"served", "pass", "adr"} and not (a.get("evidence") or []):
-            fleas.append(f"axioms: {aid}: вердикт {verdict!r} без доказательства — обман, не вердикт")
-        if verdict == "partial" and not (a.get("evidence") or []):
-            fleas.append(f"axioms: {aid}: «частично» без сделанного — обман, не вердикт")
-        if verdict in {"open", "partial"} and not a.get("plan"):
-            fleas.append(f"axioms: {aid}: открытая аксиома без плана — обман («когда-нибудь» не план)")
-    ok = sum(1 for a in axioms if isinstance(a, dict) and not any(f.startswith(f"axioms: {a.get('id', '?')}:") for f in fleas))
+        orphans = [f"A{w}" for w in sorted(set(AXIOM_REF.findall(path.read_text(encoding="utf-8")))) if f"A{w}" not in defined]
+        if orphans:
+            fleas.append(f"{rel}: аксиомы-сироты вне реестра {AXIOMS}: {', '.join(orphans)}")
+    # счёт прост и честен: сам реестр + файлы, в которых нет сирот
+    ok = 1 if not any(f.startswith(AXIOMS) for f in fleas) else 0
+    ok += sum(1 for path in _markdown_files(root) if not any(
+        f"{path.relative_to(root).as_posix()}:" in flea for flea in fleas))
     return ok, fleas
+
+
+def _head_changed_files(root: Path) -> list[str] | None:
+    """Имена файлов HEAD-коммита (git diff HEAD~1..HEAD); None — git
+    недоступен или не репозиторий: caller решает fail-closed."""
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(root), "diff", "--name-only", "HEAD", "HEAD~1"],
+            capture_output=True, text=True, timeout=15, check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if out.returncode != 0:
+        return None
+    return [line.strip() for line in out.stdout.splitlines() if line.strip()]
+
+
+def check_spec_first(root: Path) -> tuple[int, list[str]]:
+    """Гейт «поведение без спеки» (W-0030, волна №26, ТЗ-0.3): HEAD-коммит,
+    меняющий публичное поведение (blood/, synapse/, brainstem/) без правки
+    генома (specs/), красен — «спека раньше кода» как машина, не лозунг.
+    .git нет — гейт неприменим (дереву без истории нечего судить); .git есть,
+    а git сломан или история пуста — fail-closed: непроверяемое ≠ чистое.
+    Книги, приёмки и кровь (tests/, runs/, docs/, README) гейта не красят."""
+    if not (root / ".git").exists():
+        # дерево без истории (копия/синтетика) — гейту нечего судить: HEAD нет.
+        # Это не «чисто», а «неприменимо»: реальный дом всегда git-репозиторий,
+        # а .git с битым git — fail-closed ниже (непроверяемое ≠ чистое).
+        return 1, []
+    changed = _head_changed_files(root)
+    if changed is None:
+        return 0, ["spec-first: git недоступен или история пуста — коммит непроверяем (fail-closed)"]
+    code_changes = [
+        f for f in changed
+        if f.endswith(".py") and f.startswith(CODE_SPEC_DIRS)
+    ]
+    if not code_changes:
+        return 1, []
+    if any(f.startswith("specs/") and f.endswith(".md") for f in changed):
+        return 1, []
+    return 0, [
+        "spec-first: коммит меняет поведение ("
+        + ", ".join(code_changes)
+        + ") без правки генома specs/ — спека раньше кода (W-0030, ТЗ-0.3)"
+    ]
 
 
 GATES = (
@@ -580,8 +596,8 @@ GATES = (
     ("changelog", check_changelog_discipline),
     ("conflict-markers", check_conflict_markers),
     ("secrets", check_no_secrets),
-    ("spec-drift", check_spec_drift),
     ("axioms", check_axioms),
+    ("spec-first", check_spec_first),
 )
 
 

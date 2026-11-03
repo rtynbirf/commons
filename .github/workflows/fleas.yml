@@ -27,6 +27,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 2  # волна №26: гейт spec-first судит HEAD-коммит по родителю — shallow-клон (depth: 1) оставлял гейт fail-closed красным
           persist-credentials: false
 
       - name: Доктор дома (машиночитаемый отчёт)

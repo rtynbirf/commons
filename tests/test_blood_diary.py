@@ -181,7 +181,8 @@ def test_trace_totals_sum_costs(tmp_path: Path) -> None:
 
     path = _pour(tmp_path / "blood.jsonl", _session(tmp_path / "src.jsonl"))
     book = entries(path, TRACE)
-    assert book["totals"] == {"tokens_in": 11, "tokens_out": 7, "seconds": approx(2.1)}
+    # волна №24 (W-0025): totals честно суммирует и внимание
+    assert book["totals"] == {"tokens_in": 11, "tokens_out": 7, "seconds": approx(2.1), "attention": 0}
 
 
 def test_empty_journal_is_honest(tmp_path: Path) -> None:

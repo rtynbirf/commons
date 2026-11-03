@@ -342,7 +342,8 @@ def test_reconstruct_unknown_trace_is_empty(tmp_path: Path) -> None:
     assert session["complete"] is False
     assert session["plan"] == []
     assert session["acts"] == []
-    assert session["totals"] == {"tokens_in": 0, "tokens_out": 0, "seconds": 0.0}
+    # волна №24 (W-0025): reconstruction totals честны и по вниманию
+    assert session["totals"] == {"tokens_in": 0, "tokens_out": 0, "seconds": 0.0, "attention": 0}
 
 
 def test_reconstruct_gap_marks_incomplete(tmp_path: Path, manifest_path: Path) -> None:

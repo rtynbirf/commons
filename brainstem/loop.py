@@ -3,7 +3,10 @@
 Инварианты:
 - G1 Трассируемость: каждый переход — событие в крови с trace_id.
 - G2 Заменяемость: смена органа не меняет цикл — меняется манифест/адаптер.
-- G3 Бюджет: при исчерпании лимита — HALT с событием `halt`.
+- G3 Бюджет: при исчерпании лимита — HALT с событием `halt`; внимание Человека —
+  четвёртый ресурс (W-0025, SPEC-0001 v0.6.0).
+- Внешний аварийный стоп (W-0033, SPEC-0001 v0.6.0 п.8): трейс останавливается
+  снаружи между шагами — stop.requested (source pid1) → reflect → halt.
 
 Цикл не знает ни одного органа и не умеет их вызывать напрямую:
 весь доступ — через синапсы (gateway.call). Прямого пути к органу из цикла нет.
@@ -28,7 +31,6 @@ import jsonschema
 
 from blood.envelope import REVERSIBILITY_CLASSES, Cost, make, new_trace_id
 from blood.journal import Journal
-from brainstem.attention import attention_cost
 from brainstem.silence import ANSWER_APPROVED, ApprovalRequest, await_approval
 from memory import Memory
 from synapse.gateway import AuthorityViolation, BloodRecordError, Gateway, OrganUnavailable, SynapseVeto
@@ -65,6 +67,12 @@ class Step:
     `cost.attention=1` — остановка и вопрос Человеку — заявленная цена.
     `approval_why` — зачем одобрение, попадает в approval.requested;
     пусто — берётся намерение шага.
+
+    `basis` (A20, SPEC-0001 п.9, волна №28) — id гипотезы творческой
+    песочницы (brainstem.sandbox), на которой строится шаг. Гипотеза — не
+    факт: шаг на гипотезе без критерия проверки (`accept`) — veto до факта;
+    ссылка на гипотезу, которой нет в крови, — тоже veto (незаявленное не
+    достраивается). None — шаг на проверенном знании, старые планы валидны.
     """
 
     organ: str
@@ -76,23 +84,28 @@ class Step:
     approval: str | None = None
     approval_window: float | None = None
     approval_why: str = ""
+    basis: str | None = None
 
 
 @dataclass
 class Budget:
     """Бюджет метаболизма (G3). None — лимит не задан.
 
-    Три границы (M3 SPEC-0001 G3):
+    Четыре ресурса (M3 SPEC-0001 G3; внимание — W-0025, v0.6.0):
     - exhausted_by — исчерпание трейс-бюджета: HALT (граница включена);
     - alerted_by — порог алерта от лимита: событие `alert` (один раз на трейс);
     - per_call_exceeded_by — лимит ОДНОГО вызова (из манифеста, данные —
       brainstem.budget.budgets_from_manifest): вызов уже оплачен кровью — это
       не запрет, а алерт с именем органа.
+    Внимание (`attention`, W-0025 SPEC-0003 п.17) — ресурс трейса, не органа:
+    орган не тратит внимание Человека, его тратит контур дома (SPEC-0004 п.9),
+    поэтому в манифестах органов ключ `attention` не читается.
     """
 
     tokens_in: int | None = None
     tokens_out: int | None = None
     seconds: float | None = None
+    attention: int | None = None
     alert_ratio: float = 0.8
 
     def exhausted_by(self, spent: Cost) -> str | None:
@@ -103,6 +116,8 @@ class Budget:
             return f"tokens_out {spent.tokens_out} >= {self.tokens_out}"
         if self.seconds is not None and spent.seconds >= self.seconds:
             return f"seconds {spent.seconds:.3f} >= {self.seconds}"
+        if self.attention is not None and spent.attention >= self.attention:
+            return f"attention {spent.attention} >= {self.attention}"
         return None
 
     def alerted_by(self, spent: Cost) -> str | None:
@@ -111,6 +126,7 @@ class Budget:
             (self.tokens_in, spent.tokens_in, "tokens_in"),
             (self.tokens_out, spent.tokens_out, "tokens_out"),
             (self.seconds, spent.seconds, "seconds"),
+            (self.attention, spent.attention, "attention"),
         ):
             if limit is None:
                 continue
@@ -165,7 +181,7 @@ class Loop:
         memory: Memory | None = None,
         organ_budgets: dict[str, Budget] | None = None,
         approval_channel: Callable[[dict[str, Any]], str | None] | None = None,
-        stop_signal: Callable[[], str | None] | None = None,
+        stop_check: Callable[[], str | None] | None = None,
         clock: Callable[[], float] = time.monotonic,
         sleeper: Callable[[float], None] = time.sleep,
     ) -> None:
@@ -177,10 +193,51 @@ class Loop:
         self.organ_budgets = organ_budgets or {}
         # Контур одобрения (W-0032): канал Человека + инъекция времени для приёмок.
         self.approval_channel = approval_channel
-        # Внешний аварийный стоп (W-0033, SPEC-0001 п.8): стоп-кран снаружи.
-        self.stop_signal = stop_signal
+        # Внешний аварийный стоп (W-0033, SPEC-0001 v0.6.0 п.8): нерв Человека;
+        # None — стопа нет, цикл живёт как раньше (аддитивно).
+        self.stop_check = stop_check
         self.clock = clock
         self.sleeper = sleeper
+
+    # --- внешний аварийный стоп (W-0033, SPEC-0001 v0.6.0 п.8) -------------------
+
+    def _check_stop(self, trace_id: str, index: int) -> str | None:
+        """Спрашивает внешний нерв между шагами. None — тишина, строка — стоп.
+
+        Пришедший стоп пишется источником pid1 (ADR-0006: организм останавливает
+        только Человек) с вниманием 1/P0 — поданный стоп потратил внимание самого
+        Человека (W-0025, SPEC-0003 п.17). Сломанный или нечитаемый канал —
+        error-конверт и стоп БЕЗ приписанной воли (source brainstem): тело
+        останавливается и называет, чего не хватает, — воля не выдумывается.
+        """
+        if self.stop_check is None:
+            return None
+        try:
+            signal = self.stop_check()
+        except Exception as exc:  # noqa: BLE001 — сломанный нерв не управляет молча
+            reason = f"канал стопа упал: {exc!r}"
+            self.journal.append(make("error", "brainstem", "self", trace_id, {"reason": reason, "at_step": index}))
+            return reason
+        if signal is None:
+            return None
+        if isinstance(signal, str) and signal.strip():
+            self.journal.append(make(
+                "stop.requested",
+                "pid1",
+                "self",
+                trace_id,
+                {
+                    "reason": signal.strip(),
+                    "at_step": index,
+                    "via": getattr(self.stop_check, "__name__", "callable"),
+                },
+                Cost(attention=1),
+                attention_class="P0",
+            ))
+            return signal.strip()
+        reason = f"стоп-сигнал нечитаем: {signal!r}"
+        self.journal.append(make("error", "brainstem", "self", trace_id, {"reason": reason, "at_step": index}))
+        return reason
 
     # --- кровь ---
 
@@ -287,17 +344,12 @@ class Loop:
         alerted = False  # один alert на трейс: кровь не засоряем спамом
 
         for index, step in enumerate(plan):
-            # Внешний аварийный стоп (W-0033, SPEC-0001 п.8): стоп-кран
-            # главнее бюджета и всё остального — проверяется на границе
-            # каждого шага, включая границу перед первым.
-            stop_reason = self._external_stop()
+            # Внешний аварийный стоп (W-0033, SPEC-0001 v0.6.0 п.8): старше бюджета
+            # и старше вопроса — остановленный трейс не тратит ни токенов, ни внимания.
+            stop_reason = self._check_stop(trace_id, index)
             if stop_reason is not None:
-                self._emit(
-                    "halt",
-                    "self",
-                    {"reason": f"внешний аварийный стоп: {stop_reason}", "at_step": index, "source": "external"},
-                    trace_id,
-                )
+                self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": f"стоп: {stop_reason}"}, trace_id))
+                self._emit("halt", "self", {"reason": f"остановлен снаружи: {stop_reason}", "at_step": index}, trace_id)
                 return False
             spent = self.journal.totals(trace_id)
             reason = budget.exhausted_by(spent)
@@ -315,6 +367,8 @@ class Loop:
                 plan_payload["reversibility"] = step.reversibility  # заявка ДО факта (W-0024, п.5)
             if step.approval is not None:
                 plan_payload["approval"] = step.approval  # кто одобрил (заявка, unverified по природе)
+            if step.basis is not None:
+                plan_payload["basis"] = step.basis  # на чьей гипотезе строится шаг (A20, заявка ДО факта)
             memory_context = self._recall(step.intent, trace_id)  # read-only, до PLAN (SPEC-0005 п.5)
             if memory_context:
                 plan_payload["memory_context"] = memory_context
@@ -343,10 +397,50 @@ class Loop:
                         "at_step": index,
                     },
                     trace_id,
-                    cost=Cost(attention=attention_cost("P0")),  # остановка и вопрос Человеку — заявленная цена (W-0025)
                 )
                 self._emit("halt", "self", {"reason": "необратимое действие не одобрено — остановка до факта", "at_step": index}, trace_id)
                 return False
+            if step.basis is not None:
+                # Гипотеза не становится фактом (A20, SPEC-0001 п.9, волна №28):
+                # шаг на гипотезе песочницы без критерия проверки — veto до факта;
+                # ссылка на гипотезу, которой нет в крови, — тоже veto (незаявленное
+                # не достраивается). Проверенный путь — W-0027: план несёт basis,
+                # reflect называет критерий, которым мерил.
+                known = any(
+                    e.get("type") == "reflect"
+                    and isinstance(e.get("payload"), dict)
+                    and e["payload"].get("sandbox") is True
+                    and e.get("id") == step.basis
+                    for e in self.journal.all()
+                )
+                if step.accept is None:
+                    self._emit(
+                        "veto",
+                        "self",
+                        {
+                            "reason": "шаг на гипотезе без критерия проверки — гипотеза не становится фактом (A20, SPEC-0001 п.9)",
+                            "tool": step.tool,
+                            "basis": step.basis,
+                            "at_step": index,
+                        },
+                        trace_id,
+                    )
+                    self._emit("halt", "self", {"reason": "гипотеза без проверки не исполняется — остановка до факта", "at_step": index}, trace_id)
+                    return False
+                if not known:
+                    self._emit(
+                        "veto",
+                        "self",
+                        {
+                            "reason": f"basis ссылается на гипотезу, которой нет в крови: {step.basis!r} (незаявленное не достраивается)",
+                            "tool": step.tool,
+                            "basis": step.basis,
+                            "at_step": index,
+                        },
+                        trace_id,
+                    )
+                    self._emit("halt", "self", {"reason": "гипотезы нет в крови — шаг не исполняется", "at_step": index}, trace_id)
+                    return False
             # Проверка ДО факта (F-03, волна №20): несериализуемый payload шага не доходит
             # до органа — эффект не случается без крови (закон 2), трейс завершён halt (G1).
             try:
@@ -369,8 +463,6 @@ class Loop:
                         what=f"{step.organ}.{step.tool}",
                         window_s=step.approval_window,
                         why=step.approval_why or step.intent,
-                        # Вопрос о необратимом — P0-прерывание: цена внимания названа (W-0025)
-                        priority="P0" if step.reversibility == "irreversible" else None,
                     ),
                     self.approval_channel,
                     clock=self.clock,
@@ -430,6 +522,13 @@ class Loop:
             # W-0029 (SPEC-0001 G3, 0.4.0, зерно коллег F-07): бюджет проверяется и
             # ПОСЛЕ шага — перерасход последним шагом не проходит молча: трейс
             # завершён halt, а не проходом (G1: отказной выход завершён halt).
+            # Стоп старше бюджета и здесь (W-0033): стоп, поданный во время шага,
+            # закрывает трейс на его границе — не проходом.
+            stop_after = self._check_stop(trace_id, index)
+            if stop_after is not None:
+                self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": f"стоп: {stop_after}"}, trace_id))
+                self._emit("halt", "self", {"reason": f"остановлен снаружи: {stop_after}", "at_step": index}, trace_id)
+                return False
             exhausted_after = budget.exhausted_by(self.journal.totals(trace_id))
             if exhausted_after is not None:
                 self._emit(

@@ -172,6 +172,46 @@ class MemoryGraph:
             "removed_nodes": removed_nodes,
         }
 
+    def forget_envelope(self, envelope: dict[str, Any]) -> bool:
+        """Забывает конверт (ТЗ-1.1, A12): True — был и выметен, False — его не было.
+
+        Обратная операция к add_envelope: цепочка пересчитывается из того же
+        конверта (правило одно — source→organ→tool), веса рёбер вычитаются,
+        trace_id уходит с ребра, пустые рёбра и осиротевшие узлы выметаются.
+        Честная граница: граф не хранит конверты — одиночный узел, созданный
+        ДВУМЯ конвертами, при забвении одного уходит вместе с ним (узел без
+        рёбер — не запись); кровь — истина, replay восстановит честно (G4).
+        """
+        env_id = envelope.get("id")
+        if env_id is None or env_id not in self._seen:
+            return False
+
+        source = envelope.get("source")
+        organ = envelope.get("organ")
+        payload = envelope.get("payload") or {}
+        tool = payload.get("tool") or envelope.get("tool")
+        trace_id = envelope.get("trace_id")
+
+        chain: list[str] = []
+        if source:
+            chain.append(f"source:{source}")
+        if organ and organ != "none":
+            chain.append(f"organ:{organ}")
+        if tool:
+            chain.append(f"tool:{tool}")
+
+        for a, b in zip(chain, chain[1:]):
+            self._unlink(a, b, trace_id)
+
+        del self._seen[env_id]
+
+        # Осиротевшие узлы выметаются: узел без единого ребра — не запись.
+        alive = {node for key in self._edges for node in key.split("|")}
+        for node in list(self._node_incoming):
+            if node not in alive:
+                del self._node_incoming[node]
+        return True
+
     def neighbors(self, node: str, k: int = 5) -> list[dict[str, Any]]:
         """До k соседей узла: [{node, weight, via}] — по убыванию веса.
 
@@ -246,6 +286,22 @@ class MemoryGraph:
             traces = self._edge_traces.setdefault(key, {})
             traces[tid] = int(traces.get(tid, 0)) + 1
         self._node_incoming[b] = self._node_incoming.get(b, 0) + 1
+
+    def _unlink(self, a: str, b: str, trace_id: Any) -> None:
+        """Выметает один обмен a→b (обратный к _link, ТЗ-1.1): вес −1, trace_id уходит,
+        пустое ребро удаляется, счётчик входящих b корректируется."""
+        key = f"{a}|{b}"
+        edge = self._edges.get(key)
+        if edge is None:
+            return  # нечего выметать — ребра нет
+        edge["weight"] = int(edge["weight"]) - 1
+        tid = str(trace_id) if trace_id else None
+        if tid and tid in edge["via"]:
+            edge["via"].remove(tid)
+        if edge["weight"] <= 0:
+            del self._edges[key]
+            if b in self._node_incoming:
+                self._node_incoming[b] = max(0, self._node_incoming[b] - 1)
 
     def _load(self, path: Path) -> None:
         """Читает состояние, записанное flush-ем (персистентность).

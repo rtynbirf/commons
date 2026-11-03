@@ -277,5 +277,8 @@ def test_approval_envelopes_carry_trace_and_cost(journal) -> None:
     assert len(events) == 2
     for envelope in events:
         assert envelope["trace_id"] == "trace-sil"
-        assert envelope["cost"] == {"tokens_in": 0, "tokens_out": 0, "seconds": 0.0}
         assert envelope["organ"] == "self"
+    # волна №24 (W-0025): вопрос с окном — потраченное внимание (1, P0); ответ — ноль
+    asked, answered = events
+    assert asked["cost"]["attention"] == 1 and asked["attention_class"] == "P0"
+    assert answered["cost"] == {"tokens_in": 0, "tokens_out": 0, "seconds": 0.0, "attention": 0}

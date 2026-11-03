@@ -4,6 +4,12 @@
 организма; замена движка — правкой манифеста synapse/mcp-manifest.yaml, без
 правки кода цикла (G2 SPEC-0005). Данные локальны: файл — только тот путь,
 что дал конструктор (G3 SPEC-0005).
+
+Права забывания и выгрузки (SPEC-0005 пп.7–8, волна №27): delete/delete_by_trace/
+get/items — дополнения реализации (как close()): протокол VectorIndex цикла
+их не знает (G2), движок без них честно отчитается OUT_OF_CONTROL в memory.forget.
+Трейс забывается вместе с подтрейсами `<trace_id>-*` (та же конвенция дома,
+что и в графе: сцены и стыки называются `<трейс>-<имя>`).
 """
 
 from __future__ import annotations
@@ -21,6 +27,18 @@ CREATE TABLE IF NOT EXISTS vectors (
     meta TEXT NOT NULL
 )
 """
+
+
+def _trace_matches(actual: Any, wanted: str) -> bool:
+    """Конвенция подтрейсов дома: точный трейс или `<trace_id>-*` (SPEC-0005 п.7).
+
+    Одна и та же в индексе (delete_by_trace) и в графе (forget_trace) —
+    иначе забывание двух хранилищ разъедется.
+    """
+    if actual is None:
+        return False
+    actual = str(actual)
+    return actual == wanted or actual.startswith(wanted + "-")
 
 
 def cosine(a: list[float], b: list[float]) -> float:
@@ -91,6 +109,48 @@ class SQLiteVectorIndex:
         """Число векторов в индексе."""
         (total,) = self._connection.execute("SELECT COUNT(*) FROM vectors").fetchone()
         return int(total)
+
+    def get(self, vec_id: str) -> tuple[list[float], dict[str, Any]] | None:
+        """Вектор с метаданными по id — или None (для сверки при импорте, п.8)."""
+        row = self._connection.execute(
+            "SELECT vec, meta FROM vectors WHERE vec_id = ?", (vec_id,)
+        ).fetchone()
+        if row is None:
+            return None
+        return json.loads(row[0]), json.loads(row[1])
+
+    def items(self) -> list[tuple[str, list[float], dict[str, Any]]]:
+        """Все записи (vec_id, vector, meta) — материал экспорта снапшота (п.8)."""
+        return [
+            (vec_id, json.loads(raw_vec), json.loads(raw_meta))
+            for vec_id, raw_vec, raw_meta in self._connection.execute(
+                "SELECT vec_id, vec, meta FROM vectors ORDER BY vec_id"
+            )
+        ]
+
+    def delete(self, vec_id: str) -> bool:
+        """Забывает одну запись; True — была и удалена, False — не было (п.7).
+
+        Как и add, живёт в транзакции: фактическая запись файла — flush().
+        """
+        cursor = self._connection.execute("DELETE FROM vectors WHERE vec_id = ?", (vec_id,))
+        return cursor.rowcount > 0
+
+    def delete_by_trace(self, trace_id: str) -> int:
+        """Забывает все записи трейса и его подтрейсов `<trace_id>-*`; возвращает число.
+
+        Совпадение — по meta.trace_id: точное или подтрейс (конвенция дома).
+        Как и add, живёт в транзакции: фактическая запись файла — flush().
+        """
+        wanted = str(trace_id)
+        doomed = [
+            vec_id
+            for vec_id, raw_meta in self._connection.execute("SELECT vec_id, meta FROM vectors")
+            if _trace_matches(json.loads(raw_meta).get("trace_id"), wanted)
+        ]
+        for vec_id in doomed:
+            self._connection.execute("DELETE FROM vectors WHERE vec_id = ?", (vec_id,))
+        return len(doomed)
 
     def flush(self) -> None:
         """COMMIT — фактическая запись файла (путь только из конструктора, G3)."""

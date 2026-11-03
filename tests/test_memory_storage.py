@@ -183,7 +183,11 @@ def test_graph_flush_and_reload_roundtrip(tmp_path: Path) -> None:
     graph.flush()
 
     snapshot = json.loads(path.read_text(encoding="utf-8"))
-    assert set(snapshot) == {"nodes", "edges", "seen"}
+    # волна №27 (SPEC-0005 п.7): счётчики трейсов в снапшоте аддитивно —
+    # базовая форма обязательна, новые ключи не ломают старые читатели
+    assert {"nodes", "edges", "seen"} <= set(snapshot)
+    assert "trace_counts" in snapshot
+    assert snapshot["trace_counts"] == {"trace-1": 1, "trace-2": 1}
     assert snapshot["seen"] == ["id-1", "id-2"]
     assert snapshot["edges"]["source:synapse|organ:markitdown"]["weight"] == 1
 

@@ -73,19 +73,19 @@ axioms:
     plan: null
   - id: A11
     check: forget — после удаления нет в индексах/кэшах
-    verdict: open
-    evidence: []
-    plan: "Ф-1.4 ТЗ ревизора (runs/2026-11-03-revision/REVISION.md): волна №27 — memory Forget с отчётом DELETED/NOT_FOUND/FAILED/OUT_OF_CONTROL"
+    verdict: pass
+    evidence: ["memory/forget.py", "tests/test_wave27_memory_forget.py", "specs/SPEC-0005-memory.md", "runs/2026-11-03-wave27-forget-trade/report.md"]
+    plan: null
   - id: A12
     check: ручная правка памяти — diff при импорте
-    verdict: open
-    evidence: []
-    plan: "Ф-1.4 ТЗ ревизора: волна №27 — импорт памяти с diff и provenance (АSI06)"
+    verdict: pass
+    evidence: ["memory/trade.py", "tests/test_wave27_memory_forget.py", "specs/SPEC-0005-memory.md"]
+    plan: null
   - id: A13
     check: экспорт/восстановимость
-    verdict: partial
-    evidence: ["blood/diary.py", "tests/test_blood_diary.py"]
-    plan: "Ф-1.4 ТЗ ревизора: волна №27 — commons-memory экспорт/импорт/diff (кровь читаема уже сейчас)"
+    verdict: pass
+    evidence: ["memory/trade.py", "blood/diary.py", "tests/test_wave27_memory_forget.py", "tests/test_blood_diary.py"]
+    plan: null
   - id: A14
     check: нет лишних interruptions (бюджет внимания, тишина)
     verdict: served
@@ -109,8 +109,8 @@ axioms:
   - id: A18
     check: tool output = данные (prompt injection)
     verdict: partial
-    evidence: ["immune/barrier.py", "tests/test_immune.py"]
-    plan: "Ф-2.2 ТЗ ревизора: волна №28 — creative-sandbox (гипотезы unverified без write/execute)"
+    evidence: ["immune/barrier.py", "tests/test_immune.py", "memory/trade.py"]
+    plan: "Ф-2.2 ТЗ ревизора: волна №28 — creative-sandbox (гипотезы unverified без write/execute); срез волны №27: импорт памяти fail-closed (запись без провенанса / с чужим origin не входит молча, ASI06)"
   - id: A19
     check: false premise — не поддакивать (conscience)
     verdict: open

@@ -61,7 +61,10 @@ def test_g1_reconstruction(pulse: dict[str, object]) -> None:
 def test_no_empty_cost(pulse: dict[str, object]) -> None:
     events: list[dict] = pulse["events"]  # type: ignore[assignment]
     for event in events:
-        assert set(event["cost"]) == {"tokens_in", "tokens_out", "seconds"}, (
+        # Инвариант «событие без цены не существует» (SPEC-0003 п.3): тройка
+        # обязана быть; поле attention (W-0025, п.17) — аддитивное расширение,
+        # старая кровь без него валидна навсегда (п.6) — множество не строго.
+        assert {"tokens_in", "tokens_out", "seconds"} <= set(event["cost"]), (
             f"событие {event['type']} без полной цены: {event['cost']}"
         )
     act = [event for event in events if event["type"] == "act"][0]

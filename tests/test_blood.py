@@ -17,7 +17,8 @@ def valid_envelope() -> dict:
 def test_envelope_validates_against_schema() -> None:
     envelope = valid_envelope()
     validate(envelope)
-    assert envelope["cost"] == {"tokens_in": 10, "tokens_out": 5, "seconds": 0.5}
+    # волна №24 (W-0025): цена несёт внимание — аддитивно, ноль там, где не тратилось
+    assert envelope["cost"] == {"tokens_in": 10, "tokens_out": 5, "seconds": 0.5, "attention": 0}
     assert envelope["ts"].endswith("Z")
 
 

@@ -23,7 +23,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 JOURNALS = sorted((REPO_ROOT / "runs").glob("*/blood.jsonl"))
 SPEC_0003 = REPO_ROOT / "specs" / "SPEC-0003-blood-envelope.md"
 
-FULL_PRICE = {"tokens_in", "tokens_out", "seconds"}
+# волна №24 (W-0025): полная цена честна и по вниманию Человека (SPEC-0003 п.17)
+FULL_PRICE = {"tokens_in", "tokens_out", "seconds", "attention"}
 
 
 def events_of(journal: Path) -> list[dict]:
@@ -52,12 +53,17 @@ def test_every_envelope_valid_by_schema(journal: Path) -> None:
 @pytest.mark.parametrize("journal", JOURNALS, ids=lambda p: p.parent.name)
 def test_every_event_has_full_price(journal: Path) -> None:
     for event in events_of(journal):
-        assert set(event["cost"]) == FULL_PRICE, (
+        cost_keys = set(event["cost"])
+        # волна №24 (W-0025): новая кровь несёт и внимание (SPEC-0003 п.17);
+        # старая кровь (п.6) без поля валидна навсегда — граница названа, не прикрыта
+        assert cost_keys in (FULL_PRICE, FULL_PRICE - {"attention"}), (
             f"{journal.name}: событие {event['id']} без полной цены (SPEC-0003 п.3)"
         )
         assert event["cost"]["tokens_in"] >= 0
         assert event["cost"]["tokens_out"] >= 0
         assert event["cost"]["seconds"] >= 0
+        if "attention" in event["cost"]:
+            assert isinstance(event["cost"]["attention"], int) and event["cost"]["attention"] >= 0
 
 
 @pytest.mark.parametrize("journal", JOURNALS, ids=lambda p: p.parent.name)

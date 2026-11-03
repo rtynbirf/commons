@@ -6,7 +6,9 @@
 approval.expired — ни одного немого ожидания. Правило симметрично
 донорскому триггеру тишины (окно follow-up наружу), но работает внутрь
 дома. Ответ Человека пишется с источником pid1 — воля человека в крови
-отличима от воли тела.
+отличима от воли тела. Вопрос с окном — потраченное внимание Человека:
+approval.requested несёт cost.attention = 1 с классом P0 (W-0025,
+SPEC-0003 п.17, SPEC-0004 п.9) — тело видит, сколько внимания попросило.
 
 Fail-closed: окно <= 0 — ValueError ДО первой записи (правило без окна —
 не правило, ничего не случилось); канал упал или вернул мусор — error-
@@ -19,7 +21,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from blood.envelope import make
+from blood.envelope import Cost, make
 from blood.journal import Journal
 
 ANSWER_APPROVED = "approved"
@@ -81,6 +83,8 @@ def await_approval(
             "default": "cancel",
             "rule": "silence=no (W-0032, SPEC-0004 п.8)",
         },
+        Cost(attention=1),
+        attention_class="P0",
     ))
 
     started = clock()

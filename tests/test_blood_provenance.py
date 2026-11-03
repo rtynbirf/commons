@@ -218,7 +218,8 @@ def test_adapter_imports_known_event() -> None:
     assert env["occurred_at"] < env["observed_at"]
     assert env["trust"] == "verified"
     assert env["privacy"] == "personal"
-    assert env["cost"] == {"tokens_in": 0, "tokens_out": 0, "seconds": 1.5}
+    # волна №24 (W-0025): цена приёма несёт и внимание (ноль — не тратилось)
+    assert env["cost"] == {"tokens_in": 0, "tokens_out": 0, "seconds": 1.5, "attention": 0}
     assert "stored_at" not in env  # их stored_at — не заявка дома
     assert "causation_id" not in env  # их causation_id — не uuid дома
     membrane = env["payload"]["membrane"]

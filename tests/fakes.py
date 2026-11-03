@@ -10,6 +10,7 @@ import socket
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +31,31 @@ class FakeEcho:
     def invoke(self, tool: str, payload: dict[str, Any]) -> tuple[Any, Cost]:
         self.calls.append((tool, payload))
         return {"echo": payload, "tool": tool}, Cost(tokens_in=len(str(payload)), tokens_out=1, seconds=0.01)
+
+
+class SlowEcho:
+    """Медленный орган-эхо: invoke живёт заявленные секунды (живая граница шага).
+
+    Для живых прогонов волны №24 (W-0033): орган только живёт — стоп-файл во
+    время его вызова кладёт СЦЕНАРИЙ прогона (подстава-Человек, рука вне тела,
+    названа в boot), потому что настоящий Человек кладёт стоп одной командой
+    снаружи (G5), и его полномочия не сужены манифестом органа. Приёмкам сна
+    не нужно — `delay` они задают сами.
+    """
+
+    def __init__(self, entry: dict[str, Any]) -> None:
+        self.entry = entry
+        self.delay: float = float(entry.get("delay", 0.0))
+        self.calls: list[tuple[str, dict[str, Any]]] = []
+
+    def health(self) -> bool:
+        return True
+
+    def invoke(self, tool: str, payload: dict[str, Any]) -> tuple[Any, Cost]:
+        if self.delay > 0:
+            time.sleep(self.delay)
+        self.calls.append((tool, payload))
+        return {"echo": payload, "tool": tool}, Cost(tokens_in=len(str(payload)), tokens_out=1, seconds=self.delay)
 
 
 class FakeDead:

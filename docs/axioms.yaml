@@ -135,8 +135,10 @@ axioms:
     marker: "гипотеза, не факт"
   - id: A21
     title: "Swarm-consent: согласие обеих сторон обмена"
-    status: НЕ СЛУЖЕНО
-    todo: "ТЗ-2.3"
+    status: СЛУЖЕНО
+    since: 0.49.0
+    witness: synapse/consent.py
+    marker: "согласие обеих сторон"
   - id: A22
     title: "Провенанс содержимого (PROVENANCE, donation)"
     status: PASS

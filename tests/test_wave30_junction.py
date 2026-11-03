@@ -226,7 +226,8 @@ def test_axioms_registry_holds_markers_after_the_junction() -> None:
     registry = yaml.safe_load((ROOT / "docs" / "axioms.yaml").read_text(encoding="utf-8"))
     rows = {r["id"]: r for r in registry["axioms"]}
     assert rows["A19"]["status"] == "СЛУЖЕНО" and rows["A20"]["status"] == "СЛУЖЕНО"
-    assert rows["A21"]["status"] == "НЕ СЛУЖЕНО" and rows["A21"]["todo"].startswith("ТЗ-")
+    # A21 служена их волной №30 (0.49.0, synapse/consent.py) — переворот по факту
+    assert rows["A21"]["status"] == "СЛУЖЕНО" and rows["A21"]["since"] == "0.49.0"
 
 
 def test_smell_reads_merged_house_blood() -> None:

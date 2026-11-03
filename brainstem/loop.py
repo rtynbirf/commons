@@ -21,6 +21,7 @@ import jsonschema
 
 from blood.envelope import REVERSIBILITY_CLASSES, Cost, make, new_trace_id
 from blood.journal import Journal
+from brainstem.silence import ANSWER_APPROVED, ApprovalRequest, await_approval
 from memory import Memory
 from synapse.gateway import AuthorityViolation, BloodRecordError, Gateway, OrganUnavailable, SynapseVeto
 
@@ -44,6 +45,16 @@ class Step:
     («PID 1, 2026-11-03»), доверие unverified по природе. Необратимое без
     одобрения ствол не исполняет — veto до факта (спрашивать = остановиться
     и назвать, чего не хватает; решение — за Человеком, не за циклом).
+
+    `approval_window` (W-0032, SPEC-0004 п.8, SPEC-0001 v0.5.0 п.7) — окно
+    тишины в секундах: живой контур одобрения перед ACT — кровь несёт
+    approval.requested → granted/veto (воля Человека, source pid1) /
+    expired (окно истекло — отмена по-записанному, тишина = «нет»);
+    до органа шаг не доходит без ответа. Когда окно объявлено, вето
+    «необратимое без одобрения» откладывается до вердикта контура —
+    спрашивать по-настоящему лучше, чем остановиться от отсутствия нерва.
+    `approval_why` — зачем одобрение, попадает в approval.requested;
+    пусто — берётся намерение шага.
     """
 
     organ: str
@@ -53,6 +64,8 @@ class Step:
     accept: dict[str, Any] | Callable[[Any], bool] | None = None
     reversibility: str | None = None
     approval: str | None = None
+    approval_window: float | None = None
+    approval_why: str = ""
 
 
 @dataclass
@@ -133,6 +146,9 @@ class Loop:
         *,
         memory: Memory | None = None,
         organ_budgets: dict[str, Budget] | None = None,
+        approval_channel: Callable[[dict[str, Any]], str | None] | None = None,
+        clock: Callable[[], float] = time.monotonic,
+        sleeper: Callable[[float], None] = time.sleep,
     ) -> None:
         self.gateway = gateway
         self.journal = journal
@@ -140,6 +156,10 @@ class Loop:
         # Per-call лимиты органов (M3 SPEC-0001 G3): данные из манифеста
         # (brainstem.budget.budgets_from_manifest), ствол мозга знает их как параметры.
         self.organ_budgets = organ_budgets or {}
+        # Контур одобрения (W-0032): канал Человека + инъекция времени для приёмок.
+        self.approval_channel = approval_channel
+        self.clock = clock
+        self.sleeper = sleeper
 
     # --- кровь ---
 
@@ -245,7 +265,9 @@ class Loop:
                     trace_id,
                 )
                 return False
-            if step.reversibility == "irreversible" and not step.approval:
+            if step.reversibility == "irreversible" and not step.approval and step.approval_window is None:
+                # (W-0032 п.7): окно тишины — это и есть спрашивание живьём; без окна —
+                # остановиться до факта и назвать, чего не хватает.
                 self._emit(
                     "veto",
                     "self",
@@ -266,6 +288,30 @@ class Loop:
             except (TypeError, ValueError) as exc:
                 self._emit("halt", "self", {"reason": f"payload шага не сериализуется в кровь: {exc}", "at_step": index}, trace_id)
                 return False
+            if step.approval_window is not None:
+                # Одобрение перед необратимым живьём (W-0032, SPEC-0004 п.8, SPEC-0001 v0.5.0 п.7):
+                # тишина = «нет» по-записанному, до органа шаг не доходит без ответа.
+                if self.approval_channel is None:
+                    self._emit("error", "self", {"reason": "канал одобрения не подключён, а шаг требует окна", "what": f"{step.organ}.{step.tool}"}, trace_id)
+                    self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": "approval: канал не подключён"}, trace_id))
+                    self._emit("halt", "self", {"reason": f"канал одобрения не подключён: шаг {index} требует окна", "at_step": index}, trace_id)
+                    return False
+                verdict = await_approval(
+                    self.journal,
+                    trace_id,
+                    ApprovalRequest(
+                        what=f"{step.organ}.{step.tool}",
+                        window_s=step.approval_window,
+                        why=step.approval_why or step.intent,
+                    ),
+                    self.approval_channel,
+                    clock=self.clock,
+                    sleeper=self.sleeper,
+                )
+                if verdict != ANSWER_APPROVED:
+                    self._remember(self._emit("reflect", "self", {"intent": step.intent, "satisfied": False, "reason": f"approval: {verdict}"}, trace_id))
+                    self._emit("halt", "self", {"reason": f"одобрение не получено ({verdict}): тишина = «нет»" if verdict == "expired" else f"одобрение не получено ({verdict})", "at_step": index}, trace_id)
+                    return False
             try:
                 result = self.gateway.call(
                     step.organ, step.tool, step.payload, trace_id, reversibility=step.reversibility

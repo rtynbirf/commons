@@ -87,7 +87,11 @@
         "organ.replace",
         "boot",
         "shutdown",
-        "alert"
+        "alert",
+        "approval.requested",
+        "approval.granted",
+        "approval.veto",
+        "approval.expired"
       ]
     },
     "source": {

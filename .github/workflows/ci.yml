@@ -89,8 +89,16 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Гейт spec-drift (0.43.0, W-0030) судит дифф против базы PR —
+          # объект base.sha обязан быть в истории (полная выкачка).
+          fetch-depth: 0
 
       - name: Доктор дома (машиночитаемый отчёт)
+        env:
+          # W-0030: база для гейта «поведение без спеки» — base PR'а;
+          # для пушей (base.sha пуст) — предыдущий коммит.
+          SPEC_DRIFT_BASE: ${{ github.event.pull_request.base.sha || 'HEAD~1' }}
         run: python3 scripts/doctor.py --json > doctor-report.json
 
       - name: Память воротов — таблица в summary

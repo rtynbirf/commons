@@ -15,6 +15,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -507,7 +508,9 @@ def test_secretfree_house_is_clean(tmp_path: Path) -> None:
 
 
 def _clean_house(root: Path) -> None:
-    """Минимальный зелёный дом: все 11 гейтов чисты."""
+    """Минимальный зелёный дом: все 12 гейтов чисты (гейт spec-drift судит
+    дифф против базы — дом обязан быть judgeable: git есть, всё закоммичено,
+    дифф пуст — зелёный; 0.43.0, W-0030)."""
     _touch(root, "pyproject.toml", 'version = "0.23.0"\n[project.scripts]\ncommons-x = "mod_x:main"\n')
     _touch(root, "mod_x.py", "def main(): ...\n")
     _touch(root, "CITATION.cff", "version: 0.23.0\n")
@@ -516,6 +519,9 @@ def _clean_house(root: Path) -> None:
     _touch(root, "README.en.md", "House 0.23.0.\n")
     _touch(root, "ROADMAP.md", "дело\n")
     _touch(root, "docs/personas.md", "### W-0001 — дело\nХочу: дело.\nСтатус: СЛУЖЕНО — артефакт.\n")
+    subprocess.run(["git", "-C", str(root), "init", "-q"], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(root), "-c", "user.email=h@h", "-c", "user.name=house", "add", "-A"], check=True, capture_output=True)
+    subprocess.run(["git", "-C", str(root), "-c", "user.email=h@h", "-c", "user.name=house", "commit", "-q", "-m", "clean"], check=True, capture_output=True)
 
 
 def test_doctor_json_report_is_machine_readable(tmp_path: Path, capsys) -> None:

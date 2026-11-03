@@ -90,3 +90,4 @@ commit carries a DCO `Signed-off-by` line. Agents should start from [`llms.txt`]
 ## License
 
 Apache-2.0 — see [LICENSE](LICENSE). Rationale (in Russian): [ADR-0003](docs/adr/ADR-0003-apache-2.0.md).
+Since **0.43.0 the body has an external stop-crane and a spec-machine** (wave 24): an external emergency stop of the loop (`brainstem/loop.py` + `brainstem/stop.py`, SPEC-0001 v0.6.0 п.8, W-0033) — `halt` with `source: "external"` at step boundaries before the fact; what was done before the stop is not erased; a broken signal is a stop too (fail-closed); the doctor's `spec-drift` gate (W-0030) reddens "behavior without a spec" — [`runs/2026-11-03-wave24-stop-drift/`](runs/2026-11-03-wave24-stop-drift/report.md).

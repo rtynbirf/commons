@@ -62,7 +62,9 @@ scripts/doctor_report.py, оба воркфлоу печатают её в $GITH
 from __future__ import annotations
 
 import json
+import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -92,6 +94,12 @@ WANT_REF = re.compile(r"\bW-(\d{4})\b")
 WANT_DEF_RE = re.compile(r"^#{2,3} W-(\d{4})\b", re.M)
 WANT_STATUS_RE = re.compile(r"^\s*(?:[-*]\s*)?\**Статус\**\s*:", re.IGNORECASE | re.M)
 PERSONAS = "docs/personas.md"
+
+# W-0030 (0.43.0, зерно D3 коллег, находка F-09): публичное поведение дома —
+# три пакета ствола и крови; specs/ — геном. Правило «спека раньше кода».
+BEHAVIOR_PREFIXES = ("blood/", "synapse/", "brainstem/")
+SPEC_PREFIX = "specs/"
+SPEC_DRIFT_ENV = "SPEC_DRIFT_BASE"
 
 # --- гейты: каждый возвращает (сколько файлов/пунктов чисто, список блох) ---
 
@@ -450,6 +458,56 @@ def check_no_secrets(root: Path) -> tuple[int, list[str]]:
     return ok, fleas
 
 
+def check_spec_drift(root: Path) -> tuple[int, list[str]]:
+    """Поведение без спеки — красный PR (W-0030, 0.43.0, зерно D3 коллег, F-09).
+
+    Принцип дома «спека меняется раньше кода» становится машиной: если в
+    диффе против базы тронуты кровь/синапсы/ствол (blood/, synapse/,
+    brainstem/), а specs/ не тронут — блоха на каждом таком пути. База —
+    env SPEC_DRIFT_BASE (CI ставит base.sha PR'а; для пушей — HEAD~1;
+    локально по умолчанию HEAD — незакоммиченное). Новые файлы (untracked)
+    видны так же: новое поведение без спеки — та же блоха. Git недоступен —
+    fail-closed: гейт красный, а не слепой (закон иммунитета, SPEC-0006).
+    Граница честно названа: гейт судит дифф против базы, а не историю —
+    старые расползания ловят гематология и ревизии.
+    """
+    base = os.environ.get(SPEC_DRIFT_ENV, "").strip() or "HEAD"
+    try:
+        diff = subprocess.run(
+            ["git", "-C", str(root), "-c", "core.quotepath=off", "diff", "--name-only", base],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=True,
+        ).stdout.splitlines()
+        status = subprocess.run(
+            ["git", "-C", str(root), "-c", "core.quotepath=off", "status", "--porcelain", "-uall"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=True,
+        ).stdout.splitlines()
+    except (OSError, subprocess.SubprocessError) as exc:
+        detail = (exc.stderr if hasattr(exc, "stderr") and exc.stderr else str(exc)).strip()[:200]
+        return 0, [
+            f"spec-drift: гейт не смог прочитать diff против {base!r} ({detail}) — fail-closed, красный без суждения"
+        ]
+
+    changed = {line.strip() for line in diff if line.strip()}
+    for line in status:
+        if line.startswith("?? "):
+            changed.add(line[3:].strip())
+    behavior = sorted(p for p in changed if p.startswith(BEHAVIOR_PREFIXES))
+    specs_touched = any(p.startswith(SPEC_PREFIX) for p in changed)
+    fleas: list[str] = []
+    if behavior and not specs_touched:
+        for path in behavior:
+            fleas.append(
+                f"spec-drift: {path}: поведение без спеки — specs/ не тронуты (спека раньше кода, W-0030)"
+            )
+    return (0 if fleas else 1), fleas
+
+
 GATES = (
     ("counts", check_no_stale_counts),
     ("versions", check_version_sync),
@@ -462,6 +520,7 @@ GATES = (
     ("changelog", check_changelog_discipline),
     ("conflict-markers", check_conflict_markers),
     ("secrets", check_no_secrets),
+    ("spec-drift", check_spec_drift),
 )
 
 

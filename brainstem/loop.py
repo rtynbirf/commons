@@ -7,6 +7,13 @@
 
 Цикл не знает ни одного органа и не умеет их вызывать напрямую:
 весь доступ — через синапсы (gateway.call). Прямого пути к органу из цикла нет.
+
+Внешний аварийный стоп (SPEC-0001 v0.6.0 п.8, W-0033, волна №24): остановить
+трейс может не только собственная рефлексия — стоп-кран снаружи (`stop_signal`,
+проверяется на границе шагов, включая границу перед первым): halt с
+`source: "external"` до факта; уже вызванный орган доезжает и оплачивается
+кровью; упавший сигнал — тоже стоп (fail-closed). Файловый нерв для живого
+хоста — `brainstem/stop.file_stop_signal`.
 """
 
 from __future__ import annotations
@@ -134,6 +141,14 @@ class Loop:
     Инвариант halt (SPEC-0001 G1): любой отказной выход цикла завершён
     событием halt — G1-реконструкция трейса всегда полна.
 
+    Внешний аварийный стоп (SPEC-0001 v0.6.0 п.8, W-0033): `stop_signal` —
+    callable, подключаемый конструктором рядом с каналом одобрения; на
+    границе каждого шага (включая перед первым) сигнал опрашивается: вернул
+    причину — halt с `source: "external"` до факта, `run() = False`. Стоп
+    действует между шагами: уже вызванный орган доезжает и оплачивается
+    кровью, уже сделанное не вычёркивается (append-only). Стоп-кран главнее
+    бюджета. Сигнал упал — тоже стоп (fail-closed). None — прежние семантики.
+
     Рефлексия (SPEC-0001 v0.3.0, W-0027): шаг может объявить проверяемый
     критерий успеха (`Step.accept`) — JSON-схему или предикат; тогда REFLECT
     меряет результат им, а не фактом непустого ответа («error с ok:false»
@@ -150,6 +165,7 @@ class Loop:
         memory: Memory | None = None,
         organ_budgets: dict[str, Budget] | None = None,
         approval_channel: Callable[[dict[str, Any]], str | None] | None = None,
+        stop_signal: Callable[[], str | None] | None = None,
         clock: Callable[[], float] = time.monotonic,
         sleeper: Callable[[float], None] = time.sleep,
     ) -> None:
@@ -161,6 +177,8 @@ class Loop:
         self.organ_budgets = organ_budgets or {}
         # Контур одобрения (W-0032): канал Человека + инъекция времени для приёмок.
         self.approval_channel = approval_channel
+        # Внешний аварийный стоп (W-0033, SPEC-0001 п.8): стоп-кран снаружи.
+        self.stop_signal = stop_signal
         self.clock = clock
         self.sleeper = sleeper
 
@@ -230,6 +248,26 @@ class Loop:
         """Меряет результат критерием шага (см. measure_criterion)."""
         return measure_criterion(step.accept, result)
 
+    # --- внешний аварийный стоп (W-0033, SPEC-0001 п.8) ---
+
+    def _external_stop(self) -> str | None:
+        """Опрос стоп-крана на границе шагов (W-0033).
+
+        None — стопа нет. Сигнал упал — это тоже стоп (fail-closed):
+        авария в нерве не может молча разрешить продолжение. Пустая
+        причина названа честно («причина не названа»), не придумана.
+        """
+        if self.stop_signal is None:
+            return None
+        try:
+            reason = self.stop_signal()
+        except Exception as exc:  # noqa: BLE001 — упавший сигнал — стоп, не продолжение
+            return f"стоп-сигнал упал: {exc!r}"
+        if reason is None:
+            return None
+        text = str(reason).strip()
+        return text or "причина не названа"
+
     # --- цикл ---
 
     def run(self, plan: list[Step], trace_id: str | None = None, budget: Budget | None = None) -> bool:
@@ -249,6 +287,18 @@ class Loop:
         alerted = False  # один alert на трейс: кровь не засоряем спамом
 
         for index, step in enumerate(plan):
+            # Внешний аварийный стоп (W-0033, SPEC-0001 п.8): стоп-кран
+            # главнее бюджета и всё остального — проверяется на границе
+            # каждого шага, включая границу перед первым.
+            stop_reason = self._external_stop()
+            if stop_reason is not None:
+                self._emit(
+                    "halt",
+                    "self",
+                    {"reason": f"внешний аварийный стоп: {stop_reason}", "at_step": index, "source": "external"},
+                    trace_id,
+                )
+                return False
             spent = self.journal.totals(trace_id)
             reason = budget.exhausted_by(spent)
             if reason is not None:

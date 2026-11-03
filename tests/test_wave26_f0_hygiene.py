@@ -381,3 +381,28 @@ def test_ci_gives_the_gate_its_parent_commit() -> None:
     weekly = (REPO_ROOT / ".github" / "workflows" / "fleas.yml").read_text(encoding="utf-8")
     assert ci.count("fetch-depth: 2") >= 2, "джобы hygiene и core обязаны давать родителя коммита"
     assert "fetch-depth: 2" in weekly, "недельный свип обязан давать родителя коммита"
+
+
+class _NoDuplicateKeys(yaml.SafeLoader):
+    """SafeLoader, который не прощает дублей ключей: PyYAML по умолчанию
+    молча оставляет последний — а GitHub Actions роняет воркфлоу (0 джоб).
+    Косяк 8d758ac: второй `with:` у checkout свипа был невидим локально."""
+
+
+def _no_duplicates(loader, node, deep=False):
+    seen = set()
+    for key_node, _ in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in seen:
+            raise ValueError(f"дубль ключа {key!r} в маппинге")
+        seen.add(key)
+    return yaml.SafeLoader.construct_mapping(loader, node, deep)
+
+
+_NoDuplicateKeys.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _no_duplicates)
+
+
+def test_workflows_have_no_duplicate_keys() -> None:
+    for name in ("ci.yml", "fleas.yml"):
+        text = (REPO_ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
+        yaml.load(text, Loader=_NoDuplicateKeys)  # дубль ключа — красное

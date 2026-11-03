@@ -2,6 +2,12 @@
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/); версии — SemVer.
 
+## [0.45.2] — 2026-11-03
+
+### Fixed
+
+- **Второй косяк того же такта — и второй пойманный живьём**: в `fleas.yml` у checkout уже был блок `with: persist-credentials: false`; вставка `fetch-depth: 2` создала **дубль ключа `with:`** — GitHub Actions роняет такой воркфлоу на старте (прогон `41633461620`: 0 джоб, failure), а PyYAML локально молча прощал дубли — «валидно» было ложью проверки. Выметено: один блок `with` (fetch-depth: 2 + persist-credentials: false), пин-комментарий на месте. Приёмка `test_workflows_have_no_duplicate_keys` — оба воркфлоу парсятся лоадером, запрещающим дубли ключей; слепота проверки названа честно. Итог такта 0.45.1+0.45.2 на голове `8d758ac`: ci и scorecard — success, fleas — починен этим коммитом.
+
 ## [0.45.1] — 2026-11-03
 
 ### Fixed

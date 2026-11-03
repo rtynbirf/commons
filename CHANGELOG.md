@@ -2,6 +2,12 @@
 
 Формат основан на [Keep a Changelog](https://keepachangelog.com/); версии — SemVer.
 
+## [0.45.1] — 2026-11-03
+
+### Fixed
+
+- **Урок живого CI, пойманный собственным гейтом на первом же прогоне** (`6ac04a8`): `actions/checkout` клонирует с `fetch-depth: 1` — у гейта `spec-first` не было родителя коммита, fail-closed честно окрасил CI (джобы hygiene и core). Лечено по духу «блоха — красный PR»: checkout джоб hygiene и core (`ci.yml`) и недельного свипа (`fleas.yml`) несёт `fetch-depth: 2` — гейт судит HEAD-коммит по родителю; приёмка конфига `test_ci_gives_the_gate_its_parent_commit` держит это живым. Доктор локально: 13 гейтов, 864 ok / 0 failed; сюит 867 passed. Scorecard на `6ac04a8` — success; сам гейт ничего не смягчил: битый git и поныне красный.
+
 ## [0.45.0] — 2026-11-03
 
 ### Added

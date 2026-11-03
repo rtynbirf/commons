@@ -371,3 +371,13 @@ def test_landlock_second_probe_named_in_report() -> None:
     text = (RUN_DIR / "report.md").read_text(encoding="utf-8")
     assert "ENOSYS" in text and "landlock" in text.lower(), "проба не названа честно"
     assert "волна №26" in text.lower()
+
+
+def test_ci_gives_the_gate_its_parent_commit() -> None:
+    """Урок живого CI (6ac04a8): shallow-клон (depth: 1) оставлял гейт
+    spec-first fail-closed красным — checkout джоб с доктором и полным
+    сюитом обязан нести родителя коммита (fetch-depth: 2)."""
+    ci = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    weekly = (REPO_ROOT / ".github" / "workflows" / "fleas.yml").read_text(encoding="utf-8")
+    assert ci.count("fetch-depth: 2") >= 2, "джобы hygiene и core обязаны давать родителя коммита"
+    assert "fetch-depth: 2" in weekly, "недельный свип обязан давать родителя коммита"

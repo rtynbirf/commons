@@ -88,7 +88,9 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 2  # волна №26: гейт spec-first судит HEAD-коммит по родителю — shallow-клон (depth: 1) оставлял гейт fail-closed красным
 
       - name: Доктор дома (машиночитаемый отчёт)
         run: python3 scripts/doctor.py --json > doctor-report.json
@@ -183,7 +185,9 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 2  # волна №26: гейт spec-first судит HEAD-коммит по родителю — shallow-клон (depth: 1) оставлял гейт fail-closed красным
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:

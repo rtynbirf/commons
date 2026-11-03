@@ -65,7 +65,9 @@ scripts/doctor_report.py, оба воркфлоу печатают её в $GITH
 упоминание A-NN вне реестра — сирота; дрейф книг от машины — блоха.
 Гейт spec-first (W-0030): HEAD-коммит, меняющий blood/, synapse/, brainstem/
 без правки specs/, красен — «спека раньше кода» перестаёт быть лозунгом;
-git недоступен — fail-closed (непроверяемое ≠ чистое).
+git недоступен — fail-closed (непроверяемое ≠ чистое). CI обязан давать
+гейту родителя коммита: checkout с fetch-depth: 2 в ci.yml (hygiene, core)
+и fleas.yml — shallow-клон оставлял гейт красным на живом CI (урок 6ac04a8).
 """
 
 from __future__ import annotations

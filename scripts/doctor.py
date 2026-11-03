@@ -110,6 +110,17 @@ PERSONAS = "docs/personas.md"
 AXIOMS = "docs/axioms.yaml"
 AXIOM_REF = re.compile(r"\bA(\d{2})\b")
 AXIOM_STATUSES = ("СЛУЖЕНО", "PASS", "ЧАСТИЧНО", "НЕ СЛУЖЕНО", "СНЯТО")
+# Порог DoD этапа (docs/TZ.md §4, такт аудита 0.48.2): число A-матрицы живёт
+# только в реестре — счёт в статике книг протухает (такт аудита поймал живьём:
+# книги докладывали 23/1, реестр жил 21/3 — статусы A19/A20 отстали от кода).
+AXIOM_DOD_MIN_SERVED = 20
+AXIOM_DOD_MAX_RED = 2
+AXIOM_COUNT_BOOKS = ("docs/TZ.md", "ROADMAP.md")
+# Две живые формы протухателя, обе пойманы тактом аудита: «(сейчас 23 …)» в TZ
+# и «СЛУЖЕНО/PASS 23 + СНЯТО 1 …» в ROADMAP. Порог формулируется со знаком
+# (≥ / ≤) — счёт без знака в книге не живёт.
+AXIOM_COUNT_DUP = re.compile(r"СЛУЖЕНО/PASS[^\n]*сейчас\s+\d+")
+AXIOM_COUNT_TOTAL = re.compile(r"СЛУЖЕНО/PASS\s+\d")
 # Директории публичного поведения: правка без генома красит (W-0030)
 CODE_SPEC_DIRS = ("blood/", "synapse/", "brainstem/")
 
@@ -483,7 +494,15 @@ def check_axioms(root: Path) -> tuple[int, list[str]]:
     маркер служения в тексте свидетеля (исчез — книги разошлись с машиной,
     дрейф = блоха); ЧАСТИЧНО/НЕ СЛУЖЕНО обязаны нести пункт ТЗ; СНЯТО —
     живой ADR; упоминание A-NN вне реестра — сирота. Реестра нет — блоха
-    (fail-closed, тишина гейта недопустима)."""
+    (fail-closed, тишина гейта недопустима).
+
+    Такт аудита (0.48.2): гейт держит порог DoD этапа (СЛУЖЕНО/PASS ≥ 20,
+    красных ≤ 2 — данные гейта, G2) и запрещает книгам дублировать счёт
+    A-матрицы в статике («сейчас N» — протухатель: число живёт в реестре).
+    Слепая зона «маркер в свидетеле жив, а статус не перевёрнут» ловится
+    порогом: отставший реестр с красными служеными аксиомами превышает
+    лимит красных и красит PR — переворот статуса обязанная часть такта
+    служения, а не воспоминание в коммит-сообщении."""
     fleas: list[str] = []
     registry = root / AXIOMS
     if not registry.exists():
@@ -524,6 +543,32 @@ def check_axioms(root: Path) -> tuple[int, list[str]]:
             adr = row.get("adr")
             if not adr or not (root / adr).exists():
                 fleas.append(f"{AXIOMS}: {aid} — СНЯТО без живого ADR")
+    # Порог DoD этапа — машина, не слова: живой пересчёт реестра против
+    # границ docs/TZ.md §4 (такт аудита 0.48.2: отставший реестр красит).
+    served = sum(1 for row in rows.values() if row.get("status") in ("СЛУЖЕНО", "PASS"))
+    red = sum(1 for row in rows.values() if row.get("status") in ("ЧАСТИЧНО", "НЕ СЛУЖЕНО"))
+    if served < AXIOM_DOD_MIN_SERVED:
+        fleas.append(
+            f"{AXIOMS}: порог DoD нарушен — СЛУЖЕНО/PASS {served} < {AXIOM_DOD_MIN_SERVED} (docs/TZ.md §4)"
+        )
+    if red > AXIOM_DOD_MAX_RED:
+        fleas.append(
+            f"{AXIOMS}: порог DoD нарушен — красных {red} > {AXIOM_DOD_MAX_RED} (docs/TZ.md §4)"
+        )
+    # Счёт A-матрицы не дублируется в статике книг: число-протухатель живёт
+    # в реестре (поймано живьём: книги 23/1 — реестр 21/3).
+    for book in AXIOM_COUNT_BOOKS:
+        bpath = root / book
+        if not bpath.exists():
+            continue
+        for i, line in enumerate(bpath.read_text(encoding="utf-8").splitlines(), 1):
+            m = AXIOM_COUNT_DUP.search(line)
+            m2 = AXIOM_COUNT_TOTAL.search(line)
+            if m or m2:
+                shown = (m.group(0) if m else m2.group(0))[:48]
+                fleas.append(
+                    f"{book}:{i}: книга дублирует счёт A-матрицы ({shown}…) — число живёт в {AXIOMS}, гейт держит порог"
+                )
     defined = set(rows)
     for path in _markdown_files(root):
         rel = path.relative_to(root).as_posix()

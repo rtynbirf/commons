@@ -508,6 +508,66 @@ def check_spec_drift(root: Path) -> tuple[int, list[str]]:
     return (0 if fleas else 1), fleas
 
 
+AXIOMS_FILE = Path("docs/axioms.yaml")
+AXIOM_IDS = [f"A{i:02d}" for i in range(1, 26)]
+AXIOM_VERDICTS = {"pass", "partial", "served", "adr", "open"}
+
+
+def check_axioms(root: Path) -> tuple[int, list[str]]:
+    """W-0034 (0.44.0, волна №25): гейт дрейфа аксиом — живая матрица A01–A25.
+
+    Ревизия 2026-11-03 сверила матрицу пакета A01–A25 с телом и оставила её
+    в пролитой крови (runs/2026-11-03-revision/) — история, не живой закон.
+    Дрейф версии, ссылок и хотёлок доктор ловил, а аксиомы расползались
+    молча. Теперь матрица живёт данными docs/axioms.yaml: вердикт — только
+    из словаря дома; указатель доказательства обязан существовать на диске;
+    открытая/частичная аксиома обязана называть план (где закрывается).
+    Fail-closed: нечитаемый yaml — красный без суждения (закон иммунитета,
+    SPEC-0006), а не «ну похоже на правду».
+    """
+    fleas: list[str] = []
+    path = root / AXIOMS_FILE
+    try:
+        import yaml
+
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return 0, ["axioms: docs/axioms.yaml нет — матрицы нет, закона нет (fail-closed)"]
+    except Exception as exc:  # noqa: BLE001 — нечитаемое судим целиком
+        return 0, [f"axioms: docs/axioms.yaml не читается ({str(exc)[:120]}) — красный без суждения"]
+    if not isinstance(data, dict) or not isinstance(data.get("axioms"), list):
+        return 0, ["axioms: docs/axioms.yaml не содержит список axioms — формат дрейфанул"]
+    axioms = data["axioms"]
+    ids = [a.get("id") for a in axioms if isinstance(a, dict)]
+    if ids != AXIOM_IDS:
+        missing = [i for i in AXIOM_IDS if i not in ids]
+        dupes = sorted({i for i in ids if ids.count(i) > 1})
+        fleas.append(
+            f"axioms: матрица не полна — пропало {missing or '—'}, дубликаты {dupes or '—'} "
+            f"(тишина не значит «всё хорошо»)"
+        )
+    for a in axioms:
+        if not isinstance(a, dict):
+            fleas.append("axioms: чужая строка в матрице (не отображение) — блоха")
+            continue
+        aid = a.get("id", "?")
+        verdict = a.get("verdict")
+        if verdict not in AXIOM_VERDICTS:
+            fleas.append(f"axioms: {aid}: чужой вердикт {verdict!r} — словарь дома не расширяется молча")
+            continue
+        for rel in a.get("evidence") or []:
+            if not (root / rel).exists():
+                fleas.append(f"axioms: {aid}: указатель {rel} ведёт в пустоту — фантазия, не доказательство")
+        if verdict in {"served", "pass", "adr"} and not (a.get("evidence") or []):
+            fleas.append(f"axioms: {aid}: вердикт {verdict!r} без доказательства — обман, не вердикт")
+        if verdict == "partial" and not (a.get("evidence") or []):
+            fleas.append(f"axioms: {aid}: «частично» без сделанного — обман, не вердикт")
+        if verdict in {"open", "partial"} and not a.get("plan"):
+            fleas.append(f"axioms: {aid}: открытая аксиома без плана — обман («когда-нибудь» не план)")
+    ok = sum(1 for a in axioms if isinstance(a, dict) and not any(f.startswith(f"axioms: {a.get('id', '?')}:") for f in fleas))
+    return ok, fleas
+
+
 GATES = (
     ("counts", check_no_stale_counts),
     ("versions", check_version_sync),
@@ -521,6 +581,7 @@ GATES = (
     ("conflict-markers", check_conflict_markers),
     ("secrets", check_no_secrets),
     ("spec-drift", check_spec_drift),
+    ("axioms", check_axioms),
 )
 
 

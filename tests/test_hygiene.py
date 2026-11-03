@@ -508,9 +508,20 @@ def test_secretfree_house_is_clean(tmp_path: Path) -> None:
 
 
 def _clean_house(root: Path) -> None:
-    """Минимальный зелёный дом: все 12 гейтов чисты (гейт spec-drift судит
+    """Минимальный зелёный дом: все 13 гейтов чисты (гейт spec-drift судит
     дифф против базы — дом обязан быть judgeable: git есть, всё закоммичено,
-    дифф пуст — зелёный; 0.43.0, W-0030)."""
+    дифф пуст — зелёный; 0.43.0, W-0030; 0.44.0, W-0034 — добавлена
+    docs/axioms.yaml: гейт axioms судит живую матрицу A01–A25)."""
+    import yaml as _yaml
+
+    axioms = {
+        "laws_priority": [{"name": "честность", "why": "кровь не лжёт"}],
+        "axioms": [
+            {"id": f"A{i:02d}", "check": "дело", "verdict": "open", "evidence": [], "plan": "дело"}
+            for i in range(1, 26)
+        ],
+    }
+    _touch(root, "docs/axioms.yaml", _yaml.safe_dump(axioms, allow_unicode=True))
     _touch(root, "pyproject.toml", 'version = "0.23.0"\n[project.scripts]\ncommons-x = "mod_x:main"\n')
     _touch(root, "mod_x.py", "def main(): ...\n")
     _touch(root, "CITATION.cff", "version: 0.23.0\n")

@@ -1,0 +1,148 @@
+# Живая матрица аксиом пакета «Human Membrane» A01–A25 против тела дома (W-0034, волна №25).
+#
+# Источник матрицы: ревизия 2026-11-03 (runs/2026-11-03-revision/REVISION.md, §2.1).
+# Здесь — живая версия: вердикт двигается только вместе с доказательством.
+# Правила:
+#   - verdict: pass | partial | served | adr | open (чужое слово — блоха, гейт доктора `axioms`);
+#   - evidence: указатели на доказательства в доме (тесты, спеки, ADR, код) — мёртвый указатель — блоха;
+#   - open/partial обязаны называть plan (где закрывается) — открытая аксиома без плана — обман;
+#   - порядок законов (laws_priority) — данные для ADR-0016; ADR называет ровно эти законы.
+laws_priority:
+  - name: честность
+    why: кровь не лжёт; честный отказ дороже выдуманного успеха (W-0021, A02 — незаявленное не достраивается)
+  - name: безопасность
+    why: fail-closed, страж до факта, ключи только у Человека (SPEC-0002 пп.8–11, SPEC-0006)
+  - name: кровь
+    why: append-only, пролитая кровь валидна навсегда, история не переписывается (SPEC-0003 п.4/п.6)
+  - name: тождество
+    why: необратимое — только с Человеком; тишина = «нет» (SPEC-0004 пп.7–9, ADR-0015)
+  - name: дисциплина
+    why: спека раньше кода, красный прогон, DCO (W-0030, REUSE 3.3)
+  - name: время
+    why: время Человека дороже времени машины (W-0018, дожимы по тишине)
+axioms:
+  - id: A01
+    check: повторный append не даёт эффекта (идемпотентность)
+    verdict: served
+    evidence: ["specs/SPEC-0003-blood-envelope.md", "tests/test_blood_dedupe.py", "tests/test_blood_dedupe_edges.py", "blood/journal.py"]
+    plan: null
+  - id: A02
+    check: missing occurred_at остаётся UNKNOWN, незаявленное не достраивается
+    verdict: served
+    evidence: ["specs/SPEC-0003-blood-envelope.md", "tests/test_blood_origin.py", "blood/provenance.py"]
+    plan: null
+  - id: A03
+    check: общий trace_id на задаче
+    verdict: pass
+    evidence: ["tests/test_blood.py", "tests/test_blood_resume.py"]
+    plan: null
+  - id: A04
+    check: дневник независимому читателю — «что сделано» отвечает
+    verdict: served
+    evidence: ["blood/diary.py", "tests/test_blood_diary.py", "specs/SPEC-0003-blood-envelope.md"]
+    plan: null
+  - id: A05
+    check: план ≠ факт (план не показан как исполнение)
+    verdict: served
+    evidence: ["tests/test_blood_diary.py", "tests/test_blood_diary_junction.py"]
+    plan: null
+  - id: A06
+    check: undo — компенсация вместо переписывания истории
+    verdict: served
+    evidence: ["brainstem/compensator.py", "tests/test_wave22_reversibility_budget.py"]
+    plan: null
+  - id: A07
+    check: double-undo не портит кровь
+    verdict: served
+    evidence: ["tests/test_wave22_reversibility_budget.py", "brainstem/compensator.py"]
+    plan: null
+  - id: A08
+    check: честный отказ, когда отмена невозможна
+    verdict: served
+    evidence: ["tests/test_wave22_reversibility_budget.py", "blood/refusals.py"]
+    plan: null
+  - id: A09
+    check: PARTIAL — частичная компенсация названа честно
+    verdict: served
+    evidence: ["tests/test_wave22_reversibility_budget.py", "blood/diary.py"]
+    plan: null
+  - id: A10
+    check: restart — история и статус согласованы (resume из крови)
+    verdict: pass
+    evidence: ["tests/test_blood_resume.py", "blood/resume.py"]
+    plan: null
+  - id: A11
+    check: forget — после удаления нет в индексах/кэшах
+    verdict: open
+    evidence: []
+    plan: "Ф-1.4 ТЗ ревизора (runs/2026-11-03-revision/REVISION.md): волна №27 — memory Forget с отчётом DELETED/NOT_FOUND/FAILED/OUT_OF_CONTROL"
+  - id: A12
+    check: ручная правка памяти — diff при импорте
+    verdict: open
+    evidence: []
+    plan: "Ф-1.4 ТЗ ревизора: волна №27 — импорт памяти с diff и provenance (АSI06)"
+  - id: A13
+    check: экспорт/восстановимость
+    verdict: partial
+    evidence: ["blood/diary.py", "tests/test_blood_diary.py"]
+    plan: "Ф-1.4 ТЗ ревизора: волна №27 — commons-memory экспорт/импорт/diff (кровь читаема уже сейчас)"
+  - id: A14
+    check: нет лишних interruptions (бюджет внимания, тишина)
+    verdict: served
+    evidence: ["tests/test_wave23_silence_attention.py", "tests/test_silence.py", "brainstem/attention.py", "specs/SPEC-0004-pid1.md"]
+    plan: null
+  - id: A15
+    check: capability вне scope заблокировано до факта
+    verdict: pass
+    evidence: ["synapse/authority.py", "tests/test_authority.py", "specs/SPEC-0002-synapse-mcp.md"]
+    plan: null
+  - id: A16
+    check: орган отключён — остальные живут (G2 замена/отказ)
+    verdict: pass
+    evidence: ["tests/test_red_run.py", "tests/test_red_run_live.py", "tests/test_manifest.py"]
+    plan: null
+  - id: A17
+    check: неизвестный event сохраняется, не исполняется
+    verdict: adr
+    evidence: ["docs/adr/ADR-0014-unknown-event-fail-closed.md", "blood/adapter.py", "tests/test_blood_provenance.py"]
+    plan: null
+  - id: A18
+    check: tool output = данные (prompt injection)
+    verdict: partial
+    evidence: ["immune/barrier.py", "tests/test_immune.py"]
+    plan: "Ф-2.2 ТЗ ревизора: волна №28 — creative-sandbox (гипотезы unverified без write/execute)"
+  - id: A19
+    check: false premise — не поддакивать (conscience)
+    verdict: open
+    evidence: []
+    plan: "Ф-2.1 ТЗ ревизора: волна №30 — калибровка счётчика провалов на живой крови (W-0021 счётчик уже служен)"
+  - id: A20
+    check: гипотеза не становится фактом (creative-sandbox)
+    verdict: open
+    evidence: []
+    plan: "Ф-2.2 ТЗ ревизора: волна №28 — гипотезы unverified, без write/execute capability"
+  - id: A21
+    check: swarm без consent — передачи нет
+    verdict: open
+    evidence: []
+    plan: "Ф-2.4 ТЗ ревизора: волна №28 — swarm-consent ADR + приёмки replay/revoked/poisoned"
+  - id: A22
+    check: provenance сохранён
+    verdict: pass
+    evidence: ["PROVENANCE.md", "organs/donation.yaml", "tests/test_transplant.py"]
+    plan: null
+  - id: A23
+    check: ручное отключение не самовключается
+    verdict: partial
+    evidence: ["tests/test_pid1.py", "brainstem/pid1.py", "blood/pidlock.py"]
+    plan: "волна №31 — живая проверка гипотезы F-12 (зомби-владелец PIDLock) и приёмка «после смерти Человека тело не оживает само»"
+  - id: A24
+    check: redelivery — consumer идемпотентен
+    verdict: open
+    evidence: []
+    plan: "Ф-2.5 ТЗ ревизора: волна №29 — диспетчер крови cursor/ack/retry/DLQ (по духу ADR-0013: кровь ≠ pub/sub)"
+  - id: A25
+    check: overload — backpressure без каскада
+    verdict: partial
+    evidence: ["brainstem/budget.py", "tests/test_budget_alerts.py"]
+    plan: "Ф-2.5 ТЗ ревизора: волна №29 — предел очереди без каскада (backpressure)"

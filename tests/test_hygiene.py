@@ -239,6 +239,51 @@ def test_setext_underline_is_not_a_conflict(tmp_path: Path) -> None:
     assert (ok, fleas) == (1, [])
 
 
+# --- волна-фикс 0.50.1: конфликт-маркеры доехали до головы в CITATION.cff,
+# --- зона гейта md/py была слепа к .cff/.toml/.yml/.yaml/.json ----------
+
+
+def test_conflict_markers_in_cff_are_caught(tmp_path: Path) -> None:
+    # Урок 0.50.1: ровно тот битый CITATION, что доехал до головы origin/main.
+    _touch(
+        tmp_path,
+        "CITATION.cff",
+        'authors:\n  - name: "rtynbirf"\n<<<<<<< HEAD\nversion: 0.50.0\n=======\nversion: 0.50.0\n>>>>>>> ef133c6\n',
+    )
+
+    ok, fleas = doctor.check_conflict_markers(tmp_path)
+
+    assert ok == 0
+    assert len(fleas) >= 3, fleas
+    assert any("CITATION.cff" in f and "конфликт-маркер" in f for f in fleas)
+    assert any("`=======` рядом" in f for f in fleas)
+
+
+def test_cff_without_markers_counts_clean(tmp_path: Path) -> None:
+    _touch(tmp_path, "CITATION.cff", 'version: 0.50.1\ndate-released: "2026-11-03"\n')
+
+    ok, fleas = doctor.check_conflict_markers(tmp_path)
+
+    assert (ok, fleas) == (1, [])
+
+
+def test_duplicate_version_line_in_citation_is_caught(tmp_path: Path) -> None:
+    # Урок 0.50.1: гейт брал ПЕРВОЕ совпадение ^version: — конфликт из двух
+    # строк version: совпал с pyproject и прошёл молча. Теперь fail-closed.
+    _touch(tmp_path, "pyproject.toml", 'version = "0.50.0"\n')
+    _touch(tmp_path, "CITATION.cff", "version: 0.50.0\n=======\nversion: 0.50.0\n")
+    _touch(tmp_path, "CHANGELOG.md", "## [0.50.0] — 2026-11-03\n")
+    _touch(tmp_path, "README.md", "С 0.50.0 у организма есть гигиена дома.\n")
+    _touch(tmp_path, "README.en.md", "Since 0.50.0 the house has hygiene.\n")
+
+    ok, fleas = doctor.check_version_sync(tmp_path)
+
+    assert ok == 4  # pyproject/CHANGELOG/README/README.en чисты
+    assert len(fleas) == 1, fleas
+    assert "CITATION.cff" in fleas[0]
+    assert "2" in fleas[0]  # две строки version: — блоха даже при равенстве
+
+
 def test_practices_counter_is_caught(tmp_path: Path) -> None:
     # Урок llms.txt: «17 практик» при живых 18 — статика не счётчик.
     _touch(tmp_path, "README.md")

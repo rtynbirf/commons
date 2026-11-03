@@ -184,10 +184,16 @@ def check_version_sync(root: Path) -> tuple[int, list[str]]:
     ok = 1  # pyproject — источник правды, посчитан чистым
 
     cite = (root / CITATION).read_text(encoding="utf-8")
-    m = re.search(r"^version:\s*(\S+)", cite, re.M)
-    cite_version = m.group(1) if m else None
-    if cite_version != version:
-        fleas.append(f"{CITATION}: version {cite_version} != pyproject {version}")
+    cite_versions = re.findall(r"^version:\s*(\S+)", cite, re.M)
+    if len(cite_versions) != 1:
+        # Урок такта 0.50.1: конфликт-маркеры стыка в CITATION.cff прошли гейт
+        # молча — первое совпадение совпало с pyproject. Теперь fail-closed:
+        # строка `version:` обязана быть ровно одна.
+        fleas.append(
+            f"{CITATION}: строк version: {len(cite_versions)} (ожидала 1) — незалитый конфликт или дубль"
+        )
+    elif cite_versions[0] != version:
+        fleas.append(f"{CITATION}: version {cite_versions[0]} != pyproject {version}")
     else:
         ok += 1
 
@@ -394,7 +400,7 @@ def check_changelog_discipline(root: Path) -> tuple[int, list[str]]:
 
 def _hygiene_files(root: Path):
     for path in sorted(root.rglob("*")):
-        if path.suffix not in (".md", ".py") or not path.is_file():
+        if path.suffix not in (".md", ".py", ".cff", ".toml", ".yml", ".yaml", ".json") or not path.is_file():
             continue
         if ".git" in path.parts or "runs" in path.parts:
             continue
@@ -402,9 +408,11 @@ def _hygiene_files(root: Path):
 
 
 def check_conflict_markers(root: Path) -> tuple[int, list[str]]:
-    """Незалитый конфликт в доме = блоха: <<<<<<< и >>>>>>> в md/py.
+    """Незалитый конфликт в доме = блоха: <<<<<<< и >>>>>>> в md/py/cff/toml/yml/yaml/json.
     Строка `=======` под заголовком (setext) — не блоха, пока рядом нет
-    угловых маркеров. Кровь runs/ не переписывается — вне зоны."""
+    угловых маркеров. Кровь runs/ не переписывается — вне зоны.
+    Урок такта 0.50.1: конфликт-маркеры стыка 0.48.3 доехали до головы
+    origin/main в CITATION.cff — зона гейта теперь шире md/py."""
     fleas: list[str] = []
     ok = 0
     for path in _hygiene_files(root):

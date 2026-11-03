@@ -145,6 +145,7 @@ def make(
     trust: Any = _UNSET,
     privacy: Any = _UNSET,
     attention_class: Any = _UNSET,
+    path: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Собирает и валидирует конверт. Невалидный конверт наружу не выходит.
 
@@ -206,5 +207,7 @@ def make(
         envelope["privacy"] = privacy
     if attention_class is not _UNSET:
         envelope["attention_class"] = attention_class
+    if path is not None:
+        envelope["path"] = path
     validate(envelope)
     return envelope

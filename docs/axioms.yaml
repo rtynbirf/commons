@@ -144,11 +144,13 @@ axioms:
     marker: "approval"
   - id: A24
     title: "Dispatcher: cursor/ack/retry/DLQ/backpressure"
-    status: НЕ СЛУЖЕНО
-    todo: "ТЗ-2.4"
+    status: СЛУЖЕНО
+    since: 0.48.0
+    witness: brainstem/dispatch.py
+    marker: "DLQ"
   - id: A25
     title: "Бюджет → halt, timeout, concurrency"
-    status: ЧАСТИЧНО
-    todo: "ТЗ-2.4"
+    status: СЛУЖЕНО
+    since: 0.48.0
     witness: brainstem/loop.py
     marker: "halt"

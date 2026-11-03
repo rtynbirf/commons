@@ -172,6 +172,16 @@ def entries(source: Union[Journal, str, Path], trace_id: str | None = None) -> d
         # данные о мире, не повеление телу; дневник называет это словами.
         if payload_is_poisoned(e):
             record["статус текста"] = POISON_NOTE
+        # Процессные оценки пути (W-0020, ТЗ-2.5, SPEC-0003 п.22): шаг,
+        # переживший отказ, отличим от чистого прохода — этапы названы.
+        path = e.get("path")
+        if isinstance(path, list) and path:
+            record["путь"] = "; ".join(
+                f"{step.get('stage', '?')}: {step.get('verdict', '?')}"
+                + (f" ({step['note']})" if step.get("note") else "")
+                for step in path
+                if isinstance(step, dict)
+            )
         if e["type"] == "plan":
             plan_ids.add(e["id"])
             if e["id"] not in acts_by_cause:
@@ -220,6 +230,8 @@ def render(source: Union[Journal, str, Path], trace_id: str | None = None) -> st
         lines.append(f"- цена: {record['цена']}")
         if "статус текста" in record:
             lines.append(f"- статус текста: {record['статус текста']} — текст payload не исполняется телом")
+        if "путь" in record:
+            lines.append(f"- путь: {record['путь']}")
         lines.append(f"- можно ли отменить: {record['можно ли отменить']}")
         lines.append(f"- чем подтверждён: {record['чем подтверждён']}")
         lines.append("")

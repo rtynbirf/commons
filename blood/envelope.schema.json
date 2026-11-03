@@ -53,7 +53,10 @@
       "description": "Когда тело увидело (SPEC-0003 п.10); отсутствует — момент наблюдения не заявлен"
     },
     "occurred_at": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "format": "date-time",
       "description": "Когда случилось в мире (SPEC-0003 п.10); null или отсутствие = UNKNOWN — честное незнание, не выдумка"
     },
@@ -64,12 +67,22 @@
     },
     "trust": {
       "type": "string",
-      "enum": ["unverified", "verified", "derived", "unknown"],
+      "enum": [
+        "unverified",
+        "verified",
+        "derived",
+        "unknown"
+      ],
       "description": "Класс доверия (SPEC-0003 п.10): unverified — весть от чужих, verified — тело видело само, derived — выведено из крови, unknown — не заявлено; отсутствие поля = unknown. Неизвестный класс — fail-closed при записи"
     },
     "privacy": {
       "type": "string",
-      "enum": ["public", "internal", "personal", "sensitive"],
+      "enum": [
+        "public",
+        "internal",
+        "personal",
+        "sensitive"
+      ],
       "description": "Класс приватности (SPEC-0003 п.10): public/internal/personal/sensitive; отсутствие поля = не классифицировано — контур наружу обязан считать такое sensitive (fail-closed наружу). Неизвестный класс — fail-closed при записи"
     },
     "type": {
@@ -98,7 +111,12 @@
     },
     "attention_class": {
       "type": "string",
-      "enum": ["P0", "P1", "P2", "P3"],
+      "enum": [
+        "P0",
+        "P1",
+        "P2",
+        "P3"
+      ],
       "description": "Класс траты внимания Человека (SPEC-0003 п.17, SPEC-0004 п.9, W-0025): P0 остановка перед риском, P1 вопрос без безопасного дефолта, P2 отчёт, который должен быть увиден, P3 тихая запись. Неизвестный класс — fail-closed при записи; класс без cost.attention > 0 — тоже fail-closed"
     },
     "source": {
@@ -147,6 +165,31 @@
           "description": "Обращения к вниманию Человека по фактам крови (SPEC-0003 п.17, W-0025): заданный вопрос, открытое окно, поданный стоп; поле аддитивно — старая кровь без него валидна навсегда"
         }
       }
+    },
+    "path": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "stage",
+          "verdict"
+        ],
+        "properties": {
+          "stage": {
+            "type": "string",
+            "minLength": 1
+          },
+          "verdict": {
+            "type": "string",
+            "minLength": 1
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "description": "Процессные оценки пути события (SPEC-0003 п.22, W-0020, волна №29): через какие этапы путь прошёл и чем закончился каждый — шаг, переживший отказ, отличим от чистого прохода. Незаявленное поле не появляется (аддитивно, старая кровь валидна навсегда)."
     }
   }
 }

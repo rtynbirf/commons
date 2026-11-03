@@ -169,6 +169,33 @@ def test_anchor_book_has_no_dangling_prints() -> None:
     )
 
 
+def test_anchor_book_has_one_print_per_file() -> None:
+    """Один файл крови — одна печать (такт аудита 0.49.0, ДОБИВАЙ).
+
+    Косяк, пойманный живьём при подготовке прогона волны №30: двойной запуск
+    run.py молча перезаписал кровь, seal() опечатал новое состояние — в книге
+    остались две печати одного файла, одна из которых указывала на состояние,
+    которого больше нет (класс косяка волны №27 — «печать в никуду», вторая
+    форма: протухшая печать живого файла). Выметено: протухшая печать
+    выметена, в доме одна печать, сходящаяся с живой кровью; run.py больше
+    не перезаписывает кровь молча; дубль печати красится поимённо."""
+    if not ANCHORS.exists():
+        return
+    seen: dict[str, int] = {}
+    for lineno, raw in enumerate(ANCHORS.read_text(encoding="utf-8").splitlines(), start=1):
+        if not raw.strip():
+            continue
+        record = json.loads(raw)
+        target = record.get("file")
+        if isinstance(target, str):
+            seen.setdefault(target, 0)
+            seen[target] += 1
+    duplicates = [f"anchors.jsonl: {f} — печатей {n}" for f, n in sorted(seen.items()) if n > 1]
+    assert not duplicates, (
+        "файл крови запечатан более одного раза (печать-дубль — ложь книги): " + "; ".join(duplicates)
+    )
+
+
 def test_journals_match_their_last_anchor() -> None:
     """Живая кровь не урезана и не подменена после печати: для каждого файла
     с якорем — событий не меньше запечатанных; при равенстве последний конверт

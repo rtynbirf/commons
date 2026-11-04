@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "commons-organism"
-version = "0.50.4"
-description = "COMMONS: исполнимое ядро организма — ствол мозга (SPEC-0001), синапсы MCP (SPEC-0002), кровь (SPEC-0003), живой организм PID 1 (SPEC-0004), память (SPEC-0005), иммунитет (SPEC-0006), конвейер (SPEC-0007), эффектор — openclaw как внешние руки (SPEC-0008), гематология (SPEC-0003 v0.4.0), трансплантология (SPEC-0009), типирование реестра (SPEC-0009 v0.1.1), персона и каналы (SPEC-0010)"
+version = "0.51.0"
+description = "COMMONS: исполнимое ядро организма — ствол мозга (SPEC-0001), синапсы MCP (SPEC-0002), кровь (SPEC-0003), живой организм PID 1 (SPEC-0004), память (SPEC-0005), иммунитет (SPEC-0006), конвейер (SPEC-0007), эффектор — openclaw как внешние руки (SPEC-0008), гематология (SPEC-0003 v0.4.0), трансплантология (SPEC-0009), типирование реестра (SPEC-0009 v0.1.1), персона и каналы (SPEC-0010), граф задач — единый пропагатор планов (SPEC-0011)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
@@ -38,4 +38,4 @@ pythonpath = ["."]
 testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
-include = ["brainstem*", "synapse*", "blood*", "memory*", "immune*", "pipeline*", "openclaw*"]
+include = ["brainstem*", "synapse*", "blood*", "memory*", "immune*", "pipeline*", "openclaw*", "taskgraph*"]

@@ -21,6 +21,7 @@ path = [
   "immune/**",
   "pipeline/**",
   "openclaw/**",
+  "taskgraph/**",
   "tests/**",
   "scripts/**",
   "spikes/**",

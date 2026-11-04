@@ -13,3 +13,4 @@
 {"file": "runs/2026-11-03-wave30-swarm-consent/blood.jsonl", "events": 9, "last_id": "1846d5c2-e650-4f0c-a9f5-4ec152ea831d", "last_sha256": "89e0f574cdeaba7e786f750429cca9223e5296909a1f47cb13ea6e4c334268fd", "sealed_at": "2026-11-03T14:56:49.603Z"}
 {"file": "runs/2026-11-03-wave30-junction/blood.jsonl", "events": 15, "last_id": "67063a65-b47d-47bb-9165-0b6c3b5ac9ac", "last_sha256": "f71469ad8e1d1fb4f8af6b09aab524d75d9656974c1ec004edcc84d3ed9f11fa", "sealed_at": "2026-11-03T14:56:21.014Z"}
 {"file": "runs/2026-11-03-wave31-ab-b2/blood.jsonl", "events": 5, "last_id": "d3670e32-736f-40c1-9c46-fb1806245eef", "last_sha256": "a9096e706f4f8b49a26155a6bdbdb6f93d55ad5f9fbad0dd55c0e21ed7094e3d", "sealed_at": "2026-11-03T15:13:49.466Z"}
+{"file": "runs/2026-11-04-taskgraph/blood.jsonl", "events": 10, "last_id": "e947ecbd-94fd-42b5-ae34-354eafd5291d", "last_sha256": "8327c9c976b1eae7e94a2ae274c2dd07c94c0d622fb0b5b1f9bf508a0e1476e6", "sealed_at": "2026-11-04T13:54:07.806Z"}

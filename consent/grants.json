@@ -1,0 +1,12 @@
+{
+  "note": "Живой ConsentGrant дома на пир cell-swarm (ADR-0017). Воля Человека, PID 1 (автор rtynbirf): 2026-11-05 в сеансе web-04b56e42 владелец поручил рою действовать автономно («делай сам как считаешь нужным, чтоб не иметь трений и конфликтов с кем либо») и прямо разрешил завести grant по пункту «grant дома на живой обмен». Файл записан роем по этому поручению; владелец уведомлён в том же сеансе. Методы — словарь моста рой↔дом (ADR-0006 ядра, ADR-0017 дома), тот же список, что прогонен живым cross-handshake 2026-11-05 (genome.read / blood.envelope.emit — granted, memory.write — denied). Отзыв: удалить запись или файл — отозванный consent_id не оживает, новый обмен требует нового согласия (ADR-0017 п.4). Транспорты — stdio/http-localhost на хосте Человека (ADR-0016), наружного шлюза нет.",
+  "grants": [
+    {
+      "consent_id": "commons-2026-11-05-cell-swarm",
+      "peer": "cell-swarm",
+      "methods": ["genome.read", "genome.pins.read", "organ.proposal.draft", "blood.envelope.emit", "blood.journal.append"],
+      "granted_by": "human",
+      "not_after": "2027-11-05T00:00:00+00:00"
+    }
+  ]
+}

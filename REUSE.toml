@@ -31,6 +31,7 @@ path = [
   ".editorconfig",
   ".gitattributes",
   ".gitignore",
+  "CODEOWNERS",
 ]
 precedence = "override"
 SPDX-FileCopyrightText = "2026 COMMONS · rtynbirf · провенанс: PROVENANCE.md"

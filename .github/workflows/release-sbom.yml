@@ -1,0 +1,62 @@
+name: sbom
+
+# ПРЕДЛОЖЕНИЕ-38 (issue #12): CycloneDX SBOM на каждый релиз.
+# Генератор — scripts/sbom_cyclonedx.py (stdlib-only, детерминированный:
+# без часов, uuid5 от коммита, сортировка путей). Приёмка машинная:
+# последний релиз commons содержит sbom.json, валидный схемой CycloneDX.
+# На каждый пуш — живое доказательство генерации (артефактом прогона);
+# на release published — sbom.json прикладывается к релизу автоматически.
+
+on:
+  push:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Генерация sbom.json (stdlib, детерминированная)
+        run: python3 scripts/sbom_cyclonedx.py --output sbom.json
+
+      - name: Selftest — двойная сборка = байт-идентично, структура/полнота/хеши
+        run: python3 scripts/sbom_selftest.py .
+
+      - name: Память прогона — артефакт sbom
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v4
+        with:
+          name: sbom-${{ github.run_id }}
+          path: sbom.json
+          if-no-files-found: error
+
+  attach:
+    # Прикладываем sbom.json к релизу (append-only: без --clobber —
+    # существующий ассет не перезаписывается, конфликт = красный прогон).
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: sbom
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Генерация sbom.json на дереве релиза
+        run: python3 scripts/sbom_cyclonedx.py --output sbom.json
+
+      - name: Прикладывание к релизу (gh, append-only)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" sbom.json --repo "$GITHUB_REPOSITORY"
+          echo "sbom.json приложен к релизу ${{ github.event.release.tag_name }}"

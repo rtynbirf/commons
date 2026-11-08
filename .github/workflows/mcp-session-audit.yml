@@ -1,7 +1,7 @@
 # Э-2.1 (#7) · commons · еженедельный аудит сессий по MCP spec 2026-07-28.
 # Среда 06:00 UTC + ручной запуск. Свой concurrency-дом wave5-mcp-audit:
 # commons уже имеет CI, поэтому имя воркфлоу и дом — свои, без пересечений.
-# Гейт честный: находки сканера → exit 1 → джоба красная.
+# Гейт-храповик: находки сверх baseline → exit 1 → джоба красная.
 name: mcp-session-audit
 
 on:
@@ -32,4 +32,4 @@ jobs:
         # pipefail обязателен: иначе tee проглотит exit 1 сканера и гейт не сработает
         run: |
           set -o pipefail
-          python3 tools/mcp_session_audit.py --root synapse/ | tee "$GITHUB_STEP_SUMMARY"
+          python3 tools/mcp_session_audit.py --root synapse/ --baseline reports/mcp-session-audit-baseline.json | tee "$GITHUB_STEP_SUMMARY"

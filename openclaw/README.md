@@ -1,6 +1,6 @@
 # Эффектор: openclaw — руки организма
 
-Спека: [SPEC-0008](../../specs/SPEC-0008-effector.md) · ADR: [ADR-0010](../../docs/adr/ADR-0010-cli-bridge-effector.md)
+Спека: [SPEC-0008](../specs/SPEC-0008-effector.md) · ADR: [ADR-0010](../docs/adr/ADR-0010-cli-bridge-effector.md)
 
 openclaw — персональный gateway между моделями и каналами человека (Telegram, WhatsApp,
 Discord и др.). В организме это **эффектор**: доставляет импульсы ствола мозга в каналы,

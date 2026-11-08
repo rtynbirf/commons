@@ -1,0 +1,5 @@
+{
+ "baseline": 1,
+ "as_of": "2026-11-09",
+ "note": "1 находка: synapse/adapters/mcp_stdio.py:58 — legacy handshake initialize/initialized (протокол 2024-11-05). Миграция на stateless core 2026-07-28 запланирована (docs/MCP-2026-07-28-AUDIT.md); гейт краснеет только при росте находок."
+}

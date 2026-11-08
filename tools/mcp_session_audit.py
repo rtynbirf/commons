@@ -117,6 +117,8 @@ def main(argv=None):
     ap.add_argument("--root", default="synapse/",
                     help="каталог сканирования (по умолчанию synapse/)")
     ap.add_argument("--selftest", action="store_true", help="встроенная проверка без сети")
+    ap.add_argument("--baseline", default=None,
+                    help='JSON-файл {"baseline": N}: гейт краснеет только при находках > N (храповик миграции)')
     args = ap.parse_args(argv)
     if args.selftest:
         selftest()
@@ -128,6 +130,18 @@ def main(argv=None):
     for line in render(findings):
         print(line)
     print(verdict_of(findings))
+    if args.baseline:
+        limit = json.loads(Path(args.baseline).read_text(encoding="utf-8")).get("baseline")
+        if isinstance(limit, int):
+            if len(findings) > limit:
+                print("ХРАПОВИК ПРОБИТ: %d находок > baseline %d — новые сессионные связи запрещены"
+                      % (len(findings), limit))
+                return 1
+            print("В рамках baseline (%d/%d): миграция запланирована, рост не допускается"
+                  % (len(findings), limit))
+            return 0
+        print("битый baseline-файл: нет целого поля baseline", file=sys.stderr)
+        return 2
     return 1 if findings else 0
 
 

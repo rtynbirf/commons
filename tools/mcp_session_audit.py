@@ -16,6 +16,7 @@ initialize/initialized и заголовок Mcp-Session-Id удалены; ка
 """
 
 import argparse
+import json
 import re
 import sys
 import tempfile

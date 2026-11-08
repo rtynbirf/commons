@@ -1,0 +1,35 @@
+# Э-2.1 (#7) · commons · еженедельный аудит сессий по MCP spec 2026-07-28.
+# Среда 06:00 UTC + ручной запуск. Свой concurrency-дом wave5-mcp-audit:
+# commons уже имеет CI, поэтому имя воркфлоу и дом — свои, без пересечений.
+# Гейт честный: находки сканера → exit 1 → джоба красная.
+name: mcp-session-audit
+
+on:
+  schedule:
+    - cron: "0 6 * * 3" # среда 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wave5-mcp-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (пин из действующих зелёных прогонов волны)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Selftest сканера (без сети)
+        run: python3 tools/mcp_session_audit.py --selftest
+
+      - name: Живой скан synapse/ со сводкой в step summary
+        shell: bash
+        # pipefail обязателен: иначе tee проглотит exit 1 сканера и гейт не сработает
+        run: |
+          set -o pipefail
+          python3 tools/mcp_session_audit.py --root synapse/ | tee "$GITHUB_STEP_SUMMARY"

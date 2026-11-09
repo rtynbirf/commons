@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="banner.png" alt="commons — Один организм из лучших открытых проектов" width="100%">
+</div>
+
 # COMMONS (English summary)
 
 > **One organism built from the best open-source projects of humanity.**

@@ -11,6 +11,7 @@ path = [
   "*.cff",
   "*.toml",
   "*.example",
+  "swarm-doctrine.json",
   "docs/**",
   "specs/**",
   "organs/**",

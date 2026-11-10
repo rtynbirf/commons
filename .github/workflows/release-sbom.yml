@@ -7,11 +7,17 @@ name: sbom
 # На каждый пуш — живое доказательство генерации (артефактом прогона);
 # на release published — sbom.json прикладывается к релизу автоматически.
 
+# hardening 2026-11-10 (immutable-safe): триггер [created] ловит и черновики,
+# и сразу опубликованные релизы. Джоба attach прикладывает sbom.json ТОЛЬКО
+# к черновику (паттерн draft -> assets -> publish); если релиз уже опубликован,
+# джоба честно пропускает (зелёный прогон) — править опубликованный релиз
+# запрещено immutable releases. Порядок работы: создать черновик релиза →
+# sbom приложится автоматически → опубликовать черновик вручную.
 on:
   push:
   workflow_dispatch:
   release:
-    types: [published]
+    types: [created]
 
 permissions:
   contents: read
@@ -36,7 +42,8 @@ jobs:
       # прикладывается job-ом attach.
 
   attach:
-    # Прикладываем sbom.json к релизу (append-only: без --clobber —
+    # Прикладываем sbom.json к черновику релиза через REST API
+    # (immutable releases запрещают менять опубликованный релиз;
     # существующий ассет не перезаписывается, конфликт = красный прогон).
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
@@ -50,9 +57,18 @@ jobs:
       - name: Генерация sbom.json на дереве релиза
         run: python3 scripts/sbom_cyclonedx.py --output sbom.json
 
-      - name: Прикладывание к релизу (gh, append-only)
+      - name: Прикладывание к черновику релиза (gh api, immutable-safe)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" sbom.json --repo "$GITHUB_REPOSITORY"
-          echo "sbom.json приложен к релизу ${{ github.event.release.tag_name }}"
+          TAG="${{ github.event.release.tag_name }}"
+          if [ "${{ github.event.release.draft }}" != "true" ]; then
+            echo "Релиз $TAG не черновик — под immutable releases sbom прикладывается только к черновикам; пропускаю (зелёный прогон)."
+            exit 0
+          fi
+          RID=$(gh api "/repos/$GITHUB_REPOSITORY/releases" --jq ".[] | select(.tag_name == \"$TAG\" and .draft == true) | .id" | head -n1)
+          if [ -z "$RID" ]; then
+            echo "::error::Черновик релиза $TAG не найден."; exit 1
+          fi
+          gh api --method POST "/repos/$GITHUB_REPOSITORY/releases/$RID/assets?name=sbom.json" --input sbom.json -H "Content-Type: application/octet-stream" > /dev/null
+          echo "sbom.json приложен к черновику релиза $TAG (после публикации релиз неизменяем)"

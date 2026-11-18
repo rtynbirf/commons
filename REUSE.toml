@@ -49,3 +49,11 @@ path = ["LICENSE"]
 precedence = "override"
 SPDX-FileCopyrightText = "Канонический текст Apache License 2.0 (apache.org)"
 SPDX-License-Identifier = "Apache-2.0"
+
+
+# ДОПЕЧАТ 2026-11-18 (чистка аккаунта): кит-артефакты и бинарник вне глобов выше.
+[[annotations]]
+path = ["hologram.json", "kit/MANIFEST.txt", "kit/collage-standard-round-12.zip", "revo_autopilot.py"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 COMMONS · rtynbirf · провенанс: PROVENANCE.md"
+SPDX-License-Identifier = "Apache-2.0"

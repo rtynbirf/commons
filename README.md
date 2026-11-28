@@ -22,6 +22,18 @@
 | 477 | 101 | 1 | 2026-11-28 | 20 |
 <!--ФОРЖ:ПАСПОРТ:КОНЕЦ-->
 
+# commons
+
+<div align="center">
+
+<a href="https://github.com/rtynbirf/commons"><img src="banner.png" width="100%" alt="commons — штандарт мастерской в каноне ORNAMENTAL MYTHO-REALISM"></a>
+
+</div>
+
+
+
+
+
 # COMMONS
 
 

@@ -1,22 +1,32 @@
-# COMMONS
+<div align="center">
+
+<a href="https://github.com/rtynbirf/commons"><img src="banner.png" width="100%" alt="commons — штандарт мастерской в каноне ORNAMENTAL MYTHO-REALISM"></a>
+
+</div>
 
 <!--ФОРЖ:МУЗА:НАЧАЛО-->
 <div align="center">
-  <img src="repo-muse.svg" width="100%" alt="Муза commons: мастерская КРУГЛЫЙ СТОЛ, кузня ПОЛИМАТ, раунд 12 · REVE=РЕВО" />
+  <img src="https://cdn.jsdelivr.net/gh/rtynbirf/commons@main/repo-muse.svg" width="100%" alt="Муза commons: мастерская КРУГЛЫЙ СТОЛ, кузня ПОЛИМАТ, раунд 12 · REVE=РЕВО" />
   <br/>
-  <img src="forge-divider.svg" width="62%" alt="делитель мастерской КРУГЛЫЙ СТОЛ" />
+  <img src="https://cdn.jsdelivr.net/gh/rtynbirf/commons@main/forge-divider.svg" width="62%" alt="делитель мастерской КРУГЛЫЙ СТОЛ" />
 </div>
 <!--ФОРЖ:МУЗА:КОНЕЦ-->
 
 <!--ФОРЖ:ПАСПОРТ:НАЧАЛО-->
 <div align="center">
-  <img src="revo-page.svg" width="100%" alt="РЕВО-паспорт страницы commons: строение файлов, лексикон, числа — по фактическому контенту" />
+  <img src="revo-page.svg" width="100%" alt="РЕВО-паспорт страницы commons №25 в каноне ORNAMENTAL MYTHO-REALISM: орнаментальная решётка, медальон-миф, строение файлов, лексикон — по фактическому контенту" />
 </div>
 
 | ФАЙЛОВ | ПАПОК | КОММИТОВ | ОБНОВЛЕНО | РЕЛИЗОВ |
 |---:|---:|---:|---|---:|
-| 466 | 97 | 188 | 2026-11-18 | 20 |
+| 477 | 101 | 1 | 2026-11-28 | 20 |
 <!--ФОРЖ:ПАСПОРТ:КОНЕЦ-->
+
+# COMMONS
+
+
+
+
 
 
 
